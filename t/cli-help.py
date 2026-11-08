@@ -1,5 +1,8 @@
 #!/usr/bin/python3
-"""Check CLI help without initializing the installed module or changing guests."""
+"""
+Check CLI help without initializing the installed module or changing guests.
+"""
+
 import fcntl
 import os
 from pathlib import Path
@@ -14,13 +17,21 @@ import time
 cli = ['perl', str(Path(__file__).resolve().parents[1] / 'cli.pl')]
 
 # Redirected manuals stay plain; short help and usage errors never open a pager.
-manual = subprocess.run([*cli, 'help', 'create-system'], capture_output=True, text=True)
+manual = subprocess.run(
+    [*cli, 'help', 'create-system'], capture_output=True, text=True
+)
 assert manual.returncode == 0 and manual.stdout.startswith('create-system\n')
 assert not manual.stderr and '\x1b' not in manual.stdout
-short = subprocess.run([*cli, 'create-system', '--help'], capture_output=True, text=True)
+short = subprocess.run(
+    [*cli, 'create-system', '--help'], capture_output=True, text=True
+)
 assert short.returncode == 0 and 'cloudmin create-system [' in short.stdout
-bad = subprocess.run([*cli, 'help', 'not-a-command'], capture_output=True, text=True)
-assert bad.returncode == 2 and not bad.stdout and 'Unknown command' in bad.stderr
+bad = subprocess.run(
+    [*cli, 'help', 'not-a-command'], capture_output=True, text=True
+)
+assert (
+    bad.returncode == 2 and not bad.stdout and 'Unknown command' in bad.stderr
+)
 print('PASS plain manual, short syntax and unknown-command error')
 
 # Exercise a real terminal, including quitting before the full manual is read.
@@ -60,7 +71,9 @@ try:
         # Reap a completed pager and verify that quitting is a clean exit.
         if child:
             done = True
-            assert os.waitstatus_to_exitcode(status) == 0, 'Quitting the pager failed'
+            assert os.waitstatus_to_exitcode(status) == 0, (
+                'Quitting the pager failed'
+            )
             break
         time.sleep(0.1)
     assert done, ('Pager did not exit after q', output)

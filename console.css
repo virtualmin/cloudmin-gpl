@@ -6,9 +6,21 @@
     white-space: nowrap;
 }
 /* Let each console fill the available height inside the tab wrappers. */
-.tab-content:has(#terminal[data-cloudmin-console], #cloudmin-console, .cloudmin-webmin-view),
-.tab-pane.active:has(#terminal[data-cloudmin-console], #cloudmin-console, .cloudmin-webmin-view),
-.ui_tabs_start:has(#terminal[data-cloudmin-console], #cloudmin-console, .cloudmin-webmin-view) {
+.tab-content:has(
+    #terminal[data-cloudmin-console],
+    #cloudmin-console,
+    .cloudmin-webmin-view
+),
+.tab-pane.active:has(
+        #terminal[data-cloudmin-console],
+        #cloudmin-console,
+        .cloudmin-webmin-view
+    ),
+.ui_tabs_start:has(
+    #terminal[data-cloudmin-console],
+    #cloudmin-console,
+    .cloudmin-webmin-view
+) {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -29,7 +41,10 @@ form:has(> #terminal[data-cloudmin-console="ssh-loading"]) {
     min-height: 0;
     margin: 0;
 }
-/* The embedded Webmin fills the page's remaining space, without a resize script. */
+/*
+ * The embedded Webmin fills the page's remaining space, without a resize
+ * script.
+ */
 .cloudmin-webmin-view {
     display: flex;
     flex: 1;
@@ -76,7 +91,10 @@ body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
     flex: 1;
     min-height: 0;
 }
-#content > .container-fluid > .panel:has(.cloudmin-webmin-view) > .panel-heading {
+#content
+    > .container-fluid
+    > .panel:has(.cloudmin-webmin-view)
+    > .panel-heading {
     /* Preserve header height while the guest frame absorbs viewport changes. */
     flex-shrink: 0;
 }
@@ -86,7 +104,9 @@ body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
     height: 100%;
     min-height: 0;
 }
-/* Legacy frames request fullscreen on the containing frame, not this document. */
+/*
+ * Legacy frames request fullscreen on the containing frame, not this document.
+ */
 .cloudmin-webmin-view.cloudmin-webmin-fullscreen {
     position: fixed;
     inset: 0;
@@ -127,7 +147,9 @@ body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
     overflow: auto;
     background: #000;
 }
-/* Keep the framebuffer out of layout: a large guest must not grow its viewport. */
+/*
+ * Keep the framebuffer out of layout: a large guest must not grow its viewport.
+ */
 #cloudmin-console [data-console-display] {
     position: absolute;
     width: 100%;
@@ -135,7 +157,9 @@ body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
     min-width: 0;
     min-height: 0;
 }
-/* Override noVNC's inline auto margins to align the display with the toolbar. */
+/*
+ * Override noVNC's inline auto margins to align the display with the toolbar.
+ */
 #cloudmin-console [data-console-screen] canvas {
     margin: 0 !important;
 }
@@ -146,7 +170,10 @@ body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
     margin-inline-start: auto;
     max-width: 100%;
 }
-[data-console-keyboard] { position: relative; flex-shrink: 0; }
+[data-console-keyboard] {
+    position: relative;
+    flex-shrink: 0;
+}
 #cloudmin-console [data-console-action="keys"] {
     display: flex;
     align-items: center;
@@ -188,11 +215,15 @@ body:has(> .ui_tabs_start .cloudmin-webmin-view) > :not(.ui_tabs_start) {
     background: var(--ui-accent-soft, #eee);
 }
 #cloudmin-console-keys [data-console-key]:focus-visible {
-    /* Keep keyboard focus visible even when the theme resets button outlines. */
+    /*
+     * Keep keyboard focus visible even when the theme resets button outlines.
+     */
     outline: 2px solid var(--ui-accent, #287bc1) !important;
     outline-offset: -2px;
 }
-[data-console-status] .ui_badge { white-space: normal; }
+[data-console-status] .ui_badge {
+    white-space: normal;
+}
 /* Cover the content frame when its parent owns fullscreen. */
 #cloudmin-console.cloudmin-console-fullscreen {
     position: fixed;

@@ -1,7 +1,8 @@
 /* Remember native inventory tabs without changing theme navigation. */
 (() => {
     'use strict';
-    // SPA navigation can load this script again; keep one observer per document.
+    // SPA navigation can load this script again; keep one observer
+    // per document.
     if (window.cloudminInventoryTabs) {
         window.cloudminInventoryTabs();
         return;
@@ -29,11 +30,16 @@
             try {
                 // Keep the signed save alive when the user leaves the page.
                 const response = await fetch(config.url, {
-                    method: 'POST', credentials: 'same-origin', keepalive: true,
-                    body: new URLSearchParams({page: config.page,
-                        tab: next.tab, token: config.token})
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    keepalive: true,
+                    body: new URLSearchParams({
+                        page: config.page,
+                        tab: next.tab,
+                        token: config.token
+                    })
                 });
-                const result = response.ok && await response.json();
+                const result = response.ok && (await response.json());
                 // HTTP errors and rejected saves share one inline explanation.
                 if (!result.saved) throw new Error('Preference was not saved');
                 // A successful save clears any earlier warning on this page.
@@ -53,13 +59,18 @@
             // Newly inserted pages have their own token and error display.
             if (!state) {
                 const config = JSON.parse(node.dataset.inventoryTabs);
-                state = {config, error: document.querySelector(
-                    '[data-inventory-tabs-error="' + config.page + '"]')};
+                state = {
+                    config,
+                    error: document.querySelector(
+                        '[data-inventory-tabs-error="' + config.page + '"]'
+                    )
+                };
                 states.set(node, state);
             }
             // Themes use different prefixes for their visible panels.
             const tab = state.config.tabs.find(id => {
-                const panel = document.getElementById('att_' + id) ||
+                const panel =
+                    document.getElementById('att_' + id) ||
                     document.getElementById('div_' + id);
                 return panel && panel.getClientRects().length;
             });
@@ -82,8 +93,12 @@
         });
     });
     // Watch tab visibility and page replacement, then capture the initial tab.
-    observer.observe(document.documentElement, {subtree: true, childList: true,
-        attributes: true, attributeFilter: ['class', 'style', 'hidden']});
+    observer.observe(document.documentElement, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['class', 'style', 'hidden']
+    });
     window.cloudminInventoryTabs = refresh;
     refresh();
 })();

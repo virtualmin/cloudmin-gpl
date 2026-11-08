@@ -1,35 +1,51 @@
 /* Live rows retain their column widths as phases change and jobs finish. */
 #cloudmin-jobs .cloudmin-jobs-scroll {
-	overflow-x: auto;
+    overflow-x: auto;
 }
 #cloudmin-jobs .cloudmin-jobs-table {
-	width: 100%;
-	min-width: 48em;
-	table-layout: fixed;
+    width: 100%;
+    min-width: 48em;
+    table-layout: fixed;
 }
-#cloudmin-jobs .cloudmin-job-name { width: 22%; }
-#cloudmin-jobs .cloudmin-job-type { width: 14%; }
-#cloudmin-jobs .cloudmin-job-progress { width: 44%; }
-#cloudmin-jobs .cloudmin-job-started { width: 20%; }
+#cloudmin-jobs .cloudmin-job-name {
+    width: 22%;
+}
+#cloudmin-jobs .cloudmin-job-type {
+    width: 14%;
+}
+#cloudmin-jobs .cloudmin-job-progress {
+    width: 44%;
+}
+#cloudmin-jobs .cloudmin-job-started {
+    width: 20%;
+}
 /* Give controls room only for writers; compact forms add no row margins. */
-#cloudmin-jobs .cloudmin-job-actions { width: 16%; }
-#cloudmin-jobs .cloudmin-job-actions form { margin: 0; }
-#cloudmin-jobs .cloudmin-jobs-table:has(.cloudmin-job-actions) .cloudmin-job-progress { width: 28%; }
+#cloudmin-jobs .cloudmin-job-actions {
+    width: 16%;
+}
+#cloudmin-jobs .cloudmin-job-actions form {
+    margin: 0;
+}
+#cloudmin-jobs
+    .cloudmin-jobs-table:has(.cloudmin-job-actions)
+    .cloudmin-job-progress {
+    width: 28%;
+}
 #cloudmin-jobs .cloudmin-jobs-table td,
 #cloudmin-jobs .cloudmin-jobs-table th {
-	/* Override compact theme padding, including on rows inserted after load. */
-	padding: 8px 12px !important;
-	vertical-align: middle;
-	white-space: normal;
-	word-break: normal;
-	overflow-wrap: anywhere;
+    /* Override compact theme padding, including on rows inserted after load. */
+    padding: 8px 12px !important;
+    vertical-align: middle;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
 }
 /* Let long phase labels and transfer totals wrap within the progress column. */
 #cloudmin-jobs .ui_progress_head {
-	flex-wrap: wrap;
-	gap: 0.25em 0.75em;
+    flex-wrap: wrap;
+    gap: 0.25em 0.75em;
 }
 #cloudmin-jobs .ui_progress_value {
-	margin-inline-start: auto;
-	font-variant-numeric: tabular-nums;
+    margin-inline-start: auto;
+    font-variant-numeric: tabular-nums;
 }

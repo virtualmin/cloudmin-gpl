@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Check theme hooks and LVM integration on a disposable Cloudmin VM."""
+
 import http.cookiejar
 import json
 from theme_support import is_spa_theme
@@ -95,23 +96,41 @@ print convert_to_json(\@results);
 
 # check_hooks(theme) validates real selection and change output for each layout.
 def check_hooks(theme):
-    result = subprocess.run(['perl', '-e', HOOK_CHECK, str(webmin), theme],
-                            capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ['perl', '-e', HOOK_CHECK, str(webmin), theme],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     records = json.loads(result.stdout)
     assert len(records) == 6, 'Missing hook output'
     for record in records:
         output = record['output']
         # SPA navigation consumes the marker directly from the response text.
         if is_spa_theme(theme):
-            key = 'theme_select_server' if record['action'] == 'select' else 'theme_post_save'
-            assert output == '<!--\n%s=%s\n-->\n' % (key, record['id']), 'Wrong SPA hook marker'
+            key = (
+                'theme_select_server'
+                if record['action'] == 'select'
+                else 'theme_post_save'
+            )
+            assert output == '<!--\n%s=%s\n-->\n' % (key, record['id']), (
+                'Wrong SPA hook marker'
+            )
         else:
             # Frame themes reload their navigation through a script block.
-            assert '<script>' in output and '.location' in output, 'Frame hook did not refresh navigation'
+            assert '<script>' in output and '.location' in output, (
+                'Frame hook did not refresh navigation'
+            )
             # Selection must retain either a numeric ID or a UUID in the URL.
             if record['action'] == 'select':
-                assert 'sid=' + record['id'] in output, 'Frame hook lost the guest ID'
-    print('PASS: ' + theme + ' selection/create/delete hooks with numeric IDs and UUIDs')
+                assert 'sid=' + record['id'] in output, (
+                    'Frame hook lost the guest ID'
+                )
+    print(
+        'PASS: '
+        + theme
+        + ' selection/create/delete hooks with numeric IDs and UUIDs'
+    )
 
 
 # session()
@@ -120,14 +139,19 @@ def session():
     return urllib.request.build_opener(
         urllib.request.ProxyHandler({}),
         urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
-        urllib.request.HTTPSHandler(context=ssl._create_unverified_context()))
+        urllib.request.HTTPSHandler(context=ssl._create_unverified_context()),
+    )
 
 
 # request(path, [fields])
 def request(path, fields=None):
     """Send a real request and return the HTTP status with the page text."""
-    body = urllib.parse.urlencode(fields).encode() if fields is not None else None
-    req = urllib.request.Request(base + path, data=body, headers={'Referer': base + '/'})
+    body = (
+        urllib.parse.urlencode(fields).encode() if fields is not None else None
+    )
+    req = urllib.request.Request(
+        base + path, data=body, headers={'Referer': base + '/'}
+    )
     try:
         response = opener.open(req, timeout=60)
     except urllib.error.HTTPError as error:
@@ -138,10 +162,16 @@ def request(path, fields=None):
 
 # page(path)
 def page(path):
-    """Fetch a page that must render without calling a missing Cloudmin function."""
+    """
+    Fetch a page that must render without calling a missing Cloudmin function.
+    """
     status, text = request(path)
-    assert 'Undefined subroutine' not in text, path + ' calls a missing Cloudmin function'
-    assert status == 200 and 'Perl execution failed' not in text, '%s failed with HTTP %s' % (path, status)
+    assert 'Undefined subroutine' not in text, (
+        path + ' calls a missing Cloudmin function'
+    )
+    assert status == 200 and 'Perl execution failed' not in text, (
+        '%s failed with HTTP %s' % (path, status)
+    )
     return text
 
 
@@ -150,19 +180,35 @@ def login(theme):
     """Create the fixture account with its theme; never print its password."""
     global opener, created, user
     # Keep this test separate from other live UI checks on the same host.
-    user = ('cloudmin-spa-check' if is_spa_theme(theme) else 'cloudmin-frame-check') + '-' + secrets.token_hex(4)
+    user = (
+        (
+            'cloudmin-spa-check'
+            if is_spa_theme(theme)
+            else 'cloudmin-frame-check'
+        )
+        + '-'
+        + secrets.token_hex(4)
+    )
     password = secrets.token_urlsafe(36)
-    subprocess.run(['perl', str(helper), 'create', theme, user],
-                   input=password + '\n', text=True, check=True)
+    subprocess.run(
+        ['perl', str(helper), 'create', theme, user],
+        input=password + '\n',
+        text=True,
+        check=True,
+    )
     created = True
     time.sleep(1)
     opener = session()
     request('/session_login.cgi')
-    status, text = request('/session_login.cgi', {'user': user, 'pass': password, 'page': '/'})
+    status, text = request(
+        '/session_login.cgi', {'user': user, 'pass': password, 'page': '/'}
+    )
     # Theme language bundles may contain "Login failed" even after success.
     # Verify access to an authenticated endpoint instead of matching that text.
     status, text = request('/server-manager/api.cgi?action=list')
-    assert status == 200 and 'result' in json.loads(text), 'Fixture login did not grant module access'
+    assert status == 200 and 'result' in json.loads(text), (
+        'Fixture login did not grant module access'
+    )
 
 
 # logout()
@@ -178,8 +224,13 @@ def logout():
 def guest_ids(text):
     """Return the guest UUIDs linked from a rendered Cloudmin menu or page."""
     # Links carry the UUID through urlize, which also encodes its dashes.
-    ids = [urllib.parse.unquote(uuid) for uuid in re.findall(r'machine\.cgi\?id=([0-9a-f%A-F-]+)', text)]
-    return sorted(set(uuid for uuid in ids if re.fullmatch(r'[0-9a-f-]{36}', uuid)))
+    ids = [
+        urllib.parse.unquote(uuid)
+        for uuid in re.findall(r'machine\.cgi\?id=([0-9a-f%A-F-]+)', text)
+    ]
+    return sorted(
+        set(uuid for uuid in ids if re.fullmatch(r'[0-9a-f-]{36}', uuid))
+    )
 
 
 try:
@@ -194,32 +245,56 @@ try:
         fixture = conn.defineXML(
             f'<domain type="kvm"><name>cloudmin-frame-check-{identity}</name>'
             f'<uuid>{identity}</uuid><memory unit="MiB">64</memory><vcpu>1</vcpu>'
-            f'<os><type arch="{arch}" machine="{machine}">hvm</type></os></domain>')
-    lvm = subprocess.run(['perl', '-e', LVM_CHECK, str(webmin / 'lvm')], capture_output=True, text=True)
+            f'<os><type arch="{arch}" machine="{machine}">hvm</type></os></domain>'
+        )
+    lvm = subprocess.run(
+        ['perl', '-e', LVM_CHECK, str(webmin / 'lvm')],
+        capture_output=True,
+        text=True,
+    )
     assert lvm.returncode == 0, 'LVM device status failed: ' + lvm.stderr
     guests = int(lvm.stdout.split()[-1])
-    assert guests, 'LVM check needs at least one libvirt guest to resolve a host for'
-    print('LVM device status resolves guest hosts through get_parent_server (%d guests): PASS' % guests)
+    assert guests, (
+        'LVM check needs at least one libvirt guest to resolve a host for'
+    )
+    print(
+        'LVM device status resolves guest hosts through get_parent_server (%d guests): PASS'
+        % guests
+    )
 
     # Frame navigation uses the admin check and available guest list.
     assert not is_spa_theme('gray-theme'), 'Frame fixture declares spa=1'
     check_hooks('gray-theme')
     login('gray-theme')
     left = page('/left.cgi?mode=server-manager')
-    assert '/server-manager/machine_form.cgi' in left, 'Navigation frame lacks the Cloudmin menu'
+    assert '/server-manager/machine_form.cgi' in left, (
+        'Navigation frame lacks the Cloudmin menu'
+    )
     page('/right.cgi')
     edit = page('/edit_right.cgi')
-    assert 'name="server"' in edit, 'Content-frame settings lack the default server list'
+    assert 'name="server"' in edit, (
+        'Content-frame settings lack the default server list'
+    )
     ids = guest_ids(left)
     assert ids, 'Navigation frame lists no guests'
     for uuid in ids:
-        assert re.search(r'value=[\'"]%s[\'"]' % uuid, edit), 'default server list misses ' + uuid
-    print('Theme frames render with the Cloudmin master admin check (%d guests): PASS' % len(ids))
+        assert re.search(r'value=[\'"]%s[\'"]' % uuid, edit), (
+            'default server list misses ' + uuid
+        )
+    print(
+        'Theme frames render with the Cloudmin master admin check (%d guests): PASS'
+        % len(ids)
+    )
 
-    # Guest pages select the guest through the theme hook rather than the marker.
+    # Guest pages select the guest through the theme hook rather than
+    # the marker.
     vm = page('/server-manager/machine.cgi?id=' + ids[0])
-    assert 'left.cgi?mode=server-manager&sid=' + ids[0] in vm, 'Theme did not select the guest'
-    assert 'theme_select_server=' not in vm, 'Theme without SPA navigation received an SPA marker'
+    assert 'left.cgi?mode=server-manager&sid=' + ids[0] in vm, (
+        'Theme did not select the guest'
+    )
+    assert 'theme_select_server=' not in vm, (
+        'Theme without SPA navigation received an SPA marker'
+    )
     print('Theme selects the displayed guest through theme_select_server: PASS')
 
     # The SPA hook supplies a marker rather than executable JavaScript.
@@ -228,8 +303,12 @@ try:
     check_hooks('authentic-theme')
     login('authentic-theme')
     vm = page('/server-manager/machine.cgi?id=' + ids[0])
-    assert '<!--\ntheme_select_server=%s\n-->' % ids[0] in vm, 'The SPA theme lost the selection marker'
-    assert not re.search(r'<script[^>]*>\s*theme_select_server=', vm), 'SPA hook printed executable selection code'
+    assert '<!--\ntheme_select_server=%s\n-->' % ids[0] in vm, (
+        'The SPA theme lost the selection marker'
+    )
+    assert not re.search(r'<script[^>]*>\s*theme_select_server=', vm), (
+        'SPA hook printed executable selection code'
+    )
     print('The SPA theme keeps the guest selection marker: PASS')
 finally:
     # Only remove the fixture account after successful account setup.

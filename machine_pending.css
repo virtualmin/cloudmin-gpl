@@ -1,34 +1,81 @@
-/* Saved settings share the theme palette and keep their own responsive layout. */
+/*
+ * Saved settings share the theme palette and keep their own responsive layout.
+ */
 .vm-pending {
-    margin-block: calc(var(--ui-gap) / 4)!important;
+    margin-block: calc(var(--ui-gap) / 4) !important;
 }
 /* Hidden state must override the flex layouts supplied by the theme. */
-.vm-pending[hidden], .vm-pending [hidden] { display: none !important; }
-.ui_page.vm-header-status { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .5em; margin-inline-start: .6em; vertical-align: middle; }
+.vm-pending[hidden],
+.vm-pending [hidden] {
+    display: none !important;
+}
+.ui_page.vm-header-status {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5em;
+    margin-inline-start: .6em;
+    vertical-align: middle;
+}
 /* Subtitle badges use their inline gap, not page-level block spacing. */
-.ui_page.vm-header-status > * { margin-block: 0; }
-.vm-header-status [data-vm-header-pending] { display: inline-flex; }
-.vm-header-status [hidden], #vm-power-cycle-form[hidden] { display: none !important; }
+.ui_page.vm-header-status > * {
+    margin-block: 0;
+}
+.vm-header-status [data-vm-header-pending] {
+    display: inline-flex;
+}
+.vm-header-status [hidden],
+#vm-power-cycle-form[hidden] {
+    display: none !important;
+}
 /* Collapse the editor's cluster before the first status update, too. */
 .ui_form_grouped_cluster[hidden],
-.ui_form_grouped_cluster:has(> #vm-power-cycle-form[hidden]) { display: none !important; }
+.ui_form_grouped_cluster:has(> #vm-power-cycle-form[hidden]) {
+    display: none !important;
+}
 /* Console headers need no gap for an empty pending-badge group. */
-.ui_page.vm-header-status:has(> [data-vm-header-pending][hidden]:only-child) { display: none; }
+.ui_page.vm-header-status:has(> [data-vm-header-pending][hidden]:only-child) {
+    display: none;
+}
 /* Keep the icon beside one content column, with the theme's alert colors. */
 .vm-pending-alert {
     display: flex;
     align-items: flex-start;
     gap: 1em;
 }
-.vm-pending-alert > .fa { flex: 0 0 auto; margin-top: .2em; }
-.vm-pending-content > strong { font-size: 1.05em; }
-.vm-pending-content { flex: 1 1 28em; min-width: 0; }
+.vm-pending-alert > .fa {
+    flex: 0 0 auto;
+    margin-top: .2em;
+}
+.vm-pending-content > strong {
+    font-size: 1.05em;
+}
+.vm-pending-content {
+    flex: 1 1 28em;
+    min-width: 0;
+}
 /* Wrap each setting and comparison together as the available width shrinks. */
-.vm-pending-changes { margin-top: .55em; }
-.vm-pending-changes > div { display: flex; flex-wrap: wrap; column-gap: 1em; row-gap: .2em; margin-top: .3em; }
-.vm-pending-values { overflow-wrap: anywhere; }
-.vm-pending .vm-pending-explain { margin: .7em 0 0; font-size: .92em; max-width: 90ch; }
-#vm-power-cycle-form { margin: 0 !important; }
+.vm-pending-changes {
+    margin-top: .55em;
+}
+.vm-pending-changes > div {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 1em;
+    row-gap: .2em;
+    margin-top: .3em;
+}
+.vm-pending-values {
+    overflow-wrap: anywhere;
+}
+.vm-pending .vm-pending-explain {
+    margin: .7em 0 0;
+    font-size: .92em;
+    max-width: 90ch;
+}
+#vm-power-cycle-form {
+    margin: 0 !important;
+}
 /* Keep the icon-only menu square. */
 #vm-more-actions-menu > summary {
     padding-inline: 0;
@@ -53,4 +100,6 @@
     border: 0;
     background: none;
 }
-.vm-password-account .ui_select_switch_fields { display: block; }
+.vm-password-account .ui_select_switch_fields {
+    display: block;
+}

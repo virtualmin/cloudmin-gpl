@@ -1,4 +1,5 @@
 """Stage guest setup helpers and the host worker used by their tests."""
+
 from pathlib import Path
 import shutil
 
@@ -16,6 +17,8 @@ def stage_guest_helpers(root, directory, scripts=False):
         pro = root / 'pro/guest-scripts.pl'
         # Refuse script tests when their executor is missing.
         if not pro.is_file():
-            raise RuntimeError('This script execution test requires the Cloudmin Pro guest helper')
+            raise RuntimeError(
+                'This script execution test requires the Cloudmin Pro guest helper'
+            )
         shutil.copy2(pro, directory / 'guest-scripts.pl')
     return directory

@@ -13,14 +13,15 @@ while (<$lang>) { $text{$1} = $2 if /^([^=]+)=(.*)/; }
 close($lang);
 require "$Bin/../cloudmin-pages.pl";
 print show_images_page({ mode => 'add', images => [
-	{ id => 'size-a', name => 'Size A', download_size_bytes => 1024**3,
+	{ id => 'size-a', name => 'Size A',
+	  download_size_bytes => 1024**3,
 	  download_size_refresh => 0 },
 	{ id => 'size-b', name => 'Size B',
 	  download_size_bytes => 512 * 1024**2,
 	  download_size_refresh => 0 },
 	{ id => 'size-unknown', name => 'Unknown size',
 	  download_size_refresh => 1 },
-], catalogue => [], jobs => [],
-	pools => [{ id => 'fixture-pool', name => 'default',
-		available => 1024**3 }],
-	token => 'fixture-token' });
+], catalogue => [ ], jobs => [ ],
+			 pools => [ { id => 'fixture-pool', name => 'default',
+				      available => 1024**3 } ],
+			 token => 'fixture-token' });

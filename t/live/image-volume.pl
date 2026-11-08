@@ -6,7 +6,8 @@ use warnings;
 use JSON::PP qw(decode_json encode_json);
 use Digest::SHA;
 use Sys::Virt;
-die "Run on an authorized Linux test host as root\n" unless $^O eq 'linux' && $< == 0;
+die "Run on an authorized Linux test host as root\n" unless $^O eq 'linux' &&
+	$< == 0;
 my ($action, $id, $expected) = @ARGV;
 die "Invalid test job" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
 my $root = '/var/webmin/modules/server-manager/image-jobs';
@@ -32,7 +33,7 @@ if ($action eq 'verify') {
 	die "Webmin staging file remains"
 		if (glob("$root/$id.part.webmintmp.*"));
 	print encode_json({ volume => $volume->get_name(), path => $path,
-		bytes => -s $path, sha256 => $digest }), "\n";
+			    bytes => -s $path, sha256 => $digest }), "\n";
 	}
 # Failed imports must leave neither a volume nor staging files.
 elsif ($action eq 'absent') {
@@ -56,9 +57,9 @@ elsif ($action eq 'protect') {
 	my $path = $volume->get_path();
 	$path =~ s/&/&amp;/g; $path =~ s/'/&apos;/g;
 	$conn->define_domain("<domain type='kvm'><name>$domain_name</name>".
-		"<memory unit='MiB'>64</memory><vcpu>1</vcpu><os><type>hvm</type></os>".
-		"<devices><disk type='file' device='disk'><driver name='qemu' type='qcow2'/>".
-		"<source file='$path'/><target dev='vda' bus='virtio'/></disk></devices></domain>");
+			     "<memory unit='MiB'>64</memory><vcpu>1</vcpu><os><type>hvm</type></os>".
+			     "<devices><disk type='file' device='disk'><driver name='qemu' type='qcow2'/>".
+			     "<source file='$path'/><target dev='vda' bus='virtio'/></disk></devices></domain>");
 	}
 # Remove the test attachment so normal cleanup can proceed.
 elsif ($action eq 'unprotect') {

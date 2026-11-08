@@ -31,16 +31,27 @@
         // poll() checks login outcomes until authentication or failure.
         async function poll() {
             // Detached page nodes cannot update the current page.
-            if (stopped || !attempt.isConnected) { dispose(); return; }
+            if (stopped || !attempt.isConnected) {
+                dispose();
+                return;
+            }
             try {
                 const response = await fetch(attempt.dataset.statusUrl, {
-                    credentials: 'same-origin', cache: 'no-store', signal: controller.signal
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    signal: controller.signal
                 });
                 // An HTTP error stops checks without declaring login failure.
-                if (!response.ok) { dispose(); return; }
+                if (!response.ok) {
+                    dispose();
+                    return;
+                }
                 const result = await response.json();
                 // Navigation may have replaced the terminal during the request.
-                if (stopped || !attempt.isConnected) { dispose(); return; }
+                if (stopped || !attempt.isConnected) {
+                    dispose();
+                    return;
+                }
                 if (result.state === 'failed') {
                     // Normal navigation also closes the failed terminal.
                     dispose();
@@ -48,7 +59,10 @@
                     return;
                 }
                 // Stop after success, lost access or a superseded attempt.
-                if (result.error || result.state !== 'pending') { dispose(); return; }
+                if (result.error || result.state !== 'pending') {
+                    dispose();
+                    return;
+                }
             } catch (error) {
                 // Retry a dropped check only while this page remains active.
                 if (stopped) return;
@@ -64,7 +78,9 @@
             if (marker?.isConnected) {
                 // Consume the trigger before submitting the signed form.
                 marker.remove();
-                document.querySelector('form[action*="tab=ssh"] [name="connect"]')?.click();
+                document
+                    .querySelector('form[action*="tab=ssh"] [name="connect"]')
+                    ?.click();
             } else if (attempt?.isConnected) {
                 // Check the launched relay without submitting again.
                 poll();
@@ -78,7 +94,10 @@
 
     // Navigation may replace the page without evaluating its scripts again.
     const observer = new MutationObserver(bind);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
     // cleanup() removes the shared observer on unload or script replacement.
     function cleanup() {
         observer.disconnect();

@@ -1,20 +1,25 @@
 #!/usr/bin/perl
 # network-worker.pl apply|rollback|boot
-# Independent systemd entry point for bridge changes and unconfirmed boot recovery.
+# Independent systemd entry point for bridge changes and
+# unconfirmed boot recovery.
 use strict;
 use warnings;
 use FindBin qw($Bin);
-BEGIN {
-	die "Run on the Cloudmin Linux host as root\n" unless ($^O eq 'linux' && $< == 0);
-	$ENV{'WEBMIN_CONFIG'} ||= '/etc/webmin';
-	$ENV{'WEBMIN_VAR'} ||= '/var/webmin';
-	chdir($FindBin::Bin) || die $!;
-	}
+
+BEGIN
+{
+die "Run on the Cloudmin Linux host as root\n"
+	unless ($^O eq 'linux' && $< == 0);
+$ENV{'WEBMIN_CONFIG'} ||= '/etc/webmin';
+$ENV{'WEBMIN_VAR'} ||= '/var/webmin';
+chdir($FindBin::Bin) || die $!;
+}
 our ($remote_user, $error_must_die);
 require './server-manager-lib.pl';
 require './cloudmin-network-lib.pl';
 my $action = shift(@ARGV) || '';
-die "Invalid network worker action\n" if ($action !~ /\A(?:apply|rollback|boot)\z/);
+die "Invalid network worker action\n"
+	if ($action !~ /\A(?:apply|rollback|boot)\z/);
 $error_must_die = 1;
 # Use the journal owner for audit records from this independent process.
 my $host = get_host_network();
@@ -24,12 +29,14 @@ my $ok = eval {
 	# Apply only the currently armed transaction and log an actual change.
 	if ($action eq 'apply') {
 		my $name = $host->apply();
-		webmin_log('applied', 'network', $state->{'id'}, { name => $name }) if ($name);
+		webmin_log('applied', 'network', $state->{'id'},
+			   { name => $name }) if ($name);
 		}
 	# Both timeout and boot recovery restore the same saved configuration.
 	else {
 		my $name = $host->rollback($action eq 'boot');
-		webmin_log('rollback', 'network', $state->{'id'}, { name => $name }) if ($name);
+		webmin_log('rollback', 'network', $state->{'id'},
+			   { name => $name }) if ($name);
 		}
 	1;
 	};
@@ -42,6 +49,7 @@ if (!$ok) {
 		$p->{'error'} = $error;
 		$host->write_state($p);
 		});
-	webmin_log('failed', 'network', $state->{'id'}, { name => $state->{'name'}, error => $error });
+	webmin_log('failed', 'network', $state->{'id'},
+		   { name => $state->{'name'}, error => $error });
 	die $error;
 	}

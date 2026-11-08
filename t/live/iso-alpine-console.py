@@ -4,6 +4,7 @@
 Called by check-iso-install.pl on a disposable Linux Cloudmin host. Only its
 named fixture is accessed. Each phase shuts the guest down before returning.
 """
+
 import os
 import pty
 import re
@@ -22,7 +23,9 @@ class Console:
         self.master, slave = pty.openpty()
         self.child = subprocess.Popen(
             ["virsh", "-c", "qemu:///system", "console", uuid],
-            stdin=slave, stdout=slave, stderr=slave,
+            stdin=slave,
+            stdout=slave,
+            stderr=slave,
         )
         os.close(slave)
         self.buffer = ""
@@ -38,13 +41,13 @@ class Console:
             match = re.search(pattern, self.buffer)
             if match:
                 # Keep unread output for the next prompt or command result.
-                self.buffer = self.buffer[match.end():]
+                self.buffer = self.buffer[match.end() :]
                 return match
             if select.select([self.master], [], [], 1)[0]:
                 # Stream diagnostics without keeping an unbounded transcript.
                 data = os.read(self.master, 65536).decode(errors="replace")
-                # Treat a closed terminal as a failure instead of waiting until
-                # timeout.
+                # Treat a closed terminal as a failure instead of waiting
+                # until timeout.
                 if not data:
                     raise RuntimeError("Serial console closed")
                 sys.stdout.write(data)
@@ -53,12 +56,18 @@ class Console:
         raise RuntimeError(f"Timed out waiting for {pattern}")
 
     def run(self, command, timeout=120):
-        """run(command, [timeout]): execute a guest command and require success."""
-        self.send("sh -c " + shlex.quote("set -e; " + command)
-                  + "; printf '\\n%s:%s\\n' CLOUDMIN_COMPLETE $?\n")
+        """
+        run(command, [timeout]): execute a guest command and require success.
+        """
+        self.send(
+            "sh -c "
+            + shlex.quote("set -e; " + command)
+            + "; printf '\\n%s:%s\\n' CLOUDMIN_COMPLETE $?\n"
+        )
         match = self.expect(r"\r?\nCLOUDMIN_COMPLETE:(\d+)\r?\n", timeout)
         if match.group(1) != "0":
-            # Report the failed phase instead of continuing on a partial install.
+            # Report the failed phase instead of continuing on a
+            # partial install.
             raise RuntimeError("Guest command failed: " + match.group(1))
         self.expect(r"[^\r\n]*[~/#] ?# ")
 
@@ -78,10 +87,13 @@ def main():
     """main(): validate ownership, run one console phase and await shutdown."""
     # Serial-console installation belongs on a privileged Linux test guest.
     if sys.platform != "linux" or os.getuid() != 0 or len(sys.argv) != 4:
-        raise SystemExit("Run as root on a disposable Linux host: uuid name install|verify")
+        raise SystemExit(
+            "Run as root on a disposable Linux host: uuid name install|verify"
+        )
     uuid, name, phase = sys.argv[1:]
     actual = subprocess.check_output(
-        ["virsh", "-c", "qemu:///system", "domname", uuid], text=True).strip()
+        ["virsh", "-c", "qemu:///system", "domname", uuid], text=True
+    ).strip()
     # Verify the UUID still belongs to the named disposable guest.
     if not name.startswith("cloudmin-iso-check-") or actual != name:
         raise SystemExit("Fixture guest ownership changed")
@@ -109,20 +121,26 @@ def main():
                 "printf 'https://dl-cdn.alpinelinux.org/alpine/v%s/main\\n' "
                 '"$release" > /etc/apk/repositories; '
                 "apk update; touch /etc/cloudmin-iso-install-check; "
-                "printf 'y\\n' | setup-disk -m sys -s 0 /dev/vda", 480)
+                "printf 'y\\n' | setup-disk -m sys -s 0 /dev/vda",
+                480,
+            )
         else:
-            # A persisted marker and block-backed root prove this is the install.
+            # A persisted marker and block-backed root prove this is
+            # the install.
             console.run(
                 "test -f /etc/cloudmin-iso-install-check; "
                 "test $(hostname) = cloudmin-iso-installed; "
                 "awk '$2 == \"/\" && $1 ~ /^\\/dev\\// { found=1; print } "
-                "END { exit !found }' /proc/mounts; cat /etc/alpine-release")
+                "END { exit !found }' /proc/mounts; cat /etc/alpine-release"
+            )
         console.send("poweroff\n")
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             state = subprocess.check_output(
                 ["virsh", "-c", "qemu:///system", "domstate", uuid],
-                text=True, env={**os.environ, "LC_ALL": "C"}).strip()
+                text=True,
+                env={**os.environ, "LC_ALL": "C"},
+            ).strip()
             if state == "shut off":
                 # The caller can now change media and cold-boot the guest.
                 print(f"PASS: Alpine {phase} and clean shutdown", flush=True)

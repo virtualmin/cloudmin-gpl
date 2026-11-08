@@ -16,33 +16,35 @@ require "$Bin/../cloudmin-pages.pl";
 $INC{'server-manager-lib.pl'} = 1;
 require "$Bin/../config_info.pl";
 my @defaults = map { $_->{'id'} } list_catalogue_columns();
-for my $value (undef, '', 'unknown-column') {
-	is_deeply([ map { $_->{'id'} } get_catalogue_columns($value) ], \@defaults,
-		'old or invalid settings retain the complete default table');
+for my $value ( undef, '', 'unknown-column' ) {
+	is_deeply([ map { $_->{'id'} } get_catalogue_columns($value) ],
+		  \@defaults,
+		  'old or invalid settings retain the complete default table');
 	}
-is_deeply([ map { $_->{'id'} } get_catalogue_columns('state,size,size,unknown') ],
+is_deeply(
+	[ map { $_->{'id'} } get_catalogue_columns('state,size,size,unknown') ],
 	[ qw(name size state) ],
 	'selection retains the name, removes duplicates and uses display order');
-%in = (cataloguecol_size => 1, cataloguecol_state => 1,
-	cataloguecol_unknown => 1);
+%in = ( cataloguecol_size => 1, cataloguecol_state => 1,
+	cataloguecol_unknown => 1 );
 is(parse_catalogue_columns(''), 'name,size,state',
-	'config parser saves only known selected columns');
+   'config parser saves only known selected columns');
 %in = ();
 is(parse_catalogue_columns(''), 'name',
-	'clearing optional columns leaves the entry link');
+   'clearing optional columns leaves the entry link');
 my $widget = show_catalogue_columns('name,size');
 like($widget,
-	qr/<input\b(?=[^>]*name=['"]cataloguecol_name['"])(?=[^>]*checked)(?=[^>]*disabled)/,
-	'the required Image column is visibly checked and locked');
+     qr/<input\b(?=[^>]*name=['"]cataloguecol_name['"])(?=[^>]*checked)(?=[^>]*disabled)/,
+     'the required Image column is visibly checked and locked');
 like($widget,
-	qr/<input\b(?=[^>]*name=['"]cataloguecol_size['"])(?=[^>]*checked)/,
-	'configuration reopens with the saved size selection');
+     qr/<input\b(?=[^>]*name=['"]cataloguecol_size['"])(?=[^>]*checked)/,
+     'configuration reopens with the saved size selection');
 unlike($widget,
-	qr/<input\b(?=[^>]*name=['"]cataloguecol_state['"])(?=[^>]*checked)/,
-	'unselected columns stay unchecked');
+       qr/<input\b(?=[^>]*name=['"]cataloguecol_state['"])(?=[^>]*checked)/,
+       'unselected columns stay unchecked');
 
-# Capture the table contract to check alignment and sorting for configured
-# views.
+# Capture the table contract to check alignment and sorting
+# for configured views.
 my ($heads, $rows, $types);
 {
 	no warnings 'redefine';
@@ -51,32 +53,32 @@ my ($heads, $rows, $types);
 		return '';
 		};
 	my $entry = { catalogue_key => 'fixture:aarch64', name => 'Fixture',
-		os => 'Linux', release => '1', architecture => 'aarch64',
-		format => 'qcow2',
-		download_size_bytes => 536870912, enabled => 1,
-		catalogue_origin => 'bundled' };
+		      os => 'Linux', release => '1', architecture => 'aarch64',
+		      format => 'qcow2',
+		      download_size_bytes => 536870912, enabled => 1,
+		      catalogue_origin => 'bundled' };
 	show_catalogue_page({ catalogue_columns => 'state,size',
-		catalogue_entries => [$entry] });
-	is_deeply($heads, ['', 'Image', 'Download size', 'State'],
-		'configured headings match the selected columns');
-	is_deeply($types, [undef, 'string', 'bytes', 'string'],
-		'size keeps numeric byte sorting after columns are hidden');
+			      catalogue_entries => [ $entry ] });
+	is_deeply($heads, [ '', 'Image', 'Download size', 'State' ],
+		  'configured headings match the selected columns');
+	is_deeply($types, [ undef, 'string', 'bytes', 'string' ],
+		  'size keeps numeric byte sorting after columns are hidden');
 	is(scalar(@{$rows->[0]}), scalar(@$heads),
-		'data cells align with selected headings');
+	   'data cells align with selected headings');
 	is($rows->[0]->[0]->{'value'}, 'fixture:aarch64',
-		'bulk selection keeps the correct catalogue key');
+	   'bulk selection keeps the correct catalogue key');
 	like($rows->[0]->[1], qr/edit_catalog_image\.cgi\?key=fixture/,
-		'entry remains accessible');
+	     'entry remains accessible');
 	like($rows->[0]->[2]->{'value'}, qr/data-filesize-bytes="536870912"/,
-		'size carries its raw bytes for theme sorting');
+	     'size carries its raw bytes for theme sorting');
 	is($rows->[0]->[2]->{'td'}, 'data-order="536870912"',
-		'table cell has an exact numeric sort value');
+	   'table cell has an exact numeric sort value');
 	is($rows->[0]->[3], 'Enabled', 'state is in the correct column');
 	delete($entry->{'download_size_bytes'});
 	show_catalogue_page({ readonly => 1, catalogue_columns => 'size',
-		catalogue_entries => [$entry] });
+			      catalogue_entries => [ $entry ] });
 	is($rows->[0]->[2]->{'value'}, 'Unknown',
-		'missing sizes are unknown rather than zero');
+	   'missing sizes are unknown rather than zero');
 	is($rows->[0]->[0], '', 'read-only rows have no selection checkbox');
 	}
 done_testing();

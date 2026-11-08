@@ -9,9 +9,10 @@ use WebminCore qw(convert_to_json convert_from_json);
 use POSIX qw(_exit WNOHANG);
 use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 
-# run(callback, timeout)
-# Returns a JSON-compatible probe result, or an error after the time/size limit.
-# Call only from the probe supervisor, before it opens any libvirt connection.
+# run(callback, timeout) Returns a JSON-compatible probe result, or an error
+# after the time/size limit. Call only from the probe supervisor, before it
+# opens any libvirt connection.
+
 sub run
 {
 my ($callback, $timeout) = @_;
@@ -34,7 +35,7 @@ close($writer);
 # stop(): kill and reap this probe without waiting indefinitely for exit.
 my $stop = sub {
 	kill('KILL', $pid);
-	for (1..10) {
+	for (1 .. 10) {
 		last if (waitpid($pid, WNOHANG) != 0);
 		Time::HiRes::sleep(0.01);
 		}
@@ -43,10 +44,10 @@ my $stop = sub {
 local $SIG{$_} = sub { $stop->(); _exit(0); } foreach qw(TERM INT HUP);
 my $select = IO::Select->new($reader);
 # Read a bounded JSON reply using the monotonic deadline.
-my $deadline = clock_gettime(CLOCK_MONOTONIC)+$timeout;
-my ($bytes, $finished) = ('', 0);
-while (length($bytes) <= 1024*1024) {
-	my $remaining = $deadline-clock_gettime(CLOCK_MONOTONIC);
+my $deadline = clock_gettime(CLOCK_MONOTONIC) + $timeout;
+my ($bytes, $finished) = ( '', 0 );
+while (length($bytes) <= 1024 * 1024) {
+	my $remaining = $deadline - clock_gettime(CLOCK_MONOTONIC);
 	last if ($remaining <= 0);
 	next if (!$select->can_read($remaining > 1 ? 1 : $remaining));
 	my $length = sysread($reader, my $chunk, 65536);

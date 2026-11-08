@@ -36,14 +36,15 @@ my %POOL_STATES = (
 
 # Pool backends do not all support the same provisioning operations.
 my %EXTERNAL_STORAGE = map { $_ => 1 } qw(iscsi iscsi-direct scsi mpath);
-my %MANAGED_STORAGE = map { $_ => 1 }
+my %MANAGED_STORAGE =
+	map { $_ => 1 }
 	qw(dir fs netfs disk logical lvmthin rbd gluster zfs vstorage);
 
-# Libvirt flag values used with fake connections in tests, so the constants
-# are spelled out here instead of being read from Sys::Virt at run time.
+# Libvirt flag values used with fake connections in tests, so the constants are
+# spelled out here instead of being read from Sys::Virt at run time.
 our $XML_INACTIVE = 2;
-our $UNDEFINE_FLAGS = 1 | 2 | 4 | 16;	# managed save, snapshots, NVRAM,
-					# checkpoints metadata
+our $UNDEFINE_FLAGS = 1 | 2 | 4 | 16;    # managed save, snapshots, NVRAM,
+# checkpoints metadata
 our $ADDRESSES_LEASE = 0;
 our $ADDRESSES_AGENT = 1;
 our $ADDRESSES_ARP = 2;
@@ -51,14 +52,14 @@ our $ADDRESSES_ARP = 2;
 # new(class, [uri => value], [readonly => bool], [connection_factory => code],
 #     [sys_net => directory], [on_remove => callback], [startup => tracker],
 #     [serial_log => log_manager], [lvm => driver])
-# Creates an adapter, defaulting to qemu:///system and read-only access.
-# An optional factory receives (uri, readonly) and returns a connection object.
+# Creates an adapter, defaulting to qemu:///system and read-only access. An
+# optional factory receives (uri, readonly) and returns a connection object.
 # sys_net defaults to /sys/class/net and can point to a bridge fixture in tests.
 # on_remove(uuid, job_id) cleans controller state after local guest removal.
 # serial_log optionally configures, reads and removes managed local console
-# logs.
-# startup tracks balloon targets across requests on the local host.
-# lvm optionally supplies a driver; local LVM inventory creates one otherwise.
+# logs. startup tracks balloon targets across requests on the local host. lvm
+# optionally supplies a driver; local LVM inventory creates one otherwise.
+
 sub new
 {
 my ($class, %opts) = @_;
@@ -76,6 +77,7 @@ return bless({
 
 # storage_pools(self) returns native pools and discovered LVM thin destinations.
 # Only local logical pools use host LVM commands; remote inventory stays native.
+
 sub storage_pools
 {
 my ($self) = @_;
@@ -83,22 +85,30 @@ my @pools;
 foreach my $pool ($self->connect()->list_all_storage_pools(0)) {
 	my ($type) = parse_pool_xml($pool->get_xml_description(0));
 	if ($type eq 'logical' && $self->uri() eq 'qemu:///system') {
-		# Local VGs expose separate thick and thin allocation destinations.
-		my $driver = $self->{'lvm'} ||= Cloudmin::LVM->new(readonly => $self->{'readonly'});
+		# Local VGs expose separate thick and thin
+		# allocation destinations.
+		my $driver =
+			$self->{'lvm'} ||= Cloudmin::LVM->new(readonly =>
+								      $self->{'readonly'});
 		my @logical = eval { $driver->pools($pool) };
 		if ($@) {
-			# A missing VG must not hide unrelated file storage or other guests.
-			$self->{'storage_errors'}->{$pool->get_uuid_string()} = error_message($@);
+			# A missing VG must not hide unrelated file
+			# storage or other guests.
+			$self->{'storage_errors'}->{$pool->get_uuid_string()} =
+				error_message($@);
 			push(@pools, $pool);
 			}
 		else {
-			# A successful reread clears a previous inventory failure.
-			delete($self->{'storage_errors'}->{$pool->get_uuid_string()});
+			# A successful reread clears a
+			# previous inventory failure.
+			delete($self->{'storage_errors'}
+			       ->{$pool->get_uuid_string()});
 			push(@pools, @logical);
 			}
 		}
 	else {
-		# Preserve other backends and remote pools as native libvirt objects.
+		# Preserve other backends and remote pools as
+		# native libvirt objects.
 		push(@pools, $pool);
 		}
 	}
@@ -106,70 +116,84 @@ return @pools;
 }
 
 # storage_pool(self, uuid) resolves native and thin destinations consistently.
+
 sub storage_pool
 {
 my ($self, $uuid) = @_;
 my ($native) = grep { $_->get_uuid_string() eq $uuid }
-	$self->connect()->list_all_storage_pools(0);
+	       $self->connect()->list_all_storage_pools(0);
 # Resolve ordinary pools without parsing every unrelated pool's definition.
-return $native if ($native &&
+return $native if (
+	$native &&
 	(parse_pool_xml($native->get_xml_description(0)))[0] ne 'logical');
 my ($pool) = grep { $_->get_uuid_string() eq $uuid } storage_pools($self);
-die $self->{'storage_errors'}->{$uuid}."\n" if ($self->{'storage_errors'}->{$uuid});
+die $self->{'storage_errors'}->{$uuid}."\n"
+	if ($self->{'storage_errors'}->{$uuid});
 die "Storage pool is missing\n" if (!$pool);
 return $pool;
 }
 
 # disk_pool(type) identifies supported writable disk backends.
-sub disk_pool { return ($_[0] || '') =~ /\A(?:dir|fs|netfs|logical|lvmthin)\z/; }
+
+sub disk_pool
+{
+return ($_[0] || '') =~ /\A(?:dir|fs|netfs|logical|lvmthin)\z/;
+}
 
 # block_pool(pool) identifies LVM destinations that store raw block devices.
+
 sub block_pool
 {
 my ($type) = parse_pool_xml($_[0]->get_xml_description(0));
 return $type eq 'logical' || $type eq 'lvmthin';
 }
 
-# file_pool(self, [preferred_uuid]) selects file storage for images and firmware.
-# These auxiliary files cannot be placed in a volume group or thin pool.
+# file_pool(self, [preferred_uuid]) selects file storage for images and
+# firmware. These auxiliary files cannot be placed in a
+# volume group or thin pool.
+
 sub file_pool
 {
 my ($self, $preferred) = @_;
 my @pools = grep { $_->is_active() &&
-	(parse_pool_xml($_->get_xml_description(0)))[0] =~ /\A(?:dir|fs|netfs)\z/ }
-	storage_pools($self);
+	(parse_pool_xml($_->get_xml_description(0)))[
+		0] =~ /\A(?:dir|fs|netfs)\z/ }
+	    storage_pools($self);
 my ($pool) = grep { $_->get_uuid_string() eq ($preferred || '') } @pools;
 # Libvirt lists pools in no particular order. Prefer the conventional default
 # pool, then the first by name, so auxiliary files land predictably.
 ($pool) = grep { $_->get_name() eq 'default' } @pools if (!$pool);
 ($pool) = sort { $a->get_name() cmp $b->get_name() } @pools if (!$pool);
-die "An active file storage pool is required for images and firmware\n" if (!$pool);
+die "An active file storage pool is required for images and firmware\n"
+	if (!$pool);
 return $pool;
 }
 
-# uri(self)
-# Returns the configured libvirt connection URI.
+# uri(self) Returns the configured libvirt connection URI.
+
 sub uri
 {
 my ($self) = @_;
 return $self->{'uri'};
 }
 
-# log_call(method, parameters)
-# Attaches a libvirt API call to the next Webmin action log. Callers select
-# public parameters explicitly; never pass domain XML or provisioning inputs.
+# log_call(method, parameters) Attaches a libvirt API call to the next Webmin
+# action log. Callers select public parameters explicitly; never pass domain XML
+# or provisioning inputs.
+
 sub log_call
 {
 my ($method, $parameters) = @_;
 # Webmin's command record also carries API invocations. Identify the binding
 # explicitly rather than implying that an equivalent shell command was run.
 additional_log('exec', undef, "libvirt API: $method\n".
-	convert_to_json($parameters, 1));
+	       convert_to_json($parameters, 1));
 }
 
-# module_error(self)
-# Returns the Sys::Virt load error, or undef when the bindings are available
-# or an injected connection factory makes them unnecessary.
+# module_error(self) Returns the Sys::Virt load error, or undef when the
+# bindings are available or an injected connection factory
+# makes them unnecessary.
+
 sub module_error
 {
 my ($self) = @_;
@@ -181,8 +205,8 @@ my $ok = eval { require Sys::Virt; 1 };
 return $ok ? undef : error_message($@);
 }
 
-# connect(self)
-# Opens and caches the configured libvirt connection.
+# connect(self) Opens and caches the configured libvirt connection.
+
 sub connect
 {
 my ($self) = @_;
@@ -215,16 +239,18 @@ $self->{'connection'} = $connection;
 return $connection;
 }
 
-# disconnect(self)
-# Releases this adapter's connection before restarting its libvirt daemon.
+# disconnect(self) Releases this adapter's connection before
+# restarting its libvirt daemon.
+
 sub disconnect
 {
 my ($self) = @_;
 delete($self->{'connection'});
 }
 
-# probe(self)
-# Tests the connection and returns a result hash instead of throwing an error.
+# probe(self) Tests the connection and returns a result hash instead
+# of throwing an error.
+
 sub probe
 {
 my ($self) = @_;
@@ -238,20 +264,24 @@ return {
 return { 'ok' => 1 };
 }
 
-# get_host_info(self)
-# Returns basic, read-only details about the connected hypervisor.
+# get_host_info(self) Returns basic, read-only details about the
+# connected hypervisor.
+
 sub get_host_info
 {
 my ($self) = @_;
 my $connection = $self->connect();
 # Webmin resolves the local FQDN; remote connections identify their own host.
 my $hostname = $self->{'uri'} =~ m{\Aqemu:///}
-	? get_system_hostname() : $connection->get_hostname();
-# Match the installer's preferred local daemon layout. Remote connections
-# must not inherit the management host's installed binaries.
+	? get_system_hostname()
+	: $connection->get_hostname();
+# Match the installer's preferred local daemon layout. Remote connections must
+# not inherit the management host's installed binaries.
 my $layout = $self->{'uri'} eq 'qemu:///system'
-	? (-x '/usr/sbin/virtqemud' ? 'modular'
-		: -x '/usr/sbin/libvirtd' ? 'monolithic' : undef) : undef;
+	? (-x '/usr/sbin/virtqemud'
+		? 'modular'
+		: -x '/usr/sbin/libvirtd' ? 'monolithic' : undef)
+	: undef;
 return {
 	'uri' => $self->{'uri'},
 	'hostname' => $hostname,
@@ -264,10 +294,11 @@ return {
 };
 }
 
-# get_host_capabilities(self, [architecture])
-# Returns the host CPU count, memory, and the machine type and firmware
-# choices libvirt offers for KVM guests of the given architecture. The
-# architecture defaults to the host CPU reported in libvirt's capabilities XML.
+# get_host_capabilities(self, [architecture]) Returns the host CPU count,
+# memory, and the machine type and firmware choices libvirt offers for KVM
+# guests of the given architecture. The architecture defaults to the host CPU
+# reported in libvirt's capabilities XML.
+
 sub get_host_capabilities
 {
 my ($self, $architecture) = @_;
@@ -279,19 +310,21 @@ $architecture ||= $host_arch;
 # Creation supports native KVM guests only, not cross-architecture emulation.
 die "Only native x86-64 and ARM64 KVM guests are supported\n"
 	if ($architecture !~ /\A(?:x86_64|aarch64)\z/ ||
-	$architecture ne $host_arch);
+	    $architecture ne $host_arch);
 my $machine = get_machine_type($architecture);
 # Query firmware support for the machine type that creation will actually use.
 my $domain = parse_xml_document($connection->get_domain_capabilities(
 	undef, $architecture, $machine, 'kvm', 0));
 my @firmware = map { $_->textContent() }
-	$domain->findnodes('/domainCapabilities/os/enum[@name="firmware"]/value');
+	       $domain->findnodes(
+		       '/domainCapabilities/os/enum[@name="firmware"]/value');
 # x86 BIOS can be implicit even when the firmware enum lists only EFI.
 push(@firmware, 'bios')
 	if ($architecture eq 'x86_64' && !grep { $_ eq 'bios' } @firmware);
-my @machines = map { $_->textContent() }
+my @machines =
+	map { $_->textContent() }
 	$caps->findnodes('/capabilities/guest/arch[@name="'.$architecture.
-	'"]/machine');
+			 '"]/machine');
 return {
 	architecture => $architecture, host_architecture => $host_arch,
 	machine => $machine, machines => \@machines,
@@ -304,17 +337,19 @@ return {
 };
 }
 
-# parse_xml_document(xml)
-# Parses libvirt XML without resolving external entities or reading DTDs.
+# parse_xml_document(xml) Parses libvirt XML without resolving external
+# entities or reading DTDs.
+
 sub parse_xml_document
 {
 require XML::LibXML;
 return XML::LibXML->load_xml(string => $_[0], no_network => 1,
-	load_ext_dtd => 0, expand_entities => 0);
+			     load_ext_dtd => 0, expand_entities => 0);
 }
 
-# get_machine_type(architecture)
-# Returns the libvirt machine type alias Cloudmin uses for new guests.
+# get_machine_type(architecture) Returns the libvirt machine type alias Cloudmin
+# uses for new guests.
+
 sub get_machine_type
 {
 my ($architecture) = @_;
@@ -323,9 +358,10 @@ return 'virt' if (($architecture || '') =~ /^(?:aarch64|armv7l|riscv64)$/);
 return 'q35';
 }
 
-# volume(self, pool_uuid, name, [expected_key])
-# Resolves a current active pool and volume, preserving lookup failures.
-# Returns (pool, volume); a missing volume is undef, while a key mismatch dies.
+# volume(self, pool_uuid, name, [expected_key]) Resolves a current active pool
+# and volume, preserving lookup failures. Returns (pool, volume); a missing
+# volume is undef, while a key mismatch dies.
+
 sub volume
 {
 my ($self, $pool_id, $name, $key) = @_;
@@ -337,13 +373,13 @@ my ($volume) = grep { $_->get_name() eq $name } $pool->list_all_volumes();
 # A replacement with the same name must not inherit the old volume's trust.
 die "The selected volume has changed\n"
 	if ($volume && defined($key) && $key ne $volume->get_key());
-return ($pool, $volume);
+return ( $pool, $volume );
 }
 
-# refresh_pool(pool, [timeout])
-# Retries refresh while a libvirt storage job is busy; timeout defaults to 30
-# seconds.
-# Other failures propagate immediately; the caller's job deadline still applies.
+# refresh_pool(pool, [timeout]) Retries refresh while a libvirt storage job is
+# busy; timeout defaults to 30 seconds. Other failures propagate immediately;
+# the caller's job deadline still applies.
+
 sub refresh_pool
 {
 my ($pool, $timeout) = @_;
@@ -352,7 +388,8 @@ while (1) {
 	return if (eval { $pool->refresh(); 1 });
 	my $error = $@;
 	# Libvirt rejects refresh while a volume clone or upload is running.
-	die $error if (!ref($error) || !$error->isa('Sys::Virt::Error') ||
+	die $error if (
+		!ref($error) || !$error->isa('Sys::Virt::Error') ||
 		$error->code() != 1 ||
 		$error->message() !~ /pool .* has asynchronous jobs running/ ||
 		Time::HiRes::time() >= $end);
@@ -360,9 +397,10 @@ while (1) {
 	}
 }
 
-# clone_disk(self, pool_uuid, name, source, bytes, format, journal)
-# Makes an independent libvirt volume and grows it without changing the image.
-# source contains pool, volume and volume_key; journal() records cleanup intent.
+# clone_disk(self, pool_uuid, name, source, bytes, format, journal) Makes an
+# independent libvirt volume and grows it without changing the image. source
+# contains pool, volume and volume_key; journal() records cleanup intent.
+
 sub clone_disk
 {
 my ($self, $pool_id, $name, $source, $bytes, $format, $journal) = @_;
@@ -380,32 +418,45 @@ $journal->();
 # then copy its checked output without asking a privileged process to parse it.
 if (block_pool($pool) || $original->isa('Cloudmin::LVM::Volume')) {
 	my $source_doc = parse_xml_document($original->get_xml_description(0));
-	my $source_format = $source_doc->findvalue('/volume/target/format/@type') || 'raw';
+	my $source_format =
+		$source_doc->findvalue('/volume/target/format/@type') || 'raw';
 	my ($files, $layers) = $self->conversion_sources($original);
 	my $destination_format = block_pool($pool) ? 'raw' : $format;
-	# Allocate only after validating the source chain; the journal owns cleanup.
+	# Allocate only after validating the source chain; the
+	# journal owns cleanup.
 	my $volume = $pool->create_volume('<volume><name>'.xml_escape($name).
-		"</name><capacity unit='bytes'>$bytes</capacity><target><format type='$destination_format'/></target></volume>");
-	my $runner = $self->{'disk_worker'} || sub { Cloudmin::Worker->new()->run(@_) };
-	# Allow input-format overhead while bounding the converted virtual capacity.
-	$runner->('convert', {format => $source_format, output_format => $destination_format,
-		capacity => $bytes, limit => int($bytes*1.05)+16*1024**2, layers => $layers},
-		files => $files, consume => sub {
+					  "</name><capacity unit='bytes'>$bytes</capacity><target><format type='$destination_format'/></target></volume>");
+	my $runner = $self->{'disk_worker'} ||
+		     sub { Cloudmin::Worker->new()->run(@_) };
+	# Allow input-format overhead while bounding the
+	# converted virtual capacity.
+	$runner->('convert',
+		  { format => $source_format,
+		    output_format => $destination_format,
+		    capacity => $bytes, limit =>
+						int($bytes * 1.05) + 16 * 1024**2, layers =>
+											   $layers },
+		  files => $files, consume => sub {
 			my ($file, $info) = @_;
-			die "Converted disk exceeds its destination\n" if ($info->{'virtual-size'} > $bytes);
+			die "Converted disk exceeds its destination\n"
+				if ($info->{'virtual-size'} > $bytes);
 			$self->write_volume($volume, $file);
 			});
 	return $self->get_storage_volume_record($volume);
 	}
 log_call('Sys::Virt::StoragePool::clone_volume', {
-	pool => $pool_id, volume => $name, source_pool => $source->{'pool'},
+	pool => $pool_id, volume => $name, source_pool =>
+						   $source->{'pool'},
 	source_volume => $source->{'volume'}, capacity_bytes => $bytes,
 	format => $format, flags => 0 });
-my $volume = $pool->clone_volume("<volume><name>".xml_escape($name)."</name>".
-	"<capacity unit='bytes'>$bytes</capacity><allocation>0</allocation>".
-	"<target><format type='$format'/></target></volume>", $original, 0);
-# Some storage drivers clone at the original capacity despite the requested
-# size.
+my $volume =
+	$pool->clone_volume("<volume><name>".xml_escape($name)."</name>".
+			    "<capacity unit='bytes'>$bytes</capacity><allocation>0</allocation>".
+			    "<target><format type='$format'/></target></volume>",
+			    $original,
+			    0);
+# Some storage drivers clone at the original capacity
+# despite the requested size.
 my $capacity = $volume->get_info()->{'capacity'};
 if ($capacity < $bytes) {
 	# Record growth separately when the pool cloned at the source size.
@@ -418,31 +469,37 @@ if ($capacity < $bytes) {
 return $self->get_storage_volume_record($volume);
 }
 
-# conversion_sources(self, volume) stages a managed backing chain for conversion.
-# Only libvirt-listed local volumes may supply backing bytes. The worker rewrites
-# links on private copies, so guest-controlled paths never select host files.
+# conversion_sources(self, volume) stages a managed backing chain for
+# conversion. Only libvirt-listed local volumes may supply backing bytes. The
+# worker rewrites links on private copies, so guest-controlled paths
+# never select host files.
+
 sub conversion_sources
 {
 my ($self, $volume) = @_;
 my (%files, %seen, @layers, %managed);
 while ($volume) {
 	my $path = $volume->get_path();
-	die "The disk backing chain is cyclic or too deep\n" if ($seen{$path}++ || @layers >= 32);
+	die "The disk backing chain is cyclic or too deep\n"
+		if ($seen{$path}++ || @layers >= 32);
 	my $doc = parse_xml_document($volume->get_xml_description(0));
 	my $format = $doc->findvalue('/volume/target/format/@type') || 'raw';
-	die "Unsupported disk backing format\n" if ($format !~ /\A(?:raw|qcow2)\z/);
+	die "Unsupported disk backing format\n"
+		if ($format !~ /\A(?:raw|qcow2)\z/);
 	# Fixed private names let the worker rebuild links without host paths.
 	my $name = @layers ? 'layer'.scalar(@layers) : 'image';
 	$files{$name} = $path;
-	push(@layers, {name => $name, format => $format});
+	push(@layers, { name => $name, format => $format });
 	my $backing = $doc->findvalue('/volume/backingStore/path');
 	last if (!$backing);
 	die "Raw disks cannot have backing files\n" if ($format ne 'qcow2');
 	if (!%managed) {
-		# Build this map only for chained images; ordinary imports need no scan.
+		# Build this map only for chained images; ordinary
+		# imports need no scan.
 		foreach my $pool ($self->storage_pools()) {
 			next if (!$pool->is_active());
-			my ($type) = parse_pool_xml($pool->get_xml_description(0));
+			my ($type) =
+				parse_pool_xml($pool->get_xml_description(0));
 			next if ($type !~ /\A(?:dir|fs|netfs)\z/);
 			foreach my $item ($pool->list_all_volumes()) {
 				my $resolved = Cwd::abs_path($item->get_path());
@@ -451,15 +508,19 @@ while ($volume) {
 			}
 		}
 	$backing = dirname($path).'/'.$backing if ($backing !~ m{^/});
-	# Resolve relative links against their layer, then require managed storage.
+	# Resolve relative links against their layer, then
+	# require managed storage.
 	my $resolved = Cwd::abs_path($backing);
 	$volume = $resolved ? $managed{$resolved} : undef;
-	die "The disk backing file is not in an active managed file pool\n" if (!$volume);
+	die "The disk backing file is not in an active managed file pool\n"
+		if (!$volume);
 	}
-return (\%files, @layers > 1 ? \@layers : undef);
+return ( \%files, @layers > 1 ? \@layers : undef );
 }
 
-# write_volume(self, volume, file) copies checked disk bytes through its backend.
+# write_volume(self, volume, file) copies checked disk bytes
+# through its backend.
+
 sub write_volume
 {
 my ($self, $volume, $file) = @_;
@@ -481,9 +542,10 @@ my $ok = eval {
 if (!$ok) { my $error = $@; eval { $stream->abort(); }; die $error; }
 }
 
-# create_disk(self, pool_uuid, name, bytes, journal)
-# Allocates an empty QCOW2 file or raw logical volume at the requested capacity.
-# The required journal() callback records the volume for cleanup before allocation.
+# create_disk(self, pool_uuid, name, bytes, journal) Allocates an empty QCOW2
+# file or raw logical volume at the requested capacity. The required journal()
+# callback records the volume for cleanup before allocation.
+
 sub create_disk
 {
 my ($self, $pool_id, $name, $bytes, $journal) = @_;
@@ -497,14 +559,16 @@ log_call('Sys::Virt::StoragePool::create_volume', {
 	pool => $pool_id, volume => $name, capacity_bytes => $bytes,
 	format => $format, flags => 0 });
 my $volume = $pool->create_volume('<volume><name>'.xml_escape($name).
-	"</name><capacity unit='bytes'>$bytes</capacity><allocation>0</allocation>".
-	"<target><format type='$format'/></target></volume>", 0);
+				  "</name><capacity unit='bytes'>$bytes</capacity><allocation>0</allocation>".
+				  "<target><format type='$format'/></target></volume>", 0);
 return $self->get_storage_volume_record($volume);
 }
 
 # upload_seed(self, pool_uuid, name, file, journal, [format], [capacity])
-# Imports checked bytes into the backend; defaults to a raw seed sized to the file.
-# journal() records cleanup intent before the destination volume is created.
+# Imports checked bytes into the backend; defaults to a raw seed sized to the
+# file. journal() records cleanup intent before the
+# destination volume is created.
+
 sub upload_seed
 {
 my ($self, $pool_id, $name, $file, $journal, $format, $capacity) = @_;
@@ -519,45 +583,54 @@ $capacity ||= $size;
 Cloudmin::Worker::byte_limit($capacity);
 $journal->();
 if (block_pool($pool)) {
-	# Seed and restore imports share this path; LVs always store raw sectors.
+	# Seed and restore imports share this path; LVs
+	# always store raw sectors.
 	my $volume = $pool->create_volume('<volume><name>'.xml_escape($name).
-		"</name><capacity unit='bytes'>$capacity</capacity><target><format type='raw'/></target></volume>");
+					  "</name><capacity unit='bytes'>$capacity</capacity><target><format type='raw'/></target></volume>");
 	if ($format eq 'raw') {
-		# The caller already inspected these bytes; no format conversion is needed.
+		# The caller already inspected these bytes; no format
+		# conversion is needed.
 		$volume->write_file($file);
 		}
 	else {
-		# Parse QCOW2 only in the isolated worker, then copy its raw result.
-		my $runner = $self->{'disk_worker'} || sub { Cloudmin::Worker->new()->run(@_) };
-		# A fully written QCOW2 file slightly exceeds its virtual capacity, so
-		# budget the staged input like clone_disk; the raw output still has to fit.
-		$runner->('convert', {format => $format, output_format => 'raw',
-			limit => int($capacity*1.05)+16*1024**2},
-			files => {image => $file}, consume => sub { $volume->write_file($_[0]); });
+		# Parse QCOW2 only in the isolated worker, then
+		# copy its raw result.
+		my $runner = $self->{'disk_worker'} ||
+			     sub { Cloudmin::Worker->new()->run(@_) };
+		# A fully written QCOW2 file slightly exceeds its virtual
+		# capacity, so budget the staged input like clone_disk; the raw
+		# output still has to fit.
+		$runner->('convert', { format => $format,
+				       output_format => 'raw',
+				       limit => int($capacity * 1.05) + 16 * 1024**2 },
+			  files => { image => $file }, consume =>
+							       sub { $volume->write_file($_[0]); });
 		}
 	return $self->get_storage_volume_record($volume);
 	}
 log_call('Sys::Virt::StoragePool::create_volume', {
 	pool => $pool_id, volume => $name, capacity_bytes => $capacity,
 	format => $format });
-my $volume = $pool->create_volume("<volume><name>".xml_escape($name)."</name>".
-	"<capacity unit='bytes'>$capacity</capacity><target><format type='$format'/></target></volume>");
+my $volume =
+	$pool->create_volume("<volume><name>".xml_escape($name)."</name>".
+			     "<capacity unit='bytes'>$capacity</capacity><target><format type='$format'/></target></volume>");
 my $stream = $self->connect()->new_stream();
 # Stream the input file without granting the guest access to staging files.
 my $ok = eval {
 	# Record the transfer size, never the seed's credentials or contents.
 	log_call('Sys::Virt::StorageVol::upload', {
-		pool => $pool_id, volume => $name, bytes => $size, offset => 0,
+		pool => $pool_id, volume => $name, bytes => $size,
+		offset => 0,
 		flags => 0 });
 	$volume->upload($stream, 0, $size, 0);
 	open(my $fh, '<', $file) || die "Cannot read cloud-init seed: $!\n";
 	binmode($fh);
 	$stream->send_all(sub {
-		# reader(stream, buffer, length)
-		# Supplies the next seed bytes to libvirt.
+		# reader(stream, buffer, length) Supplies the next
+		# seed bytes to libvirt.
 		my $read = read($fh, $_[1], $_[2]);
-		# An I/O error must abort the upload rather than masquerade as
-		# EOF.
+		# An I/O error must abort the upload rather
+		# than masquerade as EOF.
 		die "Cannot read cloud-init seed: $!\n" if (!defined($read));
 		return $read;
 		});
@@ -572,8 +645,9 @@ die $error if (!$ok);
 return $self->get_storage_volume_record($volume);
 }
 
-# define_guest(self, xml)
-# Defines a persistent domain using libvirt's schema validation.
+# define_guest(self, xml) Defines a persistent domain using
+# libvirt's schema validation.
+
 sub define_guest
 {
 my ($self, $xml) = @_;
@@ -586,14 +660,15 @@ die "A domain with this name or UUID already exists\n" if (grep {
 	} $self->connect()->list_all_domains());
 # Configure recording before the first boot, including clones and restores.
 $xml = $self->{'serial_log'}->configure($xml) if ($self->{'serial_log'} &&
-	!$self->{'readonly'} && $self->uri() eq 'qemu:///system');
+						  !$self->{'readonly'} && $self->uri() eq 'qemu:///system');
 log_call('Sys::Virt::define_domain', { uuid => $uuid, name => $name,
-	flags => 1 });
+				       flags => 1 });
 return $self->connect()->define_domain($xml, 1);
 }
 
-# check_creation_cleanup(self, job)
-# Refuses rollback of a committed guest whose disks or history changed later.
+# check_creation_cleanup(self, job) Refuses rollback of a committed guest whose
+# disks or history changed later.
+
 sub check_creation_cleanup
 {
 my ($self, $job) = @_;
@@ -605,37 +680,47 @@ die "Virtual machine ownership changed; cleanup stopped\n"
 	if (($metadata->{'job'} || '') ne $job->{'id'});
 # Later history may still depend on disks that creation rollback would remove.
 die "Remove snapshots, backup checkpoints and managed saves before cleaning up this virtual machine\n"
-	if ($domain->list_all_snapshots(0) || $domain->list_all_checkpoints(0) ||
-		$domain->has_managed_save_image(0));
+	if ($domain->list_all_snapshots(0) ||
+	    $domain->list_all_checkpoints(0) ||
+	    $domain->has_managed_save_image(0));
 # Resolve the journalled volumes before comparing live and saved definitions.
 my %paths;
 foreach my $kind (qw(seed disk)) {
 	my $saved = $job->{'resources'}->{$kind} || next;
-	my ($pool, $volume) = $self->volume($r->{'pool'}, $saved->{'name'}, $saved->{'key'});
+	my ($pool, $volume) =
+		$self->volume($r->{'pool'}, $saved->{'name'}, $saved->{'key'});
 	if ($volume) {
-		# Refuse shared disks before stopping the guest, as well as at deletion.
-		Cloudmin::Images::assert_unused(undef, $self->connect(), $pool, $volume, $r->{'uuid'});
+		# Refuse shared disks before stopping the guest, as
+		# well as at deletion.
+		Cloudmin::Images::assert_unused(undef, $self->connect(), $pool,
+						$volume, $r->{'uuid'});
 		$paths{$volume->get_path()} = 1;
-	}
-}
-# Inspect both definitions; pending disk edits must not become orphaned storage.
-foreach my $flags (0, 2) {
-	my $xml = $domain->get_xml_description($flags);
-	my $doc = parse_xml_document($xml);
-	foreach my $disk ($doc->findnodes('/domain/devices/disk[@device="disk"]')) {
-		my $path = $disk->findvalue('source/@file') || $disk->findvalue('source/@dev');
-		# Added disks and backing chains need the ordinary deletion
-		# review.
-		die "The virtual machine disks changed; use its deletion page to review them\n"
-			if (!$path || !$paths{$path} || $disk->exists('backingStore/source'));
-		if ($domain->is_active()) {
-			# A running block job can change disk ownership after
-			# these checks.
-			my $block = $domain->get_block_job_info($disk->findvalue('target/@dev'), 0);
-			die "Wait for the current disk operation to finish\n" if ($block && $block->{'type'});
 		}
 	}
-}
+# Inspect both definitions; pending disk edits must not become orphaned storage.
+foreach my $flags ( 0, 2 ) {
+	my $xml = $domain->get_xml_description($flags);
+	my $doc = parse_xml_document($xml);
+	foreach my $disk (
+		$doc->findnodes('/domain/devices/disk[@device="disk"]')) {
+		my $path = $disk->findvalue('source/@file') ||
+			   $disk->findvalue('source/@dev');
+		# Added disks and backing chains need the
+		# ordinary deletion review.
+		die "The virtual machine disks changed; use its deletion page to review them\n"
+			if (!$path || !$paths{$path} ||
+			    $disk->exists('backingStore/source'));
+		if ($domain->is_active()) {
+			# A running block job can change disk
+			# ownership after these checks.
+			my $block =
+				$domain->get_block_job_info(
+					$disk->findvalue('target/@dev'), 0);
+			die "Wait for the current disk operation to finish\n"
+				if ($block && $block->{'type'});
+			}
+		}
+	}
 # Check whole-domain jobs and firmware ownership before stopping the guest.
 die "Wait for the current libvirt operation to finish\n"
 	if ($domain->is_active() && $domain->get_job_info()->{'type'});
@@ -643,17 +728,18 @@ Cloudmin::VMManage::check_nvram($self, $domain);
 return 1;
 }
 
-# remove_created_guest(self, uuid, job_id)
-# Removes only a domain carrying this creation job's ownership marker.
+# remove_created_guest(self, uuid, job_id) Removes only a domain carrying this
+# creation job's ownership marker.
+
 sub remove_created_guest
 {
 my ($self, $uuid, $job_id) = @_;
 my ($domain) = grep { $_->get_uuid_string() eq $uuid }
-	$self->connect()->list_all_domains();
+	       $self->connect()->list_all_domains();
 # Cleanup is idempotent when an earlier attempt already removed the guest.
 if (!$domain) {
-	# Retry key cleanup even if an interrupted removal already undefined the
-	# VM.
+	# Retry key cleanup even if an interrupted removal
+	# already undefined the VM.
 	$self->removed_guest($uuid, $job_id);
 	return 1;
 	}
@@ -673,9 +759,9 @@ $self->removed_guest($uuid, $job_id);
 return 1;
 }
 
-# remove_created_volume(self, pool_uuid, name, [expected_key])
-# Deletes a journalled volume only after checking every remaining domain
-# reference.
+# remove_created_volume(self, pool_uuid, name, [expected_key]) Deletes a
+# journalled volume only after checking every remaining domain reference.
+
 sub remove_created_volume
 {
 my ($self, $pool_id, $name, $key) = @_;
@@ -690,10 +776,11 @@ $volume->delete(0);
 return 1;
 }
 
-# list_domains(self, [strict], [include_addresses])
-# Returns sorted inventory; strict reads reject incomplete creation preflight
-# data. Address discovery is optional so preflight does not query guest agents.
-# Both optional flags default to false.
+# list_domains(self, [strict], [include_addresses]) Returns sorted inventory;
+# strict reads reject incomplete creation preflight data. Address discovery is
+# optional so preflight does not query guest agents. Both optional
+# flags default to false.
+
 sub list_domains
 {
 my ($self, $strict, $include_addresses) = @_;
@@ -703,18 +790,20 @@ my @records;
 foreach my $domain (@domains) {
 	my $record = eval { $self->get_domain_record($domain, $strict) };
 	if (!$record) {
-		# A guest can be undefined after enumeration. Other read failures
-		# must still stop preflight rather than hide a possible conflict.
+		# A guest can be undefined after enumeration. Other read
+		# failures must still stop preflight rather than hide
+		# a possible conflict.
 		my $error = $@;
 		next if (ref($error) && $error->isa('Sys::Virt::Error') &&
-			$error->code() == 42);
+			 $error->code() == 42);
 		die $error;
 		}
 	if ($include_addresses) {
-		# Stopped guests must not show an old lease as a current
-		# address.
+		# Stopped guests must not show an old lease
+		# as a current address.
 		$record->{'addresses'} = $record->{'active'}
-			? $self->get_domain_addresses($domain, $record) : [];
+			? $self->get_domain_addresses($domain, $record)
+			: [ ];
 		}
 	push(@records, $record);
 	}
@@ -722,10 +811,11 @@ foreach my $domain (@domains) {
 return \@records;
 }
 
-# get_domain(self, id, [skip_addresses])
-# Returns one guest's inventory record with disks, interfaces, console and
-# address details, or undef when no guest matches the UUID or name.
-# skip_addresses defaults to false; set it to avoid guest-agent queries.
+# get_domain(self, id, [skip_addresses]) Returns one guest's inventory record
+# with disks, interfaces, console and address details, or undef when no guest
+# matches the UUID or name. skip_addresses defaults to false; set it to avoid
+# guest-agent queries.
+
 sub get_domain
 {
 my ($self, $id, $skip_addresses) = @_;
@@ -737,9 +827,10 @@ $self->complete_domain($domain, $record, $skip_addresses);
 return $record;
 }
 
-# get_guest_status(self, uuid)
-# Reads power, guest-agent and address signals inside the bounded status worker.
-# A responding agent does not establish that guest setup has finished.
+# get_guest_status(self, uuid) Reads power, guest-agent and address signals
+# inside the bounded status worker. A responding agent does not establish that
+# guest setup has finished.
+
 sub get_guest_status
 {
 my ($self, $uuid) = @_;
@@ -752,16 +843,15 @@ return $record if (!$record->{'active'});
 # Agent timeouts belong to the domain, not this connection. The probe process
 # deadline bounds this read without changing another client's freeze timeout.
 if ($record->{'state'} =~ /\A(?:running|blocked)\z/) {
-	my $info = eval { $domain->get_guest_info(2, 0) }; # GUEST_INFO_OS
-	# An empty or failed reply does not establish guest-agent
-	# readiness.
+	my $info = eval { $domain->get_guest_info(2, 0) };    # GUEST_INFO_OS
+	# An empty or failed reply does not establish guest-agent readiness.
 	$record->{'agent'} = 'responding'
 		if (ref($info) eq 'HASH' && keys(%$info));
 	}
 # Agent addresses are useful only when the agent answered this check.
 my $ok = eval {
 	$record->{'addresses'} = $self->get_domain_addresses($domain, $record,
-		$record->{'agent'} ne 'responding');
+							     $record->{'agent'} ne 'responding');
 	1;
 	};
 my $error = $@;
@@ -769,29 +859,33 @@ die $error if (!$ok);
 return $record;
 }
 
-# set_user_password(self, uuid, username, password)
-# Resets an existing guest account's password without saving it in Cloudmin.
-# Requires a writable adapter, running guest and responding agent.
+# set_user_password(self, uuid, username, password) Resets an existing guest
+# account's password without saving it in Cloudmin. Requires a writable adapter,
+# running guest and responding agent.
+
 sub set_user_password
 {
 my ($self, $uuid, $username, $password) = @_;
 # Deny read-only adapters and malformed IDs before looking up the guest.
 die "Password reset requires write permission\n" if ($self->{'readonly'});
 die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
-	$uuid !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+				       $uuid !~ /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
 # Restrict account names and reject separators in chpasswd's line-based input.
-die "Enter a valid guest username\n" if (!defined($username) || ref($username) ||
-	$username !~ /\A[a-z_][a-z0-9_.-]{0,31}\$?\z/i);
+die "Enter a valid guest username\n"
+	if (!defined($username) || ref($username) ||
+	    $username !~ /\A[a-z_][a-z0-9_.-]{0,31}\$?\z/i);
 die "Enter a password of 1 to 1024 characters without line breaks\n"
 	if (!defined($password) || ref($password) || !length($password) ||
-	length($password) > 1024 || $password =~ /[\0\r\n]/);
+	    length($password) > 1024 || $password =~ /[\0\r\n]/);
 my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
-# Recheck readiness on this submission; the status shown in a browser may be old.
+# Recheck readiness on this submission; the status shown in
+# a browser may be old.
 my $state = $domain->get_info()->{'state'};
 die "The virtual machine must be running\n" if ($state != 1 && $state != 2);
 # Treat a failed or empty agent probe as unavailable before sending the secret.
-my $info = eval { $domain->get_guest_info(2, 0) }; # GUEST_INFO_OS
-die "The guest agent is not responding\n" if (ref($info) ne 'HASH' || !keys(%$info));
+my $info = eval { $domain->get_guest_info(2, 0) };    # GUEST_INFO_OS
+die "The guest agent is not responding\n"
+	if (ref($info) ne 'HASH' || !keys(%$info));
 # Pass plaintext directly to libvirt with flags=0. Never report a backend error
 # verbatim: it may contain the guest command and its password argument.
 my $ok = eval { $domain->set_user_password($username, $password, 0); 1 };
@@ -803,6 +897,7 @@ return 1;
 }
 
 # setup_agent_error() reports missing host tools before guest allocation.
+
 sub setup_agent_error
 {
 return 'Guest software setup requires virsh and timeout on the Cloudmin host'
@@ -810,49 +905,63 @@ return 'Guest software setup requires virsh and timeout on the Cloudmin host'
 return '';
 }
 
-# setup_agent_command(self, uuid, command, [arguments], [final_attempt])
-# Returns a decoded guest-file reply, or undef while the agent is not ready.
+# setup_agent_command(self, uuid, command, [arguments], [final_attempt]) Returns
+# a decoded guest-file reply, or undef while the agent is not ready.
 # final_attempt stops retrying guest file, policy and lost-handle errors.
 # arguments defaults to an empty object; final_attempt defaults to false.
 # Sys::Virt does not expose virDomainQemuAgentCommand; use libvirt's CLI for it.
+
 sub setup_agent_command
 {
 my ($self, $uuid, $command, $arguments, $final_attempt) = @_;
 # Limit this write-capable channel to the three identity file operations.
-die "Guest identity lookup requires write permission\n" if ($self->{'readonly'});
+die "Guest identity lookup requires write permission\n"
+	if ($self->{'readonly'});
 die "Invalid virtual machine identifier\n" if (!defined($uuid) ||
-	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+					       $uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
 die "Unsupported guest identity operation\n"
 	if ($command !~ /\Aguest-file-(?:open|read|close)\z/);
 my $missing = setup_agent_error();
 die "$missing\n" if ($missing);
-my $json = convert_to_json({ execute => $command, arguments => $arguments || {} }, 0, 1);
+my $json =
+	convert_to_json({ execute => $command, arguments => $arguments || { } },
+			0,
+			1);
 my $cmd = join(' ', map { quote_path($_) } '/usr/bin/timeout', '-k', '1', '5',
-	'/usr/bin/virsh', '--connect', $self->uri(), 'qemu-agent-command',
-	'--domain', $uuid, '--timeout', '2', '--cmd', $json);
+	       '/usr/bin/virsh', '--connect', $self->uri(),
+	       'qemu-agent-command',
+	       '--domain', $uuid, '--timeout', '2', '--cmd', $json);
 my ($output, $error);
 # Keep libvirt diagnostics stable when distinguishing boot delays from errors.
 local $ENV{'LC_ALL'} = 'C';
 my $status = execute_command($cmd, undef, \$output, \$error);
 if ($status) {
 	# A disconnected or busy agent may become available as the guest boots.
-	return undef if (($status >> 8) == 124 || ($status >> 8) == 137 || $status == 9 ||
-		($error || '') =~ /(?:guest agent (?:is not connected|not available|is not responding)|agent.*(?:timed out|timeout))/i);
+	return undef
+		if (($status >> 8) == 124 || ($status >> 8) == 137 ||
+		    $status == 9 ||
+		    ($error ||
+		     '') =~ /(?:guest agent (?:is not connected|not available|is not responding)|agent.*(?:timed out|timeout))/i);
 	# Libvirt converts QGA errors to stderr and a nonzero exit status. Only
-	# guest failures can be boot delays; host access errors must fail at once.
+	# guest failures can be boot delays; host access
+	# errors must fail at once.
 	my ($guest_error) = ($error || '') =~
-		/unable to execute QEMU agent command '\Q$command\E':\s*(.*)/is;
+			    /unable to execute QEMU agent command '\Q$command\E':\s*(.*)/is;
 	# Preparation publishes the identity, enables file RPCs and labels the
-	# file. A restart can also lose a read handle. Keep the final diagnostic.
+	# file. A restart can also lose a read handle. Keep
+	# the final diagnostic.
 	return undef if (!$final_attempt && defined($guest_error) &&
-		($guest_error =~ /(?:has been disabled|not allowed|Permission denied)/i ||
-		 $command eq 'guest-file-open' && $guest_error =~ /No such file or directory/i ||
-		 $command eq 'guest-file-read' && $guest_error =~ /(?:handle.*has not been found|invalid handle)/i));
+			 (
+				 $guest_error =~ /(?:has been disabled|not allowed|Permission denied)/i ||
+				 $command eq 'guest-file-open' &&
+				 $guest_error =~ /No such file or directory/i ||
+				 $command eq 'guest-file-read' &&
+				 $guest_error =~ /(?:handle.*has not been found|invalid handle)/i));
 	# Retain a bounded diagnostic without terminal control characters.
 	$error = substr($error || 'virsh failed without a diagnostic', 0, 1024);
 	$error =~ s/[\x00-\x1f\x7f]+/ /g;
 	die "Guest identity lookup failed: $error\n";
-}
+	}
 # Successful virsh calls must still return a bounded, valid agent response.
 die "Invalid guest agent response\n" if (length($output || '') > 16384);
 my $response = eval { convert_from_json($output) };
@@ -861,114 +970,145 @@ die "Invalid guest agent response\n"
 return $response;
 }
 
-# get_setup_host_key(self, uuid, [final_attempt]) reads the public identity.
-# A disconnected or busy agent returns undef. Missing files, blocked reads and
+# get_setup_host_key(self, uuid, [final_attempt]) reads the public identity. A
+# disconnected or busy agent returns undef. Missing files, blocked reads and
 # lost handles also return undef until final_attempt requests their diagnostic.
 # final_attempt defaults to false and does not disable transport retries.
+
 sub get_setup_host_key
 {
 my ($self, $uuid, $final_attempt) = @_;
 my $opened = $self->setup_agent_command($uuid, 'guest-file-open',
-	{ path => '/var/log/qemu-ga/cloudmin-identity.json', mode => 'r' }, $final_attempt);
+					{ path => '/var/log/qemu-ga/cloudmin-identity.json', mode => 'r' },
+					$final_attempt);
 # No open reply means preparation or the agent is still unavailable.
 return undef if (!$opened);
 my $handle = $opened->{'return'};
-die "Invalid guest identity handle\n" if (!defined($handle) || ref($handle) || $handle !~ /\A\d+\z/);
+die "Invalid guest identity handle\n"
+	if (!defined($handle) || ref($handle) || $handle !~ /\A\d+\z/);
 my ($identity, $pending);
 my $ok = eval {
 	my $read = $self->setup_agent_command($uuid, 'guest-file-read',
-		{ handle => 0+$handle, count => 4096 }, $final_attempt);
+					      { handle => 0 + $handle,
+						count => 4096 },
+					      $final_attempt);
 	if (!$read) {
 		# A guest reboot can close an open agent handle before its read.
 		$pending = 1;
-	}
+		}
 	else {
-		# Validate the complete record and UUID before accepting its SSH key.
+		# Validate the complete record and UUID before
+		# accepting its SSH key.
 		my $reply = $read->{'return'};
-		die "Invalid guest identity response\n" if (ref($reply) ne 'HASH' ||
-			!defined($reply->{'count'}) || $reply->{'count'} !~ /\A\d+\z/ || $reply->{'count'} >= 4096 ||
-			ref($reply->{'buf-b64'}) || ($reply->{'buf-b64'} || '') !~ /\A[A-Za-z0-9+\/=\r\n]+\z/);
+		die "Invalid guest identity response\n"
+			if (ref($reply) ne 'HASH' ||
+			    !defined($reply->{'count'}) ||
+			    $reply->{'count'} !~ /\A\d+\z/ ||
+			    $reply->{'count'} >= 4096 ||
+			    ref($reply->{'buf-b64'}) ||
+			    ($reply->{'buf-b64'} ||
+			     '') !~ /\A[A-Za-z0-9+\/=\r\n]+\z/);
 		my $bytes = decode_base64($reply->{'buf-b64'});
-		die "Incomplete guest identity response\n" if (length($bytes) != $reply->{'count'});
+		die "Incomplete guest identity response\n"
+			if (length($bytes) != $reply->{'count'});
 		$identity = convert_from_json($bytes);
-		die "The guest identity does not match this creation request\n" if (ref($identity) ne 'HASH' ||
-			($identity->{'uuid'} || '') ne $uuid);
-		die "Invalid guest SSH host key\n" if (ref($identity->{'key'}) ||
-			($identity->{'key'} || '') !~ /\Assh-rsa [A-Za-z0-9+\/=]+(?: [^\r\n]*)?\z/);
-	}
+		die "The guest identity does not match this creation request\n"
+			if (ref($identity) ne 'HASH' ||
+			    ($identity->{'uuid'} || '') ne $uuid);
+		die "Invalid guest SSH host key\n"
+			if (ref($identity->{'key'}) ||
+			    ($identity->{'key'} ||
+			     '') !~ /\Assh-rsa [A-Za-z0-9+\/=]+(?: [^\r\n]*)?\z/);
+		}
 	1;
-};
+	};
 my $error = $@;
 # Closing is required even if parsing or identity validation fails.
-eval { $self->setup_agent_command($uuid, 'guest-file-close', { handle => 0+$handle }); };
+eval { $self->setup_agent_command($uuid, 'guest-file-close',
+				  { handle => 0 + $handle }); };
 die $error if (!$ok);
 return $pending ? undef : $identity->{'key'};
 }
 
-# read_guest_file(self, uuid, path, [limit])
-# Returns the file's bytes, or undef if opening times out or the agent is
-# unavailable. Missing files, read failures and files larger than limit raise
-# errors. limit defaults to 64 KiB. Closing a valid opened handle is attempted
-# after success or failure; close errors do not replace the read result.
-# Stop starting reads after 10 seconds; each agent call has its own timeout.
+# read_guest_file(self, uuid, path, [limit]) Returns the file's bytes, or undef
+# if opening times out or the agent is unavailable. Missing files, read failures
+# and files larger than limit raise errors. limit defaults to 64 KiB. Closing a
+# valid opened handle is attempted after success or failure; close errors do not
+# replace the read result. Stop starting reads after 10 seconds; each agent call
+# has its own timeout.
+
 sub read_guest_file
 {
 my ($self, $uuid, $path, $limit) = @_;
 $limit ||= 65536;
 my $deadline = Time::HiRes::time() + 10;
 # Treat missing files and disabled file operations as final errors.
-my $opened = $self->setup_agent_command($uuid, 'guest-file-open', { path => $path, mode => 'r' }, 1);
+my $opened =
+	$self->setup_agent_command($uuid, 'guest-file-open',
+				   { path => $path, mode => 'r' }, 1);
 return undef if (!$opened);
 # Reject a malformed handle before issuing reads or attempting a close.
 my $handle = $opened->{'return'};
-die "Invalid guest file handle\n" if (!defined($handle) || ref($handle) || $handle !~ /\A\d+\z/);
+die "Invalid guest file handle\n"
+	if (!defined($handle) || ref($handle) || $handle !~ /\A\d+\z/);
 my $bytes = '';
 my $ok = eval {
 	while (1) {
-		# Bound the whole read even if the agent keeps returning small chunks.
-		die "Guest file read timed out\n" if (Time::HiRes::time() >= $deadline);
-		# Base64 and JSON must fit the agent command's 16 KiB response limit.
+		# Bound the whole read even if the agent keeps
+		# returning small chunks.
+		die "Guest file read timed out\n"
+			if (Time::HiRes::time() >= $deadline);
+		# Base64 and JSON must fit the agent command's
+		# 16 KiB response limit.
 		my $read = $self->setup_agent_command($uuid, 'guest-file-read',
-			{ handle => 0+$handle, count => 8192 }, 1);
-		# Require a byte count and a base64-compatible payload before decoding.
+						      { handle => 0 + $handle,
+							count => 8192 }, 1);
+		# Require a byte count and a base64-compatible
+		# payload before decoding.
 		my $reply = $read ? $read->{'return'} : undef;
 		die "Invalid guest file response\n" if (ref($reply) ne 'HASH' ||
-			!defined($reply->{'count'}) || $reply->{'count'} !~ /\A\d+\z/ ||
-			ref($reply->{'buf-b64'}) || ($reply->{'buf-b64'} // '') !~ /\A[A-Za-z0-9+\/=\r\n]*\z/);
-		# Verify decoded lengths and enforce the total limit before accepting data.
+							!defined($reply->{'count'}) ||
+							$reply->{'count'} !~ /\A\d+\z/ ||
+							ref($reply->{'buf-b64'}) ||
+							(
+								$reply->{'buf-b64'} // '') !~ /\A[A-Za-z0-9+\/=\r\n]*\z/);
+		# Verify decoded lengths and enforce the total limit
+		# before accepting data.
 		my $part = decode_base64($reply->{'buf-b64'} // '');
-		die "Incomplete guest file response\n" if (length($part) != $reply->{'count'});
+		die "Incomplete guest file response\n"
+			if (length($part) != $reply->{'count'});
 		$bytes .= $part;
 		die "Guest file is too large\n" if (length($bytes) > $limit);
-		# The agent reports the end of the file; an empty read also ends it.
+		# The agent reports the end of the file; an
+		# empty read also ends it.
 		last if ($reply->{'eof'} || !$reply->{'count'});
 		}
 	1;
 	};
 my $error = $@;
 # Attempt close after success or failure, preserving the original read error.
-eval { $self->setup_agent_command($uuid, 'guest-file-close', { handle => 0+$handle }); };
+eval { $self->setup_agent_command($uuid, 'guest-file-close',
+				  { handle => 0 + $handle }); };
 die $error if (!$ok);
 return $bytes;
 }
 
-# open_console(self, uuid)
-# Returns a connected VNC filehandle for a local guest. Libvirt authorizes the
-# attachment; the guest's VNC password never leaves the host.
+# open_console(self, uuid) Returns a connected VNC filehandle for a local guest.
+# Libvirt authorizes the attachment; the guest's VNC password
+# never leaves the host.
+
 sub open_console
 {
 my ($self, $uuid) = @_;
 # Console input is an interactive write operation, not inventory access.
 die "Console access requires write permission\n" if ($self->{'readonly'});
-# This flow receives a local descriptor rather than forwarding remote
-# VNC.
+# This flow receives a local descriptor rather than forwarding remote VNC.
 die "Console access requires local libvirt\n"
 	if ($self->uri() ne 'qemu:///system');
-# Bind the attachment to a stable guest identity, not a reused domain
-# name.
+# Bind the attachment to a stable guest identity, not a reused domain name.
 die "Invalid virtual machine identifier\n"
 	if (!defined($uuid) ||
-	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+	    $uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
 my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
 # Inactive domains do not have a QEMU graphics socket to attach to.
 die "Start the virtual machine before opening its console\n"
@@ -976,19 +1116,20 @@ die "Start the virtual machine before opening its console\n"
 my $xml = parse_xml_document($domain->get_xml_description(0));
 my @graphics = $xml->findnodes('/domain/devices/graphics');
 my ($index) = grep { $graphics[$_]->getAttribute('type') eq 'vnc' }
-	0..$#graphics;
+	      0 .. $#graphics;
 # noVNC cannot display SPICE or another non-VNC graphics backend.
 die "This virtual machine has no VNC display\n" if (!defined($index));
-# OPEN_GRAPHICS_SKIPAUTH applies only to this already-authorized connection.
-# It does not change authentication on the guest's listening VNC socket.
+# OPEN_GRAPHICS_SKIPAUTH applies only to this already-authorized connection. It
+# does not change authentication on the guest's listening VNC socket.
 my $fd = $domain->open_graphics_fd($index, 1);
 open(my $socket, '+<&=', $fd) || die "Cannot open the console socket: $!\n";
 return $socket;
 }
 
-# open_serial_console(self, uuid)
-# Opens the default PTY console as a nonblocking libvirt stream. The caller must
-# run libvirt's event loop and abort the stream when the browser disconnects.
+# open_serial_console(self, uuid) Opens the default PTY console as a nonblocking
+# libvirt stream. The caller must run libvirt's event loop and abort the stream
+# when the browser disconnects.
+
 sub open_serial_console
 {
 my ($self, $uuid) = @_;
@@ -998,7 +1139,7 @@ die "Console access requires local libvirt\n"
 	if ($self->uri() ne 'qemu:///system');
 # Resolve only a stable UUID, never a device path or a guest name.
 die "Invalid virtual machine identifier\n" if (!defined($uuid) ||
-	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+					       $uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
 my $domain = $self->find_domain($uuid) || die "Virtual machine not found\n";
 # Recheck live hardware; the guest may have stopped since rendering the page.
 die "Start the virtual machine before opening its console\n"
@@ -1006,14 +1147,16 @@ die "Start the virtual machine before opening its console\n"
 my $device = extract_serial_console($domain->get_xml_description(0));
 die "This virtual machine has no supported serial console\n" if (!$device);
 # Nonblocking I/O lets the supervisor check access while the port is idle.
-my $stream = $self->connect()->new_stream(1); # NONBLOCK
+my $stream = $self->connect()->new_stream(1);    # NONBLOCK
 my $ok = eval {
-	# SAFE requires exclusive access. Never force another client off the port.
-	$domain->open_console($stream, $device->{'alias'}, 2); # CONSOLE_SAFE
+	# SAFE requires exclusive access. Never force another
+	# client off the port.
+	$domain->open_console($stream, $device->{'alias'}, 2);    # CONSOLE_SAFE
 	1;
 	};
 if (!$ok) {
-	# Release even a partially opened stream before returning libvirt's error.
+	# Release even a partially opened stream before
+	# returning libvirt's error.
 	my $error = $@;
 	eval { $stream->abort(); };
 	die $error;
@@ -1021,8 +1164,9 @@ if (!$ok) {
 return $stream;
 }
 
-# serial_history(self, uuid) opens only the running guest's managed log.
-# Call after open_serial_console(), under the same console authorization.
+# serial_history(self, uuid) opens only the running guest's managed log. Call
+# after open_serial_console(), under the same console authorization.
+
 sub serial_history
 {
 my ($self, $uuid) = @_;
@@ -1037,9 +1181,9 @@ die "Serial console closed\n" if (!$domain->is_active());
 return $self->{'serial_log'}->reader($uuid, $domain->get_xml_description(0));
 }
 
-# find_domain(self, id)
-# Matches a guest's UUID or name in the current inventory; returns undef if
-# absent.
+# find_domain(self, id) Matches a guest's UUID or name in the current inventory;
+# returns undef if absent.
+
 sub find_domain
 {
 my ($self, $id) = @_;
@@ -1049,25 +1193,27 @@ my $connection = $self->connect();
 # Enumeration distinguishes a missing guest from a failed daemon connection.
 my ($domain) = grep { $_->get_uuid_string() eq lc($id) ||
 	$_->get_name() eq $id }
-	$connection->list_all_domains(0);
+	       $connection->list_all_domains(0);
 return $domain;
 }
 
-# start_domain(self, id)
-# Starts a defined guest; a missing guest or libvirt refusal raises an error.
+# start_domain(self, id) Starts a defined guest; a missing guest or libvirt
+# refusal raises an error.
+
 sub start_domain
 {
 my ($self, $id) = @_;
 my $domain = $self->find_domain($id) || die "Virtual machine not found\n";
-# Existing guests acquire history on a cold start without replacing live XML
-# or hardware saved in a managed-save image.
+# Existing guests acquire history on a cold start without replacing live XML or
+# hardware saved in a managed-save image.
 if ($self->{'serial_log'} && !$self->{'readonly'} &&
-	$self->uri() eq 'qemu:///system' && !$domain->is_active() &&
-	!$domain->has_managed_save_image(0)) {
-	my $before = $domain->get_xml_description(3); # SECURE | INACTIVE
+    $self->uri() eq 'qemu:///system' && !$domain->is_active() &&
+    !$domain->has_managed_save_image(0)) {
+	my $before = $domain->get_xml_description(3);    # SECURE | INACTIVE
 	my $after = $self->{'serial_log'}->configure($before);
 	if ($after ne $before) {
-		# Preserve all saved hardware and credentials when adding the log.
+		# Preserve all saved hardware and credentials
+		# when adding the log.
 		log_call('Sys::Virt::define_domain', {
 			uuid => $domain->get_uuid_string(), flags => 1 });
 		$self->connect()->define_domain($after, 1);
@@ -1075,61 +1221,73 @@ if ($self->{'serial_log'} && !$self->{'readonly'} &&
 	}
 # Managed saves resume old hardware; only a cold start applies saved memory.
 my $memory = eval {
-	my $doc = parse_xml_document($domain->get_xml_description($XML_INACTIVE));
+	my $doc =
+		parse_xml_document($domain->get_xml_description($XML_INACTIVE));
 	$self->{'startup'} && !$domain->has_managed_save_image(0) &&
 		$doc->exists('/domain/devices/memballoon[@model="virtio"]')
-		? memory_kib($doc, 'currentMemory') / 1024 : undef;
+			? memory_kib($doc, 'currentMemory') / 1024
+			: undef;
 	};
 $self->call_domain_method($id, 'create');
 # A cache failure must not turn a successful start into a reported failure.
 if (defined($memory)) {
-	# Libvirt handles obtained before create can retain the inactive domain ID.
+	# Libvirt handles obtained before create can retain
+	# the inactive domain ID.
 	eval { $self->{'startup'}->remember($self->find_domain($id), $memory) };
 	}
 return 1;
 }
-# shutdown_domain(self, id)
-# Requests a clean guest shutdown; completion is asynchronous.
+
+# shutdown_domain(self, id) Requests a clean guest shutdown;
+# completion is asynchronous.
+
 sub shutdown_domain
 {
 return $_[0]->call_domain_method($_[1], 'shutdown');
 }
-# reboot_domain(self, id)
-# Requests a guest reboot through libvirt and propagates refusal errors.
+
+# reboot_domain(self, id) Requests a guest reboot through libvirt and
+# propagates refusal errors.
+
 sub reboot_domain
 {
 return $_[0]->call_domain_method($_[1], 'reboot');
 }
-# destroy_domain(self, id)
-# Forces a guest off without deleting its definition or storage.
+
+# destroy_domain(self, id) Forces a guest off without deleting its
+# definition or storage.
+
 sub destroy_domain
 {
 return $_[0]->call_domain_method($_[1], 'destroy');
 }
 
-# suspend_domain(self, id)
-# Pauses guest execution while retaining its memory and devices.
+# suspend_domain(self, id) Pauses guest execution while retaining
+# its memory and devices.
+
 sub suspend_domain
 {
 return $_[0]->call_domain_method($_[1], 'suspend');
 }
 
-# resume_domain(self, id)
-# Continues execution of a paused guest.
+# resume_domain(self, id) Continues execution of a paused guest.
+
 sub resume_domain
 {
 return $_[0]->call_domain_method($_[1], 'resume');
 }
 
-# reset_domain(self, id)
-# Resets the hardware without asking the guest operating system to shut down.
+# reset_domain(self, id) Resets the hardware without asking the guest operating
+# system to shut down.
+
 sub reset_domain
 {
 return $_[0]->call_domain_method($_[1], 'reset');
 }
 
-# set_domain_autostart(self, id, enabled)
-# Changes whether libvirt starts the guest when the host boots.
+# set_domain_autostart(self, id, enabled) Changes whether libvirt starts the
+# guest when the host boots.
+
 sub set_domain_autostart
 {
 my ($self, $id, $enabled) = @_;
@@ -1142,8 +1300,9 @@ die error_message($@)."\n" if (!$ok);
 return 1;
 }
 
-# call_domain_method(self, id, method)
-# Runs a Sys::Virt::Domain method and normalizes the error text.
+# call_domain_method(self, id, method) Runs a Sys::Virt::Domain method and
+# normalizes the error text.
+
 sub call_domain_method
 {
 my ($self, $id, $method) = @_;
@@ -1155,10 +1314,10 @@ die error_message($@)."\n" if (!$ok);
 return 1;
 }
 
-# undefine_domain(self, id)
-# Removes a persistent guest definition together with its NVRAM, managed save
-# and snapshot/checkpoint metadata. Disks are not touched; callers remove
-# volumes.
+# undefine_domain(self, id) Removes a persistent guest definition together with
+# its NVRAM, managed save and snapshot/checkpoint metadata. Disks are not
+# touched; callers remove volumes.
+
 sub undefine_domain
 {
 my ($self, $id) = @_;
@@ -1166,7 +1325,7 @@ my $domain = $self->find_domain($id) || die "Virtual machine not found\n";
 my $metadata = extract_metadata($domain->get_xml_description(0));
 my $uuid = $domain->get_uuid_string();
 log_call('Sys::Virt::Domain::undefine', { uuid => $uuid,
-	flags => $UNDEFINE_FLAGS });
+					  flags => $UNDEFINE_FLAGS });
 my $ok = eval { $domain->undefine($UNDEFINE_FLAGS); 1 };
 # Undefine may fail when libvirt cannot remove the requested auxiliary state.
 die error_message($@)."\n" if (!$ok);
@@ -1174,65 +1333,70 @@ $self->removed_guest($uuid, $metadata->{'job'});
 return 1;
 }
 
-# removed_guest(self, uuid, [job_id])
-# Removes local managed logs after guest deletion. A valid creation job also
-# permits the controller callback to remove that creation's access records.
+# removed_guest(self, uuid, [job_id]) Removes local managed logs after guest
+# deletion. A valid creation job also permits the controller callback to remove
+# that creation's access records.
+
 sub removed_guest
 {
 my ($self, $uuid, $job) = @_;
 # Rotation files must not survive deletion or creation rollback.
-$self->{'serial_log'}->remove($uuid) if ($self->{'serial_log'} && !$self->{'readonly'} &&
-	$self->uri() eq 'qemu:///system' && !$self->find_domain($uuid));
+$self->{'serial_log'}->remove($uuid)
+	if ($self->{'serial_log'} && !$self->{'readonly'} &&
+	    $self->uri() eq 'qemu:///system' && !$self->find_domain($uuid));
 # Access records are tied to a creation job, not just a possibly reused UUID.
 $self->{'on_remove'}->($uuid, $job) if ($self->uri() eq 'qemu:///system' &&
-	$self->{'on_remove'} && ($job || '') =~ /\A[a-f0-9]{32}\z/);
+					$self->{'on_remove'} && ($job || '') =~ /\A[a-f0-9]{32}\z/);
 }
 
-# list_networks(self)
-# Returns libvirt networks with their forwarding mode, bridge and addressing,
-# sorted by name.
+# list_networks(self) Returns libvirt networks with their forwarding mode,
+# bridge and addressing, sorted by name.
+
 sub list_networks
 {
 my ($self) = @_;
 my $connection = $self->connect();
 my @records = map { $self->get_network_record($_) }
-	$connection->list_all_networks(0);
+	      $connection->list_all_networks(0);
 @records = sort { lc($a->{'name'}) cmp lc($b->{'name'}) } @records;
 return \@records;
 }
 
-# list_host_bridges(self, [networks])
-# Returns Linux bridges on the host that are not owned by a libvirt network,
-# read from sysfs so no interface daemon is required.
-# Pass networks from list_networks() to exclude their bridges; otherwise none
-# are excluded. sys_net always describes the local host, not a remote URI.
+# list_host_bridges(self, [networks]) Returns Linux bridges on the host that are
+# not owned by a libvirt network, read from sysfs so no interface daemon is
+# required. Pass networks from list_networks() to exclude their bridges;
+# otherwise none are excluded. sys_net always describes the local
+# host, not a remote URI.
+
 sub list_host_bridges
 {
 my ($self, $networks) = @_;
-my %owned = map { ($_->{'bridge'} || '') => 1 } @{$networks || []};
+my %owned = map { ($_->{'bridge'} || '') => 1 } @{$networks || [ ]};
 my @bridges;
-opendir(my $dh, $self->{'sys_net'}) || return [];
+opendir(my $dh, $self->{'sys_net'}) || return [ ];
 foreach my $name (sort readdir($dh)) {
-	# Avoid hidden entries and duplicate choices already offered as
-	# networks.
+	# Avoid hidden entries and duplicate choices already
+	# offered as networks.
 	next if ($name =~ /^\./ || $owned{$name});
-	# The bridge directory distinguishes Linux bridges from other
-	# interfaces.
+	# The bridge directory distinguishes Linux bridges
+	# from other interfaces.
 	next if (!-d "$self->{'sys_net'}/$name/bridge");
 	# An empty bridge has no carrier until its first guest attaches. IFF_UP
-	# tells us whether the administrator enabled it, independently of
-	# carrier.
+	# tells us whether the administrator enabled it,
+	# independently of carrier.
 	my $flags = read_file_contents("$self->{'sys_net'}/$name/flags") || '';
 	my $state = $flags =~ /\A0x([0-9a-f]+)\s*\z/i
-		? (hex($1) & 1 ? 'up' : 'down') : '';
+		? (hex($1) & 1 ? 'up' : 'down')
+		: '';
 	push(@bridges, { 'name' => $name, 'state' => $state });
 	}
 closedir($dh);
 return \@bridges;
 }
 
-# get_network_record(self, network)
-# Converts a Sys::Virt::Network object into a Cloudmin inventory record.
+# get_network_record(self, network) Converts a Sys::Virt::Network object into a
+# Cloudmin inventory record.
+
 sub get_network_record
 {
 my ($self, $network) = @_;
@@ -1246,7 +1410,7 @@ my ($forward) = $xml =~ /<forward\b[^>]*\bmode\s*=\s*["']([^"']+)["']/i;
 # A network without a forward element is isolated to the host.
 $forward = $xml =~ /<forward\b/i ? ($forward || 'nat') : 'isolated';
 my ($address, $netmask, $prefix) = $xml =~
-	/<ip\b(?![^>]*family\s*=\s*["']ipv6["'])[^>]*\baddress\s*=\s*["']([^"']+)["'](?:[^>]*\bnetmask\s*=\s*["']([^"']+)["'])?(?:[^>]*\bprefix\s*=\s*["'](\d+)["'])?/i;
+				   /<ip\b(?![^>]*family\s*=\s*["']ipv6["'])[^>]*\baddress\s*=\s*["']([^"']+)["'](?:[^>]*\bnetmask\s*=\s*["']([^"']+)["'])?(?:[^>]*\bprefix\s*=\s*["'](\d+)["'])?/i;
 my $dhcp = $xml =~ /<dhcp\b/i ? 1 : 0;
 
 # Inventory records retain inactive networks without claiming they are usable.
@@ -1266,9 +1430,9 @@ return {
 };
 }
 
-# list_storage_pools(self, [include_volumes])
-# Returns active and inactive pools, optionally with volume details.
-# Volume enumeration is omitted by default.
+# list_storage_pools(self, [include_volumes]) Returns active and inactive pools,
+# optionally with volume details. Volume enumeration is omitted by default.
+
 sub list_storage_pools
 {
 my ($self, $include_volumes) = @_;
@@ -1280,23 +1444,27 @@ my @records = map {
 return \@records;
 }
 
-# get_domain_record(self, domain, [strict])
-# Converts a Sys::Virt::Domain object into a Cloudmin inventory hash reference.
-# strict defaults to false; identity lookups always propagate failures.
+# get_domain_record(self, domain, [strict]) Converts a Sys::Virt::Domain object
+# into a Cloudmin inventory hash reference. strict defaults to false; identity
+# lookups always propagate failures.
+
 sub get_domain_record
 {
 my ($self, $domain, $strict) = @_;
-# Strict reads propagate errors so resource validation cannot silently lose
-# MAC addresses or ownership data. Inventory reads fall back to empty
-# metadata and false status flags.
-my $info = $strict ? $domain->get_info() : eval { $domain->get_info() } || {};
+# Strict reads propagate errors so resource validation cannot silently lose MAC
+# addresses or ownership data. Inventory reads fall back to empty metadata
+# and false status flags.
+my $info = $strict ? $domain->get_info() : eval { $domain->get_info() } || { };
 my $active = ($strict ? $domain->is_active() : eval { $domain->is_active() })
-	? 1 : 0;
-my $persistent = ($strict ? $domain->is_persistent()
+	? 1
+	: 0;
+my $persistent = ($strict
+	? $domain->is_persistent()
 	: eval { $domain->is_persistent() }) ? 1 : 0;
 # Keep an unavailable setting distinct from autostart being disabled.
 my $autostart = $persistent ? eval { $domain->get_autostart() ? 1 : 0 } : 0;
-my $xml = $strict ? $domain->get_xml_description(0)
+my $xml = $strict
+	? $domain->get_xml_description(0)
 	: eval { $domain->get_xml_description(0) } || '';
 my @macs = extract_macs($xml);
 # Use the reported state, or infer it from the active flag if missing.
@@ -1308,12 +1476,16 @@ my $uuid = $domain->get_uuid_string();
 my $name = $domain->get_name();
 
 # A failed comparison stays unknown rather than clearing an existing warning.
-my $pending = {};
+my $pending = { };
 if ($active && $persistent) {
-	# Only a running persistent guest can differ
-	# from its next-start definition.
-	$pending = eval { $self->pending_domain_settings($domain, resource_settings(parse_xml_document($xml)),
-		resource_settings(parse_xml_document($domain->get_xml_description($XML_INACTIVE)))) };
+	# Only a running persistent guest can differ from its
+	# next-start definition.
+	$pending =
+		eval { $self->pending_domain_settings($domain,
+						      resource_settings(parse_xml_document($xml)),
+						      resource_settings(
+							      parse_xml_document(
+								      $domain->get_xml_description($XML_INACTIVE)))) };
 	}
 
 # Reuse the same disk inventory for labels and writable resource targets.
@@ -1331,49 +1503,55 @@ return {
 	'persistent' => $persistent,
 	'autostart' => $autostart,
 	'pending' => $pending,
-	# Status polling needs disk roles, but never full paths, to label boot changes.
+	# Status polling needs disk roles, but never full paths,
+	# to label boot changes.
 	'disk_roles' => { map { $_->{'target'} => $_->{'role'} }
-		grep { $_->{'target'} } @disks },
+			  grep { $_->{'target'} } @disks },
 	# Keep memory in KiB; the UI converts it to bytes.
 	'memory_kib' => $info->{'memory'} || 0,
 	'max_memory_kib' => $info->{'maxMem'} || 0,
 	'vcpus' => $info->{'nrVirtCpu'} || 0,
 	'disk_targets' => [ map { $_->{'target'} }
-		grep { $_->{'device'} eq 'disk' && !$_->{'readonly'} &&
-		$_->{'target'} } @disks ],
-	'memory_stats_period' => scalar(($xml =~ m{<memballoon\b.*?<stats\b[^>]*period=['"](\d+)['"]}s)[0]),
+			    grep { $_->{'device'} eq 'disk' && !$_->{'readonly'} &&
+			$_->{'target'} } @disks ],
+	'memory_stats_period' => scalar((
+		$xml =~ m{<memballoon\b.*?<stats\b[^>]*period=['"](\d+)['"]}s)[
+			0]),
 	'macs' => \@macs,
 	'mac_addresses' => join(' ', @macs),
 	'cloudmin' => extract_metadata($xml),
 };
 }
 
-# domain_state_name(state)
-# Gives inventory and editor settings the same public libvirt state names.
+# domain_state_name(state) Gives inventory and editor settings the same public
+# libvirt state names.
+
 sub domain_state_name
 {
 return $DOMAIN_STATES{$_[0]} || 'unknown';
 }
 
-# memory_kib(doc, element)
-# Converts libvirt memory fields to KiB, including omitted currentMemory.
+# memory_kib(doc, element) Converts libvirt memory fields to KiB, including
+# omitted currentMemory.
+
 sub memory_kib
 {
 my ($doc, $element) = @_;
 my ($node) = $doc->findnodes('/domain/'.$element);
 # Without currentMemory, libvirt starts with the configured memory maximum.
-($node) = $doc->findnodes('/domain/memory') if (!$node && $element eq 'currentMemory');
+($node) = $doc->findnodes('/domain/memory')
+	if (!$node && $element eq 'currentMemory');
 die "Missing memory configuration\n" if (!$node);
-my %units = (b => 1/1024, bytes => 1/1024, KiB => 1, k => 1,
-	MiB => 1024, M => 1024, GiB => 1024**2, G => 1024**2);
+my %units = ( b => 1 / 1024, bytes => 1 / 1024, KiB => 1, k => 1,
+	      MiB => 1024, M => 1024, GiB => 1024**2, G => 1024**2 );
 my $unit = $node->getAttribute('unit') || 'KiB';
 die "Unsupported memory unit\n" if (!$units{$unit});
 return $node->textContent() * $units{$unit};
 }
 
-# network_attachments(doc)
-# Returns an array reference of MAC, type and source records from parsed XML.
-# Ignores device details that libvirt adds at runtime.
+# network_attachments(doc) Returns an array reference of MAC, type and source
+# records from parsed XML. Ignores device details that libvirt adds at runtime.
+
 sub network_attachments
 {
 my ($doc) = @_;
@@ -1382,54 +1560,65 @@ foreach my $node ($doc->findnodes('/domain/devices/interface')) {
 	my $type = $node->getAttribute('type');
 	# Compare only the network and bridge attachments exposed by the editor.
 	next if ($type !~ /\A(?:network|bridge)\z/);
-	# Read the configured source, not libvirt's bridge/portid or <actual> data.
+	# Read the configured source, not libvirt's bridge/portid or
+	# <actual> data.
 	push(@interfaces, { mac => lc($node->findvalue('mac/@address')),
-		type => $type, source => ''.$node->findvalue('source/@'.$type) });
-}
+			    type => $type, source =>
+						   ''.$node->findvalue('source/@'.$type) });
+	}
 # XML device order must not make otherwise identical attachments differ.
-return [sort { $a->{'mac'} cmp $b->{'mac'} } @interfaces];
+return [ sort { $a->{'mac'} cmp $b->{'mac'} } @interfaces ];
 }
 
-# resource_settings(doc)
-# Normalizes the public settings compared by the editor and status collector.
+# resource_settings(doc) Normalizes the public settings compared by the editor
+# and status collector.
+
 sub resource_settings
 {
 my ($doc) = @_;
 die "Missing CPU configuration\n" if (!$doc->findvalue('/domain/vcpu'));
 my @boot;
 foreach my $node ($doc->findnodes('/domain/os/boot')) {
-	# Legacy boot order selects a device class rather than an individual disk.
+	# Legacy boot order selects a device class rather
+	# than an individual disk.
 	push(@boot, { device => $node->getAttribute('dev') });
 	}
 foreach my $node ($doc->findnodes('/domain/devices/*/boot')) {
 	# Per-device order identifies disks by target and interfaces by MAC.
 	my $device = $node->parentNode();
 	push(@boot, { device => $device->nodeName(),
-		target => $device->findvalue('target/@dev | mac/@address'),
-		order => $node->getAttribute('order') });
+		      target =>
+			      $device->findvalue('target/@dev | mac/@address'),
+		      order => $node->getAttribute('order') });
 	}
-return { cpus => 0 + ($doc->findvalue('/domain/vcpu/@current') || $doc->findvalue('/domain/vcpu')),
-	cpu_limit => 0 + $doc->findvalue('/domain/vcpu'),
-	memory_mib => memory_kib($doc, 'currentMemory') / 1024,
-	memory_limit_mib => memory_kib($doc, 'memory') / 1024,
-	bootmenu => $doc->findvalue('/domain/os/bootmenu/@enable') eq 'yes' ? 1 : 0,
-	boot => \@boot, networks => network_attachments($doc) };
+return { cpus =>
+		 0 + ($doc->findvalue('/domain/vcpu/@current') ||
+		      $doc->findvalue('/domain/vcpu')),
+	 cpu_limit => 0 + $doc->findvalue('/domain/vcpu'),
+	 memory_mib => memory_kib($doc, 'currentMemory') / 1024,
+	 memory_limit_mib => memory_kib($doc, 'memory') / 1024,
+	 bootmenu => $doc->findvalue('/domain/os/bootmenu/@enable') eq 'yes'
+		 ? 1
+		 : 0,
+	 boot => \@boot, networks => network_attachments($doc) };
 }
 
-# pending_settings(running, saved)
-# Returns differences in public resource settings without retaining guest XML.
+# pending_settings(running, saved) Returns differences in public resource
+# settings without retaining guest XML.
+
 sub pending_settings
 {
 my ($running, $saved) = @_;
 # Canonical JSON compares boot/network arrays and scalar settings with one rule.
 return { map { $_ => { running => $running->{$_}, saved => $saved->{$_} } }
-	grep { convert_to_json([$running->{$_}], 0, 0, 1) ne
-		convert_to_json([$saved->{$_}], 0, 0, 1) }
-	keys %$saved };
+	 grep { convert_to_json([ $running->{$_} ], 0, 0, 1) ne
+		convert_to_json([ $saved->{$_} ], 0, 0, 1) }
+	 keys %$saved };
 }
 
-# pending_domain_settings(self, domain, running, saved)
-# Excludes a cold start's settling balloon without hiding later saved changes.
+# pending_domain_settings(self, domain, running, saved) Excludes a cold start's
+# settling balloon without hiding later saved changes.
+
 sub pending_domain_settings
 {
 my ($self, $domain, $running, $saved) = @_;
@@ -1437,15 +1626,18 @@ my $pending = pending_settings($running, $saved);
 if ($self->{'startup'}) {
 	# Unavailable startup state falls back to the ordinary XML comparison.
 	delete $pending->{'memory_mib'} if (eval {
-		$self->{'startup'}->settling($domain, $running->{'memory_mib'}, $saved->{'memory_mib'});
+		$self->{'startup'}->settling($domain,
+					     $running->{'memory_mib'},
+					     $saved->{'memory_mib'});
 		});
 	}
 return $pending;
 }
 
-# complete_domain(self, domain, record, [skip_addresses])
-# Adds firmware, disks, interfaces, console and address details
-# read from the guest's XML and, when running, from leases or the agent.
+# complete_domain(self, domain, record, [skip_addresses]) Adds firmware, disks,
+# interfaces, console and address details read from the guest's XML and, when
+# running, from leases or the agent.
+
 sub complete_domain
 {
 my ($self, $domain, $record, $skip_addresses) = @_;
@@ -1467,7 +1659,7 @@ my ($firmware) = ($os || '') =~ /\bfirmware\s*=\s*["']([^"']+)["']/i;
 my $doc = parse_xml_document($inactive);
 my ($loader) = $doc->findnodes('/domain/os/loader');
 $firmware = 'efi' if (!$firmware && $loader &&
-	($loader->getAttribute('type') || '') eq 'pflash');
+		      ($loader->getAttribute('type') || '') eq 'pflash');
 $record->{'firmware'} = $firmware || 'bios';
 my ($arch) = $inactive =~ m{<type\b[^>]*\barch\s*=\s*["']([^"']+)["']}i;
 my ($machine) = $inactive =~ m{<type\b[^>]*\bmachine\s*=\s*["']([^"']+)["']}i;
@@ -1475,56 +1667,59 @@ $record->{'architecture'} = $arch;
 $record->{'machine'} = $machine;
 $record->{'cpu_mode'} = ($inactive =~ m{<cpu\b[^>]*mode=['"]([^'"]+)['"]})[0];
 $record->{'cpu_model'} = $doc->findvalue('/domain/cpu/model');
-# Running guests show attached devices, including changes made only to the
-# live definition. Stopped guests retain their configured hardware.
+# Running guests show attached devices, including changes made only to the live
+# definition. Stopped guests retain their configured hardware.
 my $hardware = $record->{'active'} ? $xml : $inactive;
 $record->{'disks'} = [ extract_disks($hardware) ];
 $record->{'interfaces'} = [ extract_interfaces($hardware) ];
 $record->{'graphics'} = extract_graphics($xml);
 $record->{'serial_console'} = extract_serial_console($hardware);
 $record->{'addresses'} = $record->{'active'} && !$skip_addresses
-	? $self->get_domain_addresses($domain, $record) : [];
+	? $self->get_domain_addresses($domain, $record)
+	: [ ];
 return $record;
 }
 
 # get_resource_stats(self, [uuids]) Reads one batch without waiting on busy QEMU
 # jobs. The statistics service omits uuids to collect all guests. Other callers
 # may request an explicit list.
+
 sub get_resource_stats
 {
 my ($self, $ids) = @_;
 my $connection = $self->connect();
-my $domains = defined($ids) ? [ grep { defined($_) }
-	map { eval { $connection->get_domain_by_uuid($_) } } @$ids ] : undef;
-# An empty explicit selection must not become a request for every
-# domain.
-return {} if (defined($domains) && !@$domains);
+my $domains = defined($ids)
+	? [ grep { defined($_) }
+	    map { eval { $connection->get_domain_by_uuid($_) } } @$ids ]
+	: undef;
+# An empty explicit selection must not become a request for every domain.
+return { } if (defined($domains) && !@$domains);
 # CPU_TOTAL, BALLOON, VCPU, INTERFACE and BLOCK; NOWAIT permits partial results.
 my @stats = $connection->get_all_domain_stats(2 | 4 | 8 | 16 | 32, $domains,
-	1 << 29);
+					      1 << 29);
 return { map { $_->{'dom'}->get_uuid_string() => $_->{'data'} } @stats };
 }
 
-# get_guest_resources(self, uuid)
-# Reads OS and mounted filesystem sizes for the statistics probe worker.
-# The probe supervisor bounds the call without changing shared domain settings.
+# get_guest_resources(self, uuid) Reads OS and mounted filesystem sizes for the
+# statistics probe worker. The probe supervisor bounds the call without changing
+# shared domain settings.
+
 sub get_guest_resources
 {
 my ($self, $uuid) = @_;
 # Slow probes accept only exact UUIDs from inventory subscriptions.
 die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
-	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+				       $uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
 # UUID lookup avoids enumerating every VM for each slow guest check.
 my $domain = $self->connect()->get_domain_by_uuid($uuid);
-# A guest stopped between scheduling and execution has no live
-# filesystem data.
-return {} if (!$domain->is_active());
-my %writable = map { map { defined($_) ? ($_ => 1) : () } $_->{'target'},
+# A guest stopped between scheduling and execution has no live filesystem data.
+return { } if (!$domain->is_active());
+my %writable = map { map { defined($_) ? ( $_ => 1 ) : () } $_->{'target'},
 	$_->{'alias'} }
-	grep { $_->{'device'} eq 'disk' && !$_->{'readonly'} }
-	extract_disks($domain->get_xml_description(0));
+	       grep { $_->{'device'} eq 'disk' && !$_->{'readonly'} }
+	       extract_disks($domain->get_xml_description(0));
 my $info = eval { $domain->get_guest_info(2 | 8 | 16,
-	0) }; # OS, HOSTNAME, FILESYSTEM
+					  0) };    # OS, HOSTNAME, FILESYSTEM
 my $error = $@;
 # Preserve the native agent error for the collector.
 die $error if ($error);
@@ -1532,29 +1727,30 @@ my @filesystems;
 my (%seen, $used, $total, $incomplete);
 for my $i (0 .. ($info->{'fs.count'} || 0) - 1) {
 	my %fs = map { $_ => $info->{"fs.$i.$_"} }
-		qw(name mountpoint fstype total-bytes used-bytes);
-	# Only disk-backed filesystems contribute; omit tmpfs, network mounts
-	# and media.
+		 qw(name mountpoint fstype total-bytes used-bytes);
+	# Only disk-backed filesystems contribute; omit tmpfs,
+	# network mounts and media.
 	next if (!($info->{"fs.$i.disk.count"} || 0) ||
-		($fs{'fstype'} || '') =~ /\A(?:iso9660|udf|squashfs)\z/);
-	# A filesystem mounted at multiple paths must contribute only
-	# once.
+		 ($fs{'fstype'} || '') =~ /\A(?:iso9660|udf|squashfs)\z/);
+	# A filesystem mounted at multiple paths must contribute only once.
 	next if (!$fs{'name'} || $seen{$fs{'name'}}++);
 	push(@filesystems, \%fs);
 	my @aliases = map { $info->{"fs.$i.disk.$_.alias"} }
-		0 .. $info->{"fs.$i.disk.count"} - 1;
+		      0 .. $info->{"fs.$i.disk.count"} - 1;
 	# Missing disk mappings cannot establish that a filesystem belongs to a
-	# writable disk. Keep its details, but withhold the aggregate
-	# percentage.
-	if (grep { !defined($_) || !length($_) } @aliases) { $incomplete = 1;
-		next; }
-	# Read-only or unmapped disks are displayed but excluded from
-	# usage totals.
+	# writable disk. Keep its details, but withhold the
+	# aggregate percentage.
+	if (grep { !defined($_) || !length($_) } @aliases) {
+		$incomplete = 1;
+		next;
+		}
+	# Read-only or unmapped disks are displayed but
+	# excluded from usage totals.
 	next if (grep { !$writable{$_} } @aliases);
-	# Partial or inconsistent agent measurements make the aggregate
-	# unavailable.
+	# Partial or inconsistent agent measurements make the
+	# aggregate unavailable.
 	if (!defined($fs{'used-bytes'}) || !($fs{'total-bytes'}) ||
-		$fs{'used-bytes'} > $fs{'total-bytes'}) {
+	    $fs{'used-bytes'} > $fs{'total-bytes'}) {
 		$incomplete = 1;
 		}
 	else {
@@ -1565,37 +1761,38 @@ for my $i (0 .. ($info->{'fs.count'} || 0) - 1) {
 		}
 	}
 return { os => $info->{'os.pretty-name'} || $info->{'os.name'},
-	kernel => $info->{'os.kernel-release'},
-	hostname => $info->{'hostname'}, filesystems => \@filesystems,
-	(defined($used) &&
-	!$incomplete
-	? (filesystem_used_bytes => $used, filesystem_total_bytes => $total)
-	: ()) };
+	 kernel => $info->{'os.kernel-release'},
+	 hostname => $info->{'hostname'}, filesystems => \@filesystems,
+	 (defined($used) &&
+	  !$incomplete
+		  ? ( filesystem_used_bytes => $used, filesystem_total_bytes =>
+							      $total )
+		  : ()) };
 }
 
-# get_domain_addresses(self, domain, record, [skip_agent])
-# Collects guest IP addresses from the guest agent when it answers, otherwise
-# combines libvirt DHCP leases and the host ARP table. skip_agent defaults to
-# false. record is accepted for inventory callers but is not read by this
-# method.
+# get_domain_addresses(self, domain, record, [skip_agent]) Collects guest IP
+# addresses from the guest agent when it answers, otherwise combines libvirt
+# DHCP leases and the host ARP table. skip_agent defaults to false. record is
+# accepted for inventory callers but is not read by this method.
+
 sub get_domain_addresses
 {
 my ($self, $domain, $record, $skip_agent) = @_;
 my %seen;
 my @addresses;
-foreach my $source ($ADDRESSES_AGENT, $ADDRESSES_LEASE, $ADDRESSES_ARP) {
-	# A failed bounded health probe should not immediately query the
-	# agent again.
+foreach my $source ( $ADDRESSES_AGENT, $ADDRESSES_LEASE, $ADDRESSES_ARP ) {
+	# A failed bounded health probe should not immediately
+	# query the agent again.
 	next if ($skip_agent && $source == $ADDRESSES_AGENT);
 	my @interfaces = eval { $domain->get_interface_addresses($source, 0) };
 	foreach my $interface (@interfaces) {
-		foreach my $entry (@{$interface->{'addrs'} || []}) {
+		foreach my $entry (@{$interface->{'addrs'} || [ ]}) {
 			my $address = $entry->{'addr'} || next;
-			# Skip loopback and IPv6 link-local addresses reported
-			# by the agent.
+			# Skip loopback and IPv6 link-local addresses
+			# reported by the agent.
 			next if ($address =~ /^(?:127\.|::1$|fe80:)/i);
-			# A lease or ARP entry must not repeat an address
-			# already collected.
+			# A lease or ARP entry must not repeat an
+			# address already collected.
 			next if ($seen{$address}++);
 			push(@addresses, {
 				'address' => $address,
@@ -1603,40 +1800,46 @@ foreach my $source ($ADDRESSES_AGENT, $ADDRESSES_LEASE, $ADDRESSES_ARP) {
 				'mac' => lc($interface->{'hwaddr'} || ''),
 				'interface' => $interface->{'name'},
 				'source' => $source == $ADDRESSES_AGENT
-				? 'agent'
-					: $source == $ADDRESSES_LEASE ? 'lease'
-					: 'arp',
+					? 'agent'
+					: $source == $ADDRESSES_LEASE
+						? 'lease'
+						: 'arp',
 			});
 			}
 		}
-	# Prefer any usable agent result; otherwise combine leases and ARP
-	# entries.
+	# Prefer any usable agent result; otherwise combine
+	# leases and ARP entries.
 	last if (@addresses && $source == $ADDRESSES_AGENT);
 	}
 return \@addresses;
 }
 
-# filesystem_space(path)
-# Reads current Linux filesystem bytes, excluding reserves from available space.
+# filesystem_space(path) Reads current Linux filesystem bytes, excluding
+# reserves from available space.
+
 sub filesystem_space
 {
 my ($path) = @_;
 return undef if ($^O ne 'linux' || !$path || !-d $path);
-open(my $stat, '-|', 'stat', '-f', '--format=%S %b %f %a %i', '--', $path) || return undef;
+open(my $stat, '-|', 'stat', '-f', '--format=%S %b %f %a %i', '--', $path) ||
+	return undef;
 my $line = <$stat>;
 my $ok = close($stat);
-return undef if (!$ok || !defined($line) || $line !~ /\A(\d+) (\d+) (\d+) (-?\d+) (\S+)\s*\z/);
-my ($size, $blocks, $free, $available, $fsid) = ($1, $2, $3, $4, $5);
+return undef
+	if (!$ok || !defined($line) ||
+	    $line !~ /\A(\d+) (\d+) (\d+) (-?\d+) (\S+)\s*\z/);
+my ($size, $blocks, $free, $available, $fsid) = ( $1, $2, $3, $4, $5 );
 # Full filesystems may report negative availability after reserves are used.
 return undef if (!$size || !$blocks || $free > $blocks || $available > $free);
 $available = 0 if ($available < 0);
 # The filesystem ID lets pools sharing one filesystem count its space once.
 return { capacity => $blocks * $size, allocation => ($blocks - $free) * $size,
-	available => $available * $size, fsid => $fsid };
+	 available => $available * $size, fsid => $fsid };
 }
 
-# get_storage_pool_record(self, pool, [include_volumes])
-# Converts a native or LVM pool object into a Cloudmin inventory record.
+# get_storage_pool_record(self, pool, [include_volumes]) Converts a native or
+# LVM pool object into a Cloudmin inventory record.
+
 sub get_storage_pool_record
 {
 my ($self, $pool, $include_volumes) = @_;
@@ -1644,12 +1847,13 @@ my $storage_error = $self->{'storage_errors'}->{$pool->get_uuid_string()};
 my $active = !$storage_error && eval { $pool->is_active() } ? 1 : 0;
 my $persistent = eval { $pool->is_persistent() } ? 1 : 0;
 my $autostart = $persistent && eval { $pool->get_autostart() } ? 1 : 0;
-my $info = $active ? (eval { $pool->get_info() } || {}) : {};
+my $info = $active ? (eval { $pool->get_info() } || { }) : { };
 my $xml = eval { $pool->get_xml_description(0) } || '';
 my ($type, $target) = parse_pool_xml($xml);
 # Libvirt caches filesystem counters and includes reserved blocks as available.
 # Only local file-based pools can be measured from this host's filesystem.
-if ($active && $self->uri() eq 'qemu:///system' && ($type || '') =~ /\A(?:dir|fs|netfs)\z/) {
+if ($active && $self->uri() eq 'qemu:///system' && ($type ||
+						    '') =~ /\A(?:dir|fs|netfs)\z/) {
 	my $space = filesystem_space($target);
 	$info = { %$info, %$space } if ($space);
 	}
@@ -1660,7 +1864,7 @@ my $volume_error = $storage_error;
 if ($active && $include_volumes) {
 	my $ok = eval {
 		@volumes = map { $self->get_storage_volume_record($_) }
-			$pool->list_all_volumes(0);
+			   $pool->list_all_volumes(0);
 		1;
 		};
 	# Keep the pool visible even when its volume inventory cannot be read.
@@ -1672,7 +1876,8 @@ if ($active && $include_volumes) {
 my $state = defined($info->{'state'})
 	? ($POOL_STATES{$info->{'state'}} || 'unknown')
 	: ($active ? 'running' : 'inactive');
-my $provisioning = $EXTERNAL_STORAGE{$type || ''} ? 'external'
+my $provisioning = $EXTERNAL_STORAGE{$type || ''}
+	? 'external'
 	: $MANAGED_STORAGE{$type || ''} ? 'managed' : 'unknown';
 my $uuid = $pool->get_uuid_string();
 my $name = $pool->get_name();
@@ -1690,22 +1895,27 @@ return {
 	'capacity' => $info->{'capacity'} || 0,
 	'allocation' => $info->{'allocation'} || 0,
 	'available' => $info->{'available'} || 0,
-	'allocation_unit' => $pool->isa('Cloudmin::LVM::Pool') && !$pool->{'thin'} ?
-		$pool->group()->{'vg_extent_size'} : 512,
+	'allocation_unit' => $pool->isa('Cloudmin::LVM::Pool') &&
+			     !$pool->{'thin'}
+				     ? $pool->group()->{'vg_extent_size'}
+				     : 512,
 	'provisioning' => $provisioning,
 	'volumes' => \@volumes,
 	'volume_count' => scalar(@volumes),
 	'volume_error' => $volume_error,
-	map { defined($info->{$_}) ? ($_ => $info->{$_}) : () } qw(data_percent metadata_percent fsid),
+	map { defined($info->{$_})
+		? ( $_ => $info->{$_} )
+		: () } qw(data_percent metadata_percent fsid),
 };
 }
 
-# get_storage_volume_record(self, volume)
-# Converts a Sys::Virt::StorageVol object into a Cloudmin inventory record.
+# get_storage_volume_record(self, volume) Converts a Sys::Virt::StorageVol
+# object into a Cloudmin inventory record.
+
 sub get_storage_volume_record
 {
 my ($self, $volume) = @_;
-my $info = eval { $volume->get_info() } || {};
+my $info = eval { $volume->get_info() } || { };
 my $doc = eval { parse_xml_document($volume->get_xml_description(0)) };
 return {
 	'name' => $volume->get_name(),
@@ -1714,15 +1924,17 @@ return {
 	'type' => $info->{'type'},
 	'block' => $volume->isa('Cloudmin::LVM::Volume') ? 1 : 0,
 	'snapshot' => $volume->isa('Cloudmin::LVM::Volume') &&
-		($volume->record()->{'lv_tags'} || '') =~ /(?:^|,)cloudmin_snapshot(?:,|$)/ ? 1 : 0,
+		      ($volume->record()->{'lv_tags'} ||
+		       '') =~ /(?:^|,)cloudmin_snapshot(?:,|$)/ ? 1 : 0,
 	'capacity' => $info->{'capacity'} || 0,
 	'allocation' => $info->{'allocation'} || 0,
 	'format' => $doc ? $doc->findvalue('/volume/target/format/@type') : '',
 };
 }
 
-# extract_macs(xml)
-# Extracts normalized interface MAC addresses from a libvirt domain document.
+# extract_macs(xml) Extracts normalized interface MAC addresses from a
+# libvirt domain document.
+
 sub extract_macs
 {
 my ($xml) = @_;
@@ -1733,40 +1945,45 @@ while ($xml =~ /<mac\b[^>]*\baddress\s*=\s*(["'])([^"']+)\1/ig) {
 return @macs;
 }
 
-# extract_metadata(xml)
-# Reads the image and creation details Cloudmin stored in the domain metadata.
+# extract_metadata(xml) Reads the image and creation details Cloudmin stored in
+# the domain metadata.
+
 sub extract_metadata
 {
 my ($xml) = @_;
 # XML editors may rename prefixes without changing the metadata namespace.
-my $doc = eval { parse_xml_document($xml) } || return {};
-my @blocks = $doc->findnodes('/domain/metadata/*[local-name()="vm" and namespace-uri()="urn:cloudmin:vm:1"]');
+my $doc = eval { parse_xml_document($xml) } || return { };
+my @blocks =
+	$doc->findnodes(
+		'/domain/metadata/*[local-name()="vm" and namespace-uri()="urn:cloudmin:vm:1"]');
 # Missing, malformed or ambiguous metadata must not establish ownership.
-return {} if (@blocks != 1);
+return { } if (@blocks != 1);
 my %fields;
-foreach my $field ($blocks[0]->findnodes('*[namespace-uri()="urn:cloudmin:vm:1"]')) {
+foreach my $field (
+	$blocks[0]->findnodes('*[namespace-uri()="urn:cloudmin:vm:1"]')) {
 	my $name = $field->localname();
 	# Ownership fields must be unique scalar values, not nested elements.
-	return {} if (exists($fields{$name}) || $field->exists('*'));
+	return { } if (exists($fields{$name}) || $field->exists('*'));
 	$fields{$name} = $field->textContent();
 	}
 return \%fields;
 }
 
-# extract_disks(xml)
-# Returns disk and CD-ROM devices with their source, target and format.
+# extract_disks(xml) Returns disk and CD-ROM devices with their
+# source, target and format.
+
 sub extract_disks
 {
 my ($xml) = @_;
 my @disks;
 my $creation = extract_metadata($xml)->{'job'} || '';
 while ($xml =~ m{<disk\b([^>]*)>(.*?)</disk>}sg) {
-	my ($attrs, $body) = ($1, $2);
+	my ($attrs, $body) = ( $1, $2 );
 	my ($device) = $attrs =~ /\bdevice\s*=\s*["']([^"']+)["']/i;
 	my ($type) = $attrs =~ /\btype\s*=\s*["']([^"']+)["']/i;
 	my ($source) = $body =~ m{<source\b([^>]*)/?>}i;
-	# Source attributes distinguish file paths, host devices and pool
-	# volumes.
+	# Source attributes distinguish file paths, host
+	# devices and pool volumes.
 	my %source;
 	while (($source || '') =~ /\b(\w+)\s*=\s*["']([^"']*)["']/g) {
 		$source{lc($1)} = decode_xml_text($2);
@@ -1780,22 +1997,27 @@ while ($xml =~ m{<disk\b([^>]*)>(.*?)</disk>}sg) {
 	# Creation metadata identifies our disks without assuming vda is the OS.
 	if ($creation =~ /\A[a-f0-9]{32}\z/) {
 		$role = 'data' if (($device || 'disk') eq 'disk' && !$readonly);
-		# Snapshot overlays retain the original disk in their backing chain.
-		my @files = map { my $file = decode_xml_text($_); $file =~ s{.*/}{}; $file }
-			$body =~ m{<source\b[^>]*\b(?:file|dev|volume)\s*=\s*["']([^"']+)["']}g;
+		# Snapshot overlays retain the original disk in
+		# their backing chain.
+		my @files = map { my $file =
+			decode_xml_text($_); $file =~ s{.*/}{}; $file }
+			    $body =~ m{<source\b[^>]*\b(?:file|dev|volume)\s*=\s*["']([^"']+)["']}g;
 		$role = 'system' if (grep {
 			/\Acloudmin-(?:vm|.+-system)-\Q$creation\E\.(?:qcow2|[0-9]+)\z/ ||
-			/\Acloudmin-\Q$creation\E-system\z/ || /-cloudmin--\Q$creation\E--system\z/
+				/\Acloudmin-\Q$creation\E-system\z/ ||
+				/-cloudmin--\Q$creation\E--system\z/
 			} @files);
-		# File seeds may gain a timestamp suffix on restore. Native seeds use
-		# short LV names, with doubled dashes in their /dev/mapper aliases.
+		# File seeds may gain a timestamp suffix on restore. Native
+		# seeds use short LV names, with doubled dashes in their
+		# /dev/mapper aliases.
 		$role = 'seed' if ($readonly && grep {
 			/\Acloudmin-(?:seed|.+-seed)-\Q$creation\E\.(?:iso|[0-9]+)\z/ ||
-			/\Acloudmin-\Q$creation\E-seed\z/ || /-cloudmin--\Q$creation\E--seed\z/
+				/\Acloudmin-\Q$creation\E-seed\z/ ||
+				/-cloudmin--\Q$creation\E--seed\z/
 			} @files);
 		}
-	# Preserve missing details rather than guessing a guest's storage
-	# format.
+	# Preserve missing details rather than guessing a
+	# guest's storage format.
 	push(@disks, {
 		'device' => $device || 'disk',
 		'type' => $type || '',
@@ -1813,14 +2035,15 @@ while ($xml =~ m{<disk\b([^>]*)>(.*?)</disk>}sg) {
 return @disks;
 }
 
-# extract_interfaces(xml)
-# Returns network interfaces with their MAC, model and attachment.
+# extract_interfaces(xml) Returns network interfaces with their MAC,
+# model and attachment.
+
 sub extract_interfaces
 {
 my ($xml) = @_;
 my @interfaces;
 while ($xml =~ m{<interface\b([^>]*)>(.*?)</interface>}sg) {
-	my ($attrs, $body) = ($1, $2);
+	my ($attrs, $body) = ( $1, $2 );
 	my ($type) = $attrs =~ /\btype\s*=\s*["']([^"']+)["']/i;
 	my ($mac) = $body =~ m{<mac\b[^>]*\baddress\s*=\s*["']([^"']+)["']}i;
 	my ($network) =
@@ -1843,9 +2066,9 @@ while ($xml =~ m{<interface\b([^>]*)>(.*?)</interface>}sg) {
 return @interfaces;
 }
 
-# extract_graphics(xml)
-# Returns the VNC graphics device when present, otherwise the first device,
-# with its type, listen address and assigned ports.
+# extract_graphics(xml) Returns the VNC graphics device when present, otherwise
+# the first device, with its type, listen address and assigned ports.
+
 sub extract_graphics
 {
 my ($xml) = @_;
@@ -1868,13 +2091,15 @@ return {
 	'listen' => $graphics{'listen'},
 	'port' => ($graphics{'port'} || -1) > 0 ? $graphics{'port'} : undef,
 	'websocket' => ($graphics{'websocket'} || -1) > 0
-		? $graphics{'websocket'} : undef,
+		? $graphics{'websocket'}
+		: undef,
 };
 }
 
-# extract_serial_console(xml)
-# Returns an alias record for the default PTY console, or undef if unsupported.
-# Fall back to the first serial port only when there is no console element.
+# extract_serial_console(xml) Returns an alias record for the default PTY
+# console, or undef if unsupported. Fall back to the first serial port only when
+# there is no console element.
+
 sub extract_serial_console
 {
 my ($xml) = @_;
@@ -1889,22 +2114,24 @@ my $alias = $device->findvalue('alias/@name');
 return { alias => length($alias) ? $alias : undef };
 }
 
-# parse_pool_xml(xml)
-# Extracts the backend type and target path from a libvirt pool document.
+# parse_pool_xml(xml) Extracts the backend type and target path from a
+# libvirt pool document.
+
 sub parse_pool_xml
 {
 my ($xml) = @_;
 my ($quote, $type) = $xml =~
-	/<pool\b[^>]*\btype\s*=\s*(["'])([^"']+)\1/i;
+		     /<pool\b[^>]*\btype\s*=\s*(["'])([^"']+)\1/i;
 my ($target) = $xml =~
-	m{<target\b[^>]*>.*?<path\b[^>]*>(.*?)</path>}is;
+	       m{<target\b[^>]*>.*?<path\b[^>]*>(.*?)</path>}is;
 # Decode an existing target without inventing a path for non-file pools.
 $target = decode_xml_text($target) if (defined($target));
-return ($type, $target);
+return ( $type, $target );
 }
 
-# decode_xml_text(value)
-# Decodes the entities libvirt uses when serializing text and attributes.
+# decode_xml_text(value) Decodes the entities libvirt uses when serializing
+# text and attributes.
+
 sub decode_xml_text
 {
 my ($value) = @_;
@@ -1920,16 +2147,18 @@ $value =~ s/&amp;/&/g;
 return $value;
 }
 
-# xml_escape(value)
-# Escapes text for use inside libvirt XML elements and quoted attributes.
+# xml_escape(value) Escapes text for use inside libvirt XML elements
+# and quoted attributes.
+
 sub xml_escape
 {
 my ($value) = @_;
 return html_escape($value);
 }
 
-# format_version(version)
-# Converts libvirt's integer version format into major.minor.release.
+# format_version(version) Converts libvirt's integer version format into
+# major.minor.release.
+
 sub format_version
 {
 my ($version) = @_;
@@ -1941,8 +2170,9 @@ my $release = $version % 1_000;
 return join('.', $major, $minor, $release);
 }
 
-# error_message(error)
-# Converts string and Sys::Virt exception objects into one-line messages.
+# error_message(error) Converts string and Sys::Virt exception objects
+# into one-line messages.
+
 sub error_message
 {
 my ($error) = @_;

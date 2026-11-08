@@ -17,7 +17,8 @@ if command -v apt-get >/dev/null 2>&1; then
 	# Debian-family containers need Python only to run the protocol tests.
 	apt-get install -y -- python3
 elif command -v dnf >/dev/null 2>&1; then
-	# Keep Enterprise Linux's test runtime separate from helper dependencies.
+	# Keep Enterprise Linux's test runtime separate from
+	# helper dependencies.
 	dnf install -y -- python3
 else
 	# The remaining supported bootstrap target uses zypper.

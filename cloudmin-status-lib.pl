@@ -4,7 +4,9 @@ use warnings;
 use File::Basename ();
 use Cwd ();
 # Load ACL helpers once, even when callers use different paths.
-require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-access-lib.pl'));
+require(
+	Cwd::abs_path(File::Basename::dirname(__FILE__).
+		      '/cloudmin-access-lib.pl'));
 use IO::Socket::IP;
 use IO::Select;
 use Time::HiRes ();
@@ -15,10 +17,10 @@ our (%text, %config, %in, $module_root_directory, $module_var_directory,
 our $cloudmin_status_protocol = 14;
 require "$module_root_directory/cloudmin-terminal-lib.pl";
 
-# check_ssh_service(addresses, [port])
-# Checks discovered guest addresses for an SSH banner on port (default 22).
-# All addresses share a two-second budget.
+# check_ssh_service(addresses, [port]) Checks discovered guest addresses for an
+# SSH banner on port (default 22). All addresses share a two-second budget.
 # Callers supply a validated port, normally from get_terminal_port.
+
 sub check_ssh_service
 {
 my ($addresses, $port) = @_;
@@ -29,22 +31,26 @@ foreach my $address (@$addresses) {
 	my $remaining = $deadline - Time::HiRes::time();
 	# All candidate addresses share the two-second budget.
 	last if ($remaining <= 0);
-	my $socket = IO::Socket::IP->new(PeerHost => $address, PeerPort => $port,
-		Type => Socket::SOCK_STREAM(),
-		Timeout => $remaining < 0.5 ? $remaining : 0.5);
-	# An unreachable address should not prevent trying another
-	# reported IP.
+	my $socket =
+		IO::Socket::IP->new(PeerHost => $address, PeerPort => $port,
+				    Type => Socket::SOCK_STREAM(),
+				    Timeout => $remaining < 0.5
+					    ? $remaining
+					    : 0.5);
+	# An unreachable address should not prevent trying another reported IP.
 	next if (!$socket);
 	my $until = Time::HiRes::time() + 0.5;
-	# A final connection attempt cannot extend the shared probe
-	# deadline.
+	# A final connection attempt cannot extend the shared probe deadline.
 	$until = $deadline if ($until > $deadline);
 	my $buffer = '';
 	# A listening TCP port alone is not evidence of a working SSH service.
 	while (length($buffer) < 4096 && $until > Time::HiRes::time()) {
-		# Stop waiting when this server has used its allotted
-		# banner time.
-		last if (!IO::Select->new($socket)->can_read($until - Time::HiRes::time()));
+		# Stop waiting when this server has used its
+		# allotted banner time.
+		last
+			if (
+				!IO::Select->new($socket)->can_read(
+					$until - Time::HiRes::time()));
 		# A closed socket or failed read cannot confirm SSH readiness.
 		last if (!sysread($socket, my $part, 512));
 		$buffer .= $part;
@@ -60,25 +66,25 @@ foreach my $address (@$addresses) {
 return undef;
 }
 
-# get_server_health(uuid)
-# Returns public health signals; the shared worker drops the localized labels.
+# get_server_health(uuid) Returns public health signals; the shared worker drops
+# the localized labels.
+
 sub get_server_health
 {
 my ($uuid) = @_;
-# Status subscriptions refer to stable inventory UUIDs, not arbitrary
-# names.
+# Status subscriptions refer to stable inventory UUIDs, not arbitrary names.
 die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
-	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+				       $uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
 my $vm = get_libvirt(1)->get_guest_status($uuid);
 my @addresses = list_terminal_addresses($vm);
 # Probe the same shared port that future SSH connection forms will offer.
 my $port = get_terminal_port($uuid);
 my $running = $vm->{'state'} =~ /\A(?:running|blocked)\z/;
 my $local = $config{'libvirt_uri'} eq 'qemu:///system';
-my $ssh = !$running ? 'inactive' : !$local ? 'remote' : !@addresses
-	? 'no_address' : 'unavailable';
-# The local collector probes only running guests with usable known
-# addresses.
+my $ssh = !$running
+	? 'inactive'
+	: !$local ? 'remote' : !@addresses ? 'no_address' : 'unavailable';
+# The local collector probes only running guests with usable known addresses.
 my $address = check_ssh_service(\@addresses, $port)
 	if ($running && $local && @addresses);
 # Mark SSH as responding only after receiving its identification line.
@@ -90,64 +96,90 @@ return {
 	addresses => $vm->{'addresses'},
 	labels => {
 		power => $text{'index_state_'.$vm->{'state'}} ||
-			$text{'index_state_unknown'},
+			 $text{'index_state_unknown'},
 		agent => $text{'vm_agent_'.$agent},
-		ssh => $address ? text('vm_ssh_responding', $address, $port)
-		: text('vm_ssh_'.$ssh, $port),
-		addresses => @addresses ? join(', ', @addresses)
-		: $text{'vm_no_address'},
+		ssh => $address
+			? text('vm_ssh_responding', $address, $port)
+			: text('vm_ssh_'.$ssh, $port),
+		addresses => @addresses
+			? join(', ', @addresses)
+			: $text{'vm_no_address'},
 	},
-	# A warning page can reopen itself when its prerequisites become
-	# available.
+	# A warning page can reopen itself when its
+	# prerequisites become available.
 	terminal_available => $running && @addresses &&
-	foreign_check('xterm') && !is_readonly_mode() ? 1 : 0,
+			      foreign_check('xterm') && !is_readonly_mode()
+				      ? 1
+				      : 0,
 	console_available => $vm->{'active'} && $local &&
-		($vm->{'graphics'}->{'type'} || '') eq 'vnc' &&
-		foreign_check('xterm') && !is_readonly_mode() ? 1 : 0,
-	# This checks device presence, not whether another client holds the port.
-	# The shared collector filters both console modes with each viewer's grant.
-	serial_available => $vm->{'active'} && $local && $vm->{'serial_console'} &&
-		foreign_check('xterm') && !is_readonly_mode() ? 1 : 0,
+			     ($vm->{'graphics'}->{'type'} || '') eq 'vnc' &&
+			     foreign_check('xterm') && !is_readonly_mode()
+				     ? 1
+				     : 0,
+	# This checks device presence, not whether another client holds the
+	# port. The shared collector filters both console modes with
+	# each viewer's grant.
+	serial_available => $vm->{'active'} && $local &&
+			    $vm->{'serial_console'} &&
+			    foreign_check('xterm') && !is_readonly_mode()
+				    ? 1
+				    : 0,
 };
 }
 
-# get_status_config(vm, [reopen])
-# Returns socket configuration and the current user's labels and permissions.
-# reopen is terminal, console or serial for a connection, or edit_machine after
-# shutdown. Omit it to update status without navigating to another page.
+# get_status_config(vm, [reopen]) Returns socket configuration and the current
+# user's labels and permissions. reopen is terminal, console or serial for a
+# connection, or edit_machine after shutdown. Omit it to update status without
+# navigating to another page.
+
 sub get_status_config
 {
 my ($vm, $reopen) = @_;
 # Map reconnect targets to tabs without changing the status readiness keys.
-my %tabs = (terminal => 'ssh', serial => 'serial', console => 'graphical');
+my %tabs = ( terminal => 'ssh', serial => 'serial', console => 'graphical' );
 my $page = $tabs{$reopen || ''} ? 'remote_access' : $reopen;
-my $config = { endpoint => get_webprefix().'/server-manager/machine_status.cgi',
-	id => $vm->{'uuid'},
-	yes => $text{'index_yes'}, no => $text{'index_no'},
-	usage => { map { $_ => $text{'vm_usage_'.$_} }
-	qw(format missing unavailable cpu memory disk rate) },
-	filesystems => { map { $_ => $text{'vm_filesystems_'.$_} }
-	qw(checking stopped unavailable empty) },
-	units => [ 'B',
-	map { $text{'nice_size_'.$_} } qw(kiB MiB GiB TiB PiB) ],
-	# Connection warning pages must not reopen after their grant is removed.
-	# Serial has its own readiness field but shares the console permission.
-	readonly => is_readonly_mode() || ($reopen && $reopen =~ /\A(?:console|serial|terminal)\z/ &&
-		!can_access($reopen eq 'serial' ? 'console' : $reopen, $vm->{'uuid'})) ? 1 : 0,
-	labels => { map { $_ => $text{$_} }
-	grep { /^(?:index_state_|vm_agent_|vm_ssh_)/ } keys %text },
-	unavailable => $text{'vm_status_unavailable'},
-	checking => $text{'vm_status_checking'}, reopen => $reopen || '',
-	# Reopen the selected console tab, including the theme's navigation mode.
-	url => $reopen ? get_webprefix().'/server-manager/'.$page.'.cgi?id='.
-	urlize($vm->{'uuid'}).($tabs{$reopen} ? '&tab='.$tabs{$reopen} : '').
-	($in{'xnavigation'} ? '&xnavigation=1' : '') : '' };
+my $config =
+	{ endpoint => get_webprefix().'/server-manager/machine_status.cgi',
+	  id => $vm->{'uuid'},
+	  yes => $text{'index_yes'}, no => $text{'index_no'},
+	  usage => { map { $_ => $text{'vm_usage_'.$_} }
+		     qw(format missing unavailable cpu memory disk rate) },
+	  filesystems => { map { $_ => $text{'vm_filesystems_'.$_} }
+			   qw(checking stopped unavailable empty) },
+	  units => [ 'B',
+		     map { $text{'nice_size_'.$_} } qw(kiB MiB GiB TiB PiB) ],
+	  # Connection warning pages must not reopen after their grant is
+	  # removed. Serial has its own readiness field but shares
+	  # the console permission.
+	  readonly => is_readonly_mode() || ($reopen &&
+					     $reopen =~ /\A(?:console|serial|terminal)\z/ &&
+					     !can_access($reopen eq 'serial'
+						     ? 'console'
+						     : $reopen,
+							 $vm->{'uuid'})) ? 1 : 0,
+	  labels => { map { $_ => $text{$_} }
+		      grep {
+				/^(?:index_state_|vm_agent_|vm_ssh_)/ } keys %text },
+	  unavailable => $text{'vm_status_unavailable'},
+	  checking => $text{'vm_status_checking'}, reopen => $reopen ||
+							     '',
+	  # Reopen the selected console tab, including the
+	  # theme's navigation mode.
+	  url => $reopen
+		  ? get_webprefix().'/server-manager/'.
+		 $page.'.cgi?id='.
+		 urlize($vm->{'uuid'}).($tabs{$reopen}
+			 ? '&tab='.$tabs{$reopen}
+			 : '').
+		 ($in{'xnavigation'} ? '&xnavigation=1' : '')
+		  : '' };
 return convert_to_json($config);
 }
 
-# get_overview_status_config([token]) supplies theme-native row templates.
-# Omit the token when power controls are unavailable.
-# Tokens and translated markup belong to the page, never the shared cache.
+# get_overview_status_config([token]) supplies theme-native row templates. Omit
+# the token when power controls are unavailable. Tokens and translated markup
+# belong to the page, never the shared cache.
+
 sub get_overview_status_config
 {
 my ($token) = @_;
@@ -156,14 +188,17 @@ my $id = '00000000-0000-0000-0000-000000000000';
 # Send column IDs so live updates find the right cells when columns are hidden.
 # As in the initial table, controls require a token as well as a visible column.
 my @columns = grep { $_->[0] ne 'controls' || $token }
-	view_selection('machine_columns');
-$config->{'columns'} = [map { $_->[0] } @columns];
+	      view_selection('machine_columns');
+$config->{'columns'} = [ map { $_->[0] } @columns ];
 # Filter every power-state template with the same settings as the initial rows.
 $config->{'rows'} = { map {
 	my (undef, $rows) = table_columns('machine_columns',
-		[get_vm_row({ uuid => $id, name => '', state => $_,
-		active => $_ ne 'shutoff', persistent => 1, autostart => 0 },
-		$token)], 0, $token);
+					  [ get_vm_row({ uuid => $id,
+							 name => '',
+							 state => $_,
+							 active => $_ ne 'shutoff', persistent => 1,
+							 autostart => 0 },
+						       $token) ], 0, $token);
 	$_ => $rows->[0]
 	} qw(running blocked paused shutdown shutoff crashed nostate
 	     pmsuspended unknown) };
@@ -173,32 +208,31 @@ return convert_to_json($config);
 }
 
 # notify_status_changed(uuid) queues module changes without a libvirt event.
+
 sub notify_status_changed
 {
 my ($id) = @_;
-# With no collector, the next subscriber's full snapshot covers this
-# change.
+# With no collector, the next subscriber's full snapshot covers this change.
 return if (!-e "$module_var_directory/status-server.json");
 open(my $fh, '>>', "$module_var_directory/status-changes") || return;
 chmod(0600, "$module_var_directory/status-changes");
 flock($fh, LOCK_EX) || return;
-# Bound the pending notification file; the collector drains it on its
-# next tick.
+# Bound the pending notification file; the collector drains it on its next tick.
 truncate($fh, 0) if (-s $fh > 65536);
 print $fh lc($id)."\n";
 close($fh);
 }
 
 # start_status() reuses one session-authenticated collector for this host.
+
 sub start_status
 {
-# Sharing a backend does not remove the need for an authenticated
-# browser.
+# Sharing a backend does not remove the need for an authenticated browser.
 die "Log in to Webmin to receive live status\n" if (!$main::session_id);
-eval { require Net::WebSocket::Server; require Sys::Virt::Event; 1 }
-	|| die "WebSocket and libvirt event support are required\n";
-# Shared collector bookkeeping must work for read-only viewers too. Restore
-# the CGI's permissions on return or failure; the socket checks each session.
+eval { require Net::WebSocket::Server; require Sys::Virt::Event; 1 } ||
+	die "WebSocket and libvirt event support are required\n";
+# Shared collector bookkeeping must work for read-only viewers too. Restore the
+# CGI's permissions on return or failure; the socket checks each session.
 local $main::readonly_mode_cache = 0;
 # An OS lock serializes concurrent first subscribers and releases on failure.
 make_dir($module_var_directory, 0700, 1);
@@ -206,27 +240,31 @@ open(my $lock, '>>', "$module_var_directory/status-start.lock") ||
 	die "Cannot lock status startup\n";
 flock($lock, LOCK_EX) || die "Cannot lock status startup\n";
 my $file = "$module_var_directory/status-server.json";
-my $state = eval { convert_from_json(read_file_contents($file)) } || {};
+my $state = eval { convert_from_json(read_file_contents($file)) } || { };
 my $port = $state->{'port'};
 my %miniserv;
 get_miniserv_config(\%miniserv);
-my $route = defined($port) ? $miniserv{"websockets_/$module_name/ws-$port"}
+my $route = defined($port)
+	? $miniserv{"websockets_/$module_name/ws-$port"}
 	: undef;
 # A leftover PID can be reused after a crash; also check the bound listener.
-my $listening = $port && $route ? IO::Socket::IP->new(PeerHost => '127.0.0.1',
-	PeerPort => $port, Type => Socket::SOCK_STREAM(), Timeout => 1) : undef;
+my $listening = $port && $route
+	? IO::Socket::IP->new(PeerHost => '127.0.0.1',
+			      PeerPort => $port, Type => Socket::SOCK_STREAM(),
+			      Timeout => 1)
+	: undef;
 if (!$port || !$state->{'pid'} || !kill(0, $state->{'pid'}) || !$route ||
-	!$listening || ($state->{'uri'} || '') ne $config{'libvirt_uri'} ||
-	($state->{'protocol'} || 0) != $cloudmin_status_protocol) {
-	# Only replace our own recorded route; console and terminal routes
-	# coexist.
+    !$listening || ($state->{'uri'} || '') ne $config{'libvirt_uri'} ||
+    ($state->{'protocol'} || 0) != $cloudmin_status_protocol) {
+	# Only replace our own recorded route; console and
+	# terminal routes coexist.
 	remove_miniserv_websocket($port, $module_name) if ($port && $route);
 	unlink($file);
 	$port = allocate_miniserv_websocket($module_name);
 	my $ok = eval {
 		# Miniserv still requires login, origin and token checks. The
-		# shared backend checks each proxied session's Cloudmin access
-		# independently.
+		# shared backend checks each proxied session's Cloudmin
+		# access independently.
 		lock_file(get_miniserv_config_file());
 		get_miniserv_config(\%miniserv);
 		$miniserv{"websockets_/$module_name/ws-$port"} =~ s/\buser=\S*\s*//;
@@ -243,37 +281,41 @@ if (!$port || !$state->{'pid'} || !kill(0, $state->{'pid'}) || !$route ||
 		chmod(0600, $log) || die "Cannot protect status log\n";
 		local $ENV{'SESSION_ID'} = $main::session_id;
 		my $command = join(' ',
-			map { quote_path($_) } ($wrapper, $port));
-		# Failed startup must unwind the newly allocated shared
-		# route.
+				   map { quote_path($_) } ( $wrapper, $port ));
+		# Failed startup must unwind the newly allocated shared route.
 		die "Cannot start status server\n"
 			if (system_logged("$command >".quote_path($log).
-			" 2>&1 </dev/null"));
+					  " 2>&1 </dev/null"));
 		1;
 		};
-	# Keep the startup error after removing an otherwise unusable
-	# proxy route.
-	if (!$ok) { my $error = $@;
-		remove_miniserv_websocket($port, $module_name); die $error; }
+	# Keep the startup error after removing an otherwise
+	# unusable proxy route.
+	if (!$ok) {
+		my $error = $@;
+		remove_miniserv_websocket($port, $module_name);
+		die $error;
+		}
 	}
 return { socket_url => get_miniserv_websocket_url($port, undef,
-	$module_name) };
+						  $module_name) };
 }
 
-# show_status_script()
-# Loads the updater for full-page and AJAX navigation alike.
+# show_status_script() Loads the updater for full-page and
+# AJAX navigation alike.
+
 sub show_status_script
 {
 return ui_tag('script', '', { src => get_webprefix().
-	'/server-manager/machine_status.js?'.
-	(stat("$module_root_directory/machine_status.js"))[9] }).
-	ui_tag('script', 'window.cloudminStatusInit?.();');
+				     '/server-manager/machine_status.js?'.
+				     (stat("$module_root_directory/machine_status.js"))[9] }).
+       ui_tag('script', 'window.cloudminStatusInit?.();');
 }
 
-# show_status_summary(vm, [reopen], [message])
-# Shows all health signals for a waiting graphical or serial console; other
-# callers get SSH readiness. See get_status_config for reopen values.
-# message adds plain text to SSH readiness after the pending check finishes.
+# show_status_summary(vm, [reopen], [message]) Shows all health signals for a
+# waiting graphical or serial console; other callers get SSH readiness. See
+# get_status_config for reopen values. message adds plain text to SSH readiness
+# after the pending check finishes.
+
 sub show_status_summary
 {
 my ($vm, $reopen, $message) = @_;
@@ -281,32 +323,36 @@ my $card;
 if (($reopen || '') =~ /\A(?:console|serial)\z/) {
 	# Show power and service status while waiting; consoles do not need SSH.
 	my @signals = map {
-		ui_list([{
+		ui_list([ {
 			title => $text{'vm_status_'.$_->[0]}, icon => $_->[1],
 			desc_html => ui_tag('span',
-			html_escape($text{'vm_status_checking'}),
-				{ 'data-vm-field' => $_->[0] }),
-		}])
-		} ([power => 'power'], [agent => 'server'],
-		[ssh => 'terminal']);
+					    html_escape($text{'vm_status_checking'}),
+					    { 'data-vm-field' => $_->[0] }),
+		} ])
+		} ( [ power => 'power' ], [ agent => 'server' ],
+		    [ ssh => 'terminal' ] );
 	$card = ui_card({ id => 'cloudmin-connection-status',
-		body => ui_grid(\@signals, { min => '240px' }) });
+			  body => ui_grid(\@signals, { min => '240px' }) });
 	}
 else {
-	# A list keeps the title and live message together without header
-	# padding.
+	# A list keeps the title and live message together
+	# without header padding.
 	$card = ui_card({ id => 'cloudmin-ssh-status', state => 'warning',
-		body => ui_list([{ title => $text{'vm_status_ssh'},
-			desc_html => ui_tag('span', html_escape($text{'vm_status_checking'}),
-				{ 'data-vm-field' => 'ssh', role => 'status',
-				  ($message ? ('data-vm-message' => html_escape($message)) : ()) }) }]) });
+			  body => ui_list([ { title => $text{'vm_status_ssh'},
+					      desc_html => ui_tag('span',
+								  html_escape($text{'vm_status_checking'}),
+								  { 'data-vm-field' => 'ssh', role => 'status',
+								    ($message
+									    ? ( 'data-vm-message' => html_escape($message) )
+									    : ()) }) } ]) });
 	}
-# Put configuration on the page itself; theme navigation strips script
-# attributes.
+# Put configuration on the page itself; theme navigation
+# strips script attributes.
 return ui_page_assets().ui_tag('div', $card,
-	{ class => 'ui_page', id => 'cloudmin-vm-status',
-	  'data-config' => get_status_config($vm, $reopen) }).
-	show_status_script();
+			       { class => 'ui_page', id => 'cloudmin-vm-status',
+				 'data-config' => get_status_config($vm,
+								    $reopen) }).
+       show_status_script();
 }
 
 1;

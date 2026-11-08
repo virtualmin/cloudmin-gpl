@@ -14,19 +14,25 @@ require(dirname(__FILE__).'/BackupSSH.pm');
 my $PRO_HELPERS = dirname(__FILE__).'/../../pro/BackupCloud.pm';
 
 # has_pro_providers() checks for the installed Cloudmin Pro transfer helpers.
+
 sub has_pro_providers
 {
 return -r $PRO_HELPERS;
 }
 
 # modes() lists destinations supported by the installed edition.
+
 sub modes
 {
-return (qw(local ssh s3), has_pro_providers() ? qw(gcs azure bb dropbox drive) : ());
+return ( qw(local ssh s3), has_pro_providers()
+	? qw(gcs azure bb dropbox drive)
+	: () );
 }
 
-# saved_target(target, [previous]) retains blank credentials only for this provider.
-# Explicit clearing lets administrators remove an optional token or password.
+# saved_target(target, [previous]) retains blank credentials only for this
+# provider. Explicit clearing lets administrators remove an
+# optional token or password.
+
 sub saved_target
 {
 my ($target, $previous) = @_;
@@ -34,93 +40,138 @@ die "Select a backup destination\n" if (ref($target) ne 'HASH');
 my %target = %$target;
 foreach my $field (qw(password secret session_token refresh_token)) {
 	my $clear = delete($target{$field.'_clear'});
-	die "Invalid credential choice\n" if (defined($clear) && $clear !~ /\A[01]?\z/);
+	die "Invalid credential choice\n"
+		if (defined($clear) && $clear !~ /\A[01]?\z/);
 	# Explicit clearing takes priority over the saved-secret fallback.
 	if ($clear) { $target{$field} = ''; }
-	# Reuse blanks only within the same provider, never after a provider
-	# switch.
-	elsif (!length($target{$field} // '') && $previous && ($previous->{'mode'} || '') eq ($target{'mode'} || '')) {
+	# Reuse blanks only within the same provider, never
+	# after a provider switch.
+	elsif (!length($target{$field} // '') && $previous &&
+	       ($previous->{'mode'} || '') eq ($target{'mode'} || '')) {
 		$target{$field} = $previous->{$field} // '';
+		}
 	}
-}
 return validate(\%target);
 }
 
 # validate(target, [restoring]) checks destination fields without contacting it.
-# The optional restoring flag is accepted by the service callback; validation
-# is identical for backup and restore.
+# The optional restoring flag is accepted by the service callback; validation is
+# identical for backup and restore.
+
 sub validate
 {
 my ($t, $restoring) = @_;
 die "Select a backup destination\n" if (ref($t) ne 'HASH');
 my %t = %$t;
-die "Select a supported backup destination\n" if (($t{'mode'} || '') !~ /\A(?:local|ssh|s3|gcs|azure|bb|dropbox|drive)\z/);
+die "Select a supported backup destination\n"
+	if (($t{'mode'} ||
+	     '') !~ /\A(?:local|ssh|s3|gcs|azure|bb|dropbox|drive)\z/);
 # Enforce the same edition boundary for forms, schedules, APIs and workers.
-die "This backup destination requires Cloudmin Pro\n" if (!grep { $_ eq $t{'mode'} } modes());
+die "This backup destination requires Cloudmin Pro\n"
+	if (!grep { $_ eq $t{'mode'} } modes());
 # Bound all fields before constructing client requests or command arguments.
 foreach my $key (keys %t) {
-	die "Invalid backup destination field\n" if (ref($t{$key}) || length($t{$key} // '') > 16384 || ($t{$key} // '') =~ /[\x00-\x08\x0b\x0c\x0e-\x1f]/);
-}
-die "Enter a backup directory or cloud folder\n" if (!defined($t{'path'}) || length($t{'path'}) > 2048 || $t{'path'} =~ /[\r\n]/);
+	die "Invalid backup destination field\n"
+		if (ref($t{$key}) || length($t{$key} // '') > 16384 ||
+		    ($t{$key} // '') =~ /[\x00-\x08\x0b\x0c\x0e-\x1f]/);
+	}
+die "Enter a backup directory or cloud folder\n"
+	if (!defined($t{'path'}) || length($t{'path'}) > 2048 ||
+	    $t{'path'} =~ /[\r\n]/);
 # Filesystem destinations need an absolute directory without parent traversal.
 if ($t{'mode'} eq 'local' || $t{'mode'} eq 'ssh') {
-	die "Enter an absolute backup directory\n" if ($t{'path'} !~ m{\A/} || $t{'path'} =~ m{(?:\A|/)\.\.(?:/|\z)});
-}
+	die "Enter an absolute backup directory\n"
+		if ($t{'path'} !~ m{\A/} ||
+		    $t{'path'} =~ m{(?:\A|/)\.\.(?:/|\z)});
+	}
 # SSH connection arguments and SFTP paths must be literal values.
 if ($t{'mode'} eq 'ssh') {
-	die "Enter a valid SSH server, username and port\n" if (($t{'host'} || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9.:-]*\z/ ||
-		($t{'user'} || '') !~ /\A[a-zA-Z0-9_][a-zA-Z0-9_.-]*\z/ || ($t{'port'} || '22') !~ /\A\d+\z/ || ($t{'port'} || 22) > 65535);
+	die "Enter a valid SSH server, username and port\n" if (($t{'host'} ||
+								 '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9.:-]*\z/ ||
+								($t{'user'} || '') !~ /\A[a-zA-Z0-9_][a-zA-Z0-9_.-]*\z/ ||
+								($t{'port'} || '22') !~ /\A\d+\z/ || ($t{'port'} ||
+												      22) > 65535);
 	$t{'port'} ||= 22;
 	Cloudmin::BackupSSH::host(\%t);
-	die "Enter an SSH password or private key file\n" if (!$t{'password'} && !$t{'key_file'});
-	die "SSH backup directories cannot contain wildcard characters\n" if ($t{'path'} =~ /[*?\[\]]/);
-}
+	die "Enter an SSH password or private key file\n"
+		if (!$t{'password'} && !$t{'key_file'});
+	die "SSH backup directories cannot contain wildcard characters\n"
+		if ($t{'path'} =~ /[*?\[\]]/);
+	}
 # Object stores separate the bucket or container from the object path.
 if ($t{'mode'} =~ /\A(?:s3|gcs|azure|bb)\z/) {
-	die "Enter a bucket or container name\n" if (($t{'bucket'} || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,222}\z/);
-}
-# Cloud providers require explicit credentials rather than host account
-# defaults.
+	die "Enter a bucket or container name\n"
+		if (($t{'bucket'} ||
+		     '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,222}\z/);
+	}
+# Cloud providers require explicit credentials rather than
+# host account defaults.
 if ($t{'mode'} !~ /\A(?:local|ssh)\z/) {
 	die "Enter the cloud account's access and secret credentials\n"
 		if (!$t{'secret'} || ($t{'mode'} ne 'azure' && !$t{'access'}));
-	die "Enter an OAuth refresh token\n" if ($t{'mode'} =~ /\A(?:gcs|drive|dropbox)\z/ && !$t{'refresh_token'});
-	die "Enter an Azure storage account\n" if ($t{'mode'} eq 'azure' && ($t{'account'} || '') !~ /\A[a-z0-9]{3,24}\z/);
-}
+	die "Enter an OAuth refresh token\n"
+		if ($t{'mode'} =~ /\A(?:gcs|drive|dropbox)\z/ &&
+		    !$t{'refresh_token'});
+	die "Enter an Azure storage account\n"
+		if ($t{'mode'} eq 'azure' &&
+		    ($t{'account'} || '') !~ /\A[a-z0-9]{3,24}\z/);
+	}
 # Custom S3 endpoints cannot embed credentials, paths or insecure HTTP.
-die "Use an HTTPS S3 endpoint without credentials or a path\n" if ($t{'endpoint'} &&
-	$t{'endpoint'} !~ m{\Ahttps://[a-zA-Z0-9][a-zA-Z0-9.:-]*\z});
-die "Enter a region name\n" if ($t{'region'} && $t{'region'} !~ /\A[a-zA-Z0-9-]+\z/);
+die "Use an HTTPS S3 endpoint without credentials or a path\n"
+	if ($t{'endpoint'} &&
+	    $t{'endpoint'} !~ m{\Ahttps://[a-zA-Z0-9][a-zA-Z0-9.:-]*\z});
+die "Enter a region name\n"
+	if ($t{'region'} && $t{'region'} !~ /\A[a-zA-Z0-9-]+\z/);
 # Remote folders are literal paths; never allow command or traversal syntax.
-die "Invalid remote backup folder\n" if ($t{'mode'} ne 'local' && ($t{'path'} =~ /[\r\n"\\]/ || $t{'path'} =~ m{(?:\A|/)\.\.(?:/|\z)}));
+die "Invalid remote backup folder\n"
+	if ($t{'mode'} ne 'local' &&
+	    ($t{'path'} =~ /[\r\n"\\]/ ||
+	     $t{'path'} =~ m{(?:\A|/)\.\.(?:/|\z)}));
 $t{'path'} =~ s{/+\z}{} if ($t{'path'} ne '/');
 return \%t;
 }
 
 # preflight(target, restoring) checks tools and storage before stopping a guest.
+
 sub preflight
 {
 my ($t, $restoring) = @_;
 $t = validate($t, $restoring);
 if ($t->{'mode'} eq 'local') {
-	# Backup may create a private destination; restore requires an existing
-	# one.
-	make_path($t->{'path'}, {mode => 0700}) if (!$restoring && !-e $t->{'path'} && !-l $t->{'path'});
+	# Backup may create a private destination; restore
+	# requires an existing one.
+	make_path($t->{'path'}, { mode => 0700 })
+		if (!$restoring && !-e $t->{'path'} && !-l $t->{'path'});
 	my @st = lstat($t->{'path'});
-	die "Select an existing private backup directory\n" if (!@st || !-d _ || -l _ || ($st[2] & 0022));
-}
+	die "Select an existing private backup directory\n"
+		if (!@st || !-d _ || -l _ || ($st[2] & 0022));
+	}
 # Check command-line dependencies before guest preparation or worker startup.
-my @tools = $t->{'mode'} eq 's3' ? ('aws') : $t->{'mode'} eq 'azure' ? ('az') :
-	$t->{'mode'} eq 'ssh' ? ('sftp', 'ssh-keygen', 'ssh-keyscan', $t->{'password'} && !$t->{'key_file'} ? ('sshpass') : ()) : ();
-foreach my $tool (@tools) { die "Install $tool on this host for the selected backup destination\n" if (!WebminCore::has_command($tool)); }
+my @tools = $t->{'mode'} eq 's3'
+	? ('aws')
+	: $t->{'mode'} eq 'azure'
+		? ('az')
+		: $t->{'mode'} eq 'ssh'
+			? ( 'sftp', 'ssh-keygen', 'ssh-keyscan',
+			    $t->{'password'} &&
+			    !$t->{'key_file'} ? ('sshpass') : () )
+			: ();
+foreach my $tool (@tools) {
+	die "Install $tool on this host for the selected backup destination\n"
+		if (!WebminCore::has_command($tool));
+	}
 Cloudmin::BackupSSH::require_trusted($t) if ($t->{'mode'} eq 'ssh');
 # B2 packages use different executable names across distributions.
 if ($t->{'mode'} eq 'bb') {
-	die "Install the Backblaze B2 command on this host\n" if (!grep { WebminCore::has_command($_) } qw(b2 b2-linux backblaze-b2));
-}
+	die "Install the Backblaze B2 command on this host\n"
+		if (
+			!grep { WebminCore::has_command(
+				$_) } qw(b2 b2-linux backblaze-b2));
+	}
 }
 
 # label(target) names a destination without displaying credentials.
+
 sub label
 {
 my ($t) = @_;
@@ -130,63 +181,93 @@ return 'SSH: '.$t->{'host'}.':'.$t->{'path'} if ($t->{'mode'} eq 'ssh');
 return uc($t->{'mode'}).': '.($t->{'bucket'} || '').'/'.$t->{'path'};
 }
 
-# transfer(operation, target, filename, local_file, [worker_options]) transfers one
-# fixed archive. Remote options provide cancellation and worker journalling.
+# transfer(operation, target, filename, local_file, [worker_options]) transfers
+# one fixed archive. Remote options provide cancellation and worker journalling.
+
 sub transfer
 {
 my ($op, $t, $name, $local, $opts) = @_;
 $t = validate($t, $op eq 'get');
-die "Invalid backup filename\n" if (($name || '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199}\.tar(?:\.gz)?\z/);
+die "Invalid backup filename\n"
+	if (($name ||
+	     '') !~ /\A[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199}\.tar(?:\.gz)?\z/);
 die "Unknown backup transfer operation\n" if ($op !~ /\A(?:put|get|delete)\z/);
 if ($t->{'mode'} eq 'local') {
-	# A single private directory works for local disks and mounted NFS storage.
+	# A single private directory works for local disks and
+	# mounted NFS storage.
 	my $dir = $t->{'path'};
 	die "The backup directory does not exist\n" if (!-d $dir || -l $dir);
 	my @st = stat($dir);
-	die "The backup directory must not be writable by other users\n" if ($st[2] & 0022);
+	die "The backup directory must not be writable by other users\n"
+		if ($st[2] & 0022);
 	my $path = "$dir/$name";
 	if ($op eq 'put') {
-		# A repeated upload must not overwrite an already published
-		# archive.
-		die "A backup with this filename already exists\n" if (-e $path || -l $path);
-		# Copy inside a private directory so an existing partial file or symlink
-		# cannot redirect the privileged write. Link publishes without replacing.
-		my $stage = tempdir('.cloudmin-XXXXXXXX', DIR => $dir, CLEANUP => 0);
+		# A repeated upload must not overwrite an
+		# already published archive.
+		die "A backup with this filename already exists\n"
+			if (-e $path || -l $path);
+		# Copy inside a private directory so an existing partial file or
+		# symlink cannot redirect the privileged write. Link
+		# publishes without replacing.
+		my $stage =
+			tempdir('.cloudmin-XXXXXXXX', DIR => $dir,
+				CLEANUP => 0);
 		my $temp = "$stage/archive";
 		eval { Cloudmin::Worker::copy_file($local, $temp, -s $local);
-			link($temp, $path) or die "Cannot publish backup archive\n"; unlink($temp) or die "Cannot remove backup transfer file\n";
-			rmdir($stage) or die "Cannot remove backup staging directory\n"; 1 }
-			or do { my $e = $@; unlink($temp); rmdir($stage); die $e; };
-	}
+			link($temp, $path) or
+				die "Cannot publish backup archive\n"; unlink(
+					$temp) or
+					die "Cannot remove backup transfer file\n";
+			rmdir($stage) or
+				die "Cannot remove backup staging directory\n";
+			1 } or
+			do { my $e =
+				$@; unlink($temp); rmdir($stage); die $e; };
+		}
 	# Bound local downloads by available staging space too.
-	elsif ($op eq 'get') { Cloudmin::Worker::copy_file($path, $local, Cloudmin::Worker::free_space(dirname($local))-256*1024**2); }
+	elsif ($op eq 'get') {
+		Cloudmin::Worker::copy_file($path, $local,
+					    Cloudmin::Worker::free_space(dirname($local)) -
+					    256 * 1024**2);
+		}
 	# Deleting an already absent local archive is idempotent.
-	else { unlink($path) or die "Cannot delete backup archive\n" if (-e $path || -l $path); }
+	else {
+		unlink($path) or die "Cannot delete backup archive\n"
+			if (-e $path || -l $path);
+		}
 	return;
-}
+	}
 # Only uploads need the input archive copied into the isolated worker.
 my %files;
 $files{'archive'} = $local if ($op eq 'put');
 foreach my $field (qw(key_file ca_file)) {
 	# Only administrator-selected credential files cross into the worker.
 	next if (!$t->{$field});
-	die "Select an absolute credential file path\n" if ($t->{$field} !~ m{\A/});
+	die "Select an absolute credential file path\n"
+		if ($t->{$field} !~ m{\A/});
 	$files{$field eq 'key_file' ? 'ssh-key' : 'ca.pem'} = $t->{$field};
-}
-my $limit = Cloudmin::Worker::free_space(dirname($local))-256*1024**2;
+	}
+my $limit = Cloudmin::Worker::free_space(dirname($local)) - 256 * 1024**2;
 my %contents;
 if ($t->{'mode'} eq 'ssh') {
 	# Give the isolated client only this server's trusted entries.
 	my $known = Cloudmin::BackupSSH::known($t);
-	die "SSH host key is unknown. Open the backup or restore form to approve its fingerprints.\n" if (!@$known);
+	die "SSH host key is unknown. Open the backup or restore form to approve its fingerprints.\n"
+		if (!@$known);
 	$contents{'known-hosts'} = join("\n", @$known)."\n";
-}
-Cloudmin::Worker->new()->run('backup_transfer', {operation => $op, target => $t,
-	filename => $name, limit => $limit}, files => \%files, contents => \%contents,
-	($op eq 'get' ? (output => $local) : ()), %{$opts || {}});
+	}
+Cloudmin::Worker->new()->run('backup_transfer', { operation => $op,
+						  target => $t,
+						  filename => $name,
+						  limit => $limit },
+			     files => \%files,
+			     contents => \%contents,
+			     ($op eq 'get' ? ( output => $local ) : ()),
+			     %{$opts || { }});
 }
 
 # remote(request) runs native clients or Virtualmin helpers in a private worker.
+
 sub remote
 {
 my ($r) = @_;
@@ -209,80 +290,132 @@ $ENV{'AZURE_STORAGE_KEY'} = $t->{'secret'} || '';
 $ENV{'B2_APPLICATION_KEY_ID'} = $t->{'access'} || '';
 $ENV{'B2_APPLICATION_KEY'} = $t->{'secret'} || '';
 if ($mode eq 's3') {
-	# Virtualmin also delegates multipart transfers and signing to the AWS CLI.
+	# Virtualmin also delegates multipart transfers and
+	# signing to the AWS CLI.
 	my $url = 's3://'.$t->{'bucket'}.'/'.$file;
-	my @args = ('aws', ($t->{'endpoint'} ? ('--endpoint-url', $t->{'endpoint'}) : ()),
-		's3', $op eq 'delete' ? ('rm', $url) : ('cp', $op eq 'put' ? ($local, $url) : ($url, $local)), '--only-show-errors');
+	my @args = ( 'aws', ($t->{'endpoint'}
+		? ( '--endpoint-url', $t->{'endpoint'} )
+		: ()),
+		     's3', $op eq 'delete'
+			     ? ( 'rm', $url )
+			     : ( 'cp', $op eq 'put'
+				     ? ( $local, $url )
+				     : ( $url, $local ) ),
+		     '--only-show-errors' );
 	Cloudmin::WorkerTasks::command(@args);
-}
+	}
 elsif ($mode eq 'ssh') {
-	# The controller supplies trust; SSH still checks the server during transfer.
-	my @args = ('sftp', '-F', '/dev/null', '-P', $t->{'port'}, '-o', 'StrictHostKeyChecking=yes',
-		'-o', 'UserKnownHostsFile=known-hosts', '-o', 'GlobalKnownHostsFile=/dev/null',
-		'-o', 'UpdateHostKeys=no', '-o', 'IdentitiesOnly=yes', '-o', 'ConnectTimeout=30',
-		'-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3');
+	# The controller supplies trust; SSH still checks the
+	# server during transfer.
+	my @args =
+		( 'sftp', '-F', '/dev/null', '-P', $t->{'port'}, '-o',
+		  'StrictHostKeyChecking=yes',
+		  '-o', 'UserKnownHostsFile=known-hosts', '-o',
+		  'GlobalKnownHostsFile=/dev/null',
+		  '-o', 'UpdateHostKeys=no', '-o', 'IdentitiesOnly=yes',
+		  '-o',
+		  'ConnectTimeout=30',
+		  '-o', 'ServerAliveInterval=15', '-o',
+		  'ServerAliveCountMax=3' );
 	# A selected private key uses noninteractive public-key authentication.
-	if ($t->{'key_file'}) { push(@args, '-i', 'ssh-key', '-o', 'BatchMode=yes'); }
+	if ($t->{'key_file'}) {
+		push(@args, '-i', 'ssh-key', '-o', 'BatchMode=yes');
+		}
 	else {
-		# sshpass reads a private file, keeping the password out of argv and logs.
-		Cloudmin::WorkerTasks::write_file('password', $t->{'password'}."\n");
+		# sshpass reads a private file, keeping the password
+		# out of argv and logs.
+		Cloudmin::WorkerTasks::write_file('password',
+						  $t->{'password'}."\n");
 		unshift(@args, 'sshpass', '-f', 'password');
 		push(@args, '-o', 'BatchMode=no');
-	}
+		}
 	# Upload to a partial name, then publish through the same SFTP session.
-	my $command = $op eq 'put' ? "put archive \"$file.partial\"\nrename \"$file.partial\" \"$file\"\n" :
-		$op eq 'get' ? "get \"$file\" output\n" : "rm \"$file\"\n";
+	my $command =
+		$op eq 'put'
+			? "put archive \"$file.partial\"\nrename \"$file.partial\" \"$file\"\n"
+			: $op eq 'get' ? "get \"$file\" output\n" : "rm \"$file\"\n";
 	Cloudmin::WorkerTasks::write_file('batch', $command);
 	push(@args, '-b', 'batch', $t->{'user'}.'@'.$t->{'host'});
 	Cloudmin::WorkerTasks::command(@args);
-}
+	}
 else {
-	# Keep the provider APIs and their OAuth refresh logic from Virtualmin Pro.
+	# Keep the provider APIs and their OAuth refresh logic
+	# from Virtualmin Pro.
 	require $PRO_HELPERS;
-	# Webmin's general HTTP helpers accept optional certificate requirements;
-	# backup credentials require verified HTTPS on every connection and redirect.
-	my ($ca) = grep { -r $_ } ('/etc/pki/tls/certs/ca-bundle.crt', '/etc/ssl/certs/ca-certificates.crt', '/etc/ssl/ca-bundle.pem');
+	# Webmin's general HTTP helpers accept optional certificate
+	# requirements; backup credentials require verified HTTPS on every
+	# connection and redirect.
+	my ($ca) =
+		grep { -r $_ } ( '/etc/pki/tls/certs/ca-bundle.crt',
+				 '/etc/ssl/certs/ca-certificates.crt',
+				 '/etc/ssl/ca-bundle.pem' );
 	die "Install system CA certificates for cloud backups\n" if (!$ca);
 	my $connect = \&WebminCore::make_http_connection;
 	# verified(connection_args...) preserves Webmin's call signature while
-	# requiring the system CA bundle and peer hostname on each HTTPS
-	# connection.
+	# requiring the system CA bundle and peer hostname on
+	# each HTTPS connection.
 	my $verified = sub {
 		my @args = @_;
 		die "Cloud backup connections require HTTPS\n" if (!$args[2]);
-		$args[7] = {capath => $ca, host => $args[0]};
+		$args[7] = { capath => $ca, host => $args[0] };
 		return $connect->(@args);
-	};
+		};
 	local *WebminCore::make_http_connection = $verified;
 	local *Cloudmin::BackupCloud::make_http_connection = $verified;
-	# OAuth refresh state belongs to this worker, not the host module
-	# settings.
+	# OAuth refresh state belongs to this worker, not the
+	# host module settings.
 	local %Cloudmin::BackupCloud::config = (
 		azure_name => $t->{'account'}, azure_id => $t->{'subscription'},
-		(map { ($_.'_account' => 1, $_.'_project' => $t->{'project'}, $_.'_clientid' => $t->{'access'},
-			$_.'_secret' => $t->{'secret'}, $_.'_rtoken' => $t->{'refresh_token'}, $_.'_tstart' => 0, $_.'_ttime' => 0) } qw(google drive)),
-		dropbox_rtoken => $t->{'refresh_token'}, dropbox_tstart => 0, dropbox_expires => 0);
+		(map { ( $_.'_account' => 1, $_.'_project' => $t->{'project'},
+			 $_.'_clientid' => $t->{'access'},
+			 $_.'_secret' => $t->{'secret'},
+			 $_.'_rtoken' => $t->{'refresh_token'},
+			 $_.'_tstart' => 0,
+			 $_.'_ttime' => 0 ) } qw(google drive)),
+		dropbox_rtoken => $t->{'refresh_token'}, dropbox_tstart => 0,
+		dropbox_expires => 0 );
 	local $Cloudmin::BackupCloud::module_config_directory = '.';
 	local $Cloudmin::BackupCloud::dropbox_app_key = $t->{'access'};
 	local $Cloudmin::BackupCloud::dropbox_app_secret = $t->{'secret'};
 	# Adapt the provider helpers' bucket/object API to the chosen operation.
 	my %methods = (
-		gcs => [\&Cloudmin::BackupCloud::upload_gcs_file, \&Cloudmin::BackupCloud::download_gcs_file, \&Cloudmin::BackupCloud::delete_gcs_file],
-		azure => [\&Cloudmin::BackupCloud::upload_azure_file, \&Cloudmin::BackupCloud::download_azure_file, \&Cloudmin::BackupCloud::delete_azure_file],
-		bb => [\&Cloudmin::BackupCloud::upload_bb_file, \&Cloudmin::BackupCloud::download_bb_file, \&Cloudmin::BackupCloud::delete_bb_file],
-		dropbox => [\&Cloudmin::BackupCloud::upload_dropbox_file, \&Cloudmin::BackupCloud::download_dropbox_file, \&Cloudmin::BackupCloud::delete_dropbox_path],
-		drive => [\&Cloudmin::BackupCloud::upload_drive_file, \&Cloudmin::BackupCloud::download_drive_file, \&Cloudmin::BackupCloud::delete_drive_file]);
+		gcs =>
+			[ \&Cloudmin::BackupCloud::upload_gcs_file,
+			  \&Cloudmin::BackupCloud::download_gcs_file,
+			  \&Cloudmin::BackupCloud::delete_gcs_file ],
+		azure =>
+			[ \&Cloudmin::BackupCloud::upload_azure_file,
+			  \&Cloudmin::BackupCloud::download_azure_file,
+			  \&Cloudmin::BackupCloud::delete_azure_file ],
+		bb =>
+			[ \&Cloudmin::BackupCloud::upload_bb_file,
+			  \&Cloudmin::BackupCloud::download_bb_file,
+			  \&Cloudmin::BackupCloud::delete_bb_file ],
+		dropbox =>
+			[ \&Cloudmin::BackupCloud::upload_dropbox_file,
+			  \&Cloudmin::BackupCloud::download_dropbox_file,
+			  \&Cloudmin::BackupCloud::delete_dropbox_path ],
+		drive =>
+			[ \&Cloudmin::BackupCloud::upload_drive_file,
+			  \&Cloudmin::BackupCloud::download_drive_file,
+			  \&Cloudmin::BackupCloud::delete_drive_file ] );
 	my $method = $methods{$mode}->[$op eq 'put' ? 0 : $op eq 'get' ? 1 : 2];
 	# Drive and Dropbox use a folder path where object stores use a bucket.
-	my ($bucket, $object) = $mode =~ /\A(?:drive|dropbox)\z/ ? ($t->{'path'}, $name) : ($t->{'bucket'}, $file);
-	my $error = $method->($bucket, $object, $op eq 'delete' ? () : (Cwd::getcwd().'/'.$local));
-	# Provider responses can contain secrets; expose only a generic failure
-	# here.
-	die "Cloud backup transfer failed\n" if (defined($error) && !ref($error) && length($error));
-}
+	my ($bucket, $object) = $mode =~ /\A(?:drive|dropbox)\z/
+		? ( $t->{'path'}, $name )
+		: ( $t->{'bucket'}, $file );
+	my $error = $method->($bucket, $object, $op eq 'delete'
+		? ()
+		: (Cwd::getcwd().'/'.$local));
+	# Provider responses can contain secrets; expose only a
+	# generic failure here.
+	die "Cloud backup transfer failed\n"
+		if (defined($error) && !ref($error) && length($error));
+	}
 # Validate the downloaded file before the controller claims it from the worker.
-die "The remote backup is empty or exceeds staging space\n" if ($op eq 'get' && (!-s 'output' || -s 'output' > $r->{'limit'}));
-return {};
+die "The remote backup is empty or exceeds staging space\n"
+	if ($op eq 'get' && (!-s 'output' || -s 'output' > $r->{'limit'}));
+return { };
 }
 
 1;

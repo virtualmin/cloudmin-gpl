@@ -13,8 +13,9 @@ use Fcntl qw(O_RDWR O_NOFOLLOW LOCK_EX LOCK_NB);
 # new(class, directory => path, lock_file => callback, unlock_file => callback,
 #     test_lock => callback, log => callback, [host_guard => callback],
 #     [admit => callback])
-# Constructs a lazy store; reading a fresh host creates no files.
-# admit() may reject new submissions; existing IDs and worker updates skip it.
+# Constructs a lazy store; reading a fresh host creates no files. admit() may
+# reject new submissions; existing IDs and worker updates skip it.
+
 sub new
 {
 my ($class, %options) = @_;
@@ -23,19 +24,21 @@ die "Job directory is required\n" if (!$options{'directory'});
 return bless(\%options, $class);
 }
 
-# dependencies()
-# Loads the SQLite driver only when the controller job store is used.
+# dependencies() Loads the SQLite driver only when the
+# controller job store is used.
+
 sub dependencies
 {
 require DBI;
 require DBD::SQLite;
 }
 
-# lock(self, resource, callback, [nonblocking], [waiting])
-# Holds a named Webmin resource lock and always releases it after the callback.
-# callback() supplies the scalar return value; resource is a safe lock basename.
-# nonblocking refuses a held lock; waiting() checks cancellation between disk
-# queue attempts and may throw to stop waiting.
+# lock(self, resource, callback, [nonblocking], [waiting]) Holds a named Webmin
+# resource lock and always releases it after the callback. callback() supplies
+# the scalar return value; resource is a safe lock basename. nonblocking refuses
+# a held lock; waiting() checks cancellation between disk queue attempts and may
+# throw to stop waiting.
+
 sub lock
 {
 my ($self, $resource, $callback, $nonblocking, $waiting) = @_;
@@ -45,37 +48,46 @@ make_dir($self->{'directory'}, 0700, 1) || die "Cannot create job directory\n";
 my $file = "$self->{directory}/$resource";
 $self->clear_dead_lock($file);
 if ($resource eq 'vm-work' || $nonblocking) {
-	# Serialize the check and acquisition under a short lock, so workers that
-	# wake together cannot enter Webmin's five-minute blocking lock wait.
-	my $deadline = time()+86400;
+	# Serialize the check and acquisition under a short lock, so workers
+	# that wake together cannot enter Webmin's
+	# five-minute blocking lock wait.
+	my $deadline = time() + 86400;
 	# Check and claim the resource while the short queue lock is held.
 	while (!$self->lock('vm-queue', sub {
-		# Another worker still owns the resource; leave it for a later attempt.
+		# Another worker still owns the resource; leave it
+		# for a later attempt.
 		$self->clear_dead_lock($file);
 		return 0 if ($self->lock_pid($file));
-		$self->{'lock_file'}->($file, 0, 0, 1) || die "Cannot lock job resource\n";
+		$self->{'lock_file'}->($file, 0, 0, 1) ||
+			die "Cannot lock job resource\n";
 		return 1;
 		})) {
 		if ($nonblocking) {
-			# Schedules must skip overlapping runs instead of queuing them.
+			# Schedules must skip overlapping runs
+			# instead of queuing them.
 			die $resource eq 'vm-work'
 				? "Another disk operation is running; try again when it finishes\n"
 				: "Another operation is running; try again when it finishes\n";
 			}
 		$waiting->() if ($waiting);
-		die "Timed out waiting for another disk operation\n" if (time() >= $deadline);
+		die "Timed out waiting for another disk operation\n"
+			if (time() >= $deadline);
 		Time::HiRes::sleep(1);
 		}
 	}
 else {
-	# Short controller transactions use Webmin's ordinary blocking resource lock.
-	$self->{'lock_file'}->($file, 0, 0, 1) || die "Cannot lock job resource\n";
+	# Short controller transactions use Webmin's ordinary
+	# blocking resource lock.
+	$self->{'lock_file'}->($file, 0, 0, 1) ||
+		die "Cannot lock job resource\n";
 	}
 my ($result, $ok);
 $ok = eval {
-	# Check host-wide network transactions after acquiring the same lock used
-	# by bridge setup, closing the gap between form validation and execution.
-	$self->{'host_guard'}->() if ($resource eq 'create-host' && $self->{'host_guard'});
+	# Check host-wide network transactions after acquiring the same lock
+	# used by bridge setup, closing the gap between form
+	# validation and execution.
+	$self->{'host_guard'}->()
+		if ($resource eq 'create-host' && $self->{'host_guard'});
 	$result = $callback->();
 	1;
 	};
@@ -86,11 +98,12 @@ die $error if (!$ok);
 return $result;
 }
 
-# run_worker(self, id, callback, [prepare])
-# Serializes disk workflows without holding the short host reservation lock.
-# prepare() may wait for shared downloads before taking the disk-work lock.
-# The durable job reserves its guest while other guests remain controllable.
-# callback() runs under the disk-work lock and supplies the return value.
+# run_worker(self, id, callback, [prepare]) Serializes disk workflows without
+# holding the short host reservation lock. prepare() may wait for shared
+# downloads before taking the disk-work lock. The durable job reserves its guest
+# while other guests remain controllable. callback() runs under the disk-work
+# lock and supplies the return value.
+
 sub run_worker
 {
 my ($self, $id, $callback, $prepare) = @_;
@@ -104,48 +117,61 @@ return $self->lock('worker-'.$id, sub {
 	my $ok = eval {
 		# Preparation holds this job's lock, leaving disk work free.
 		$prepare->() if ($prepare);
-		# Queue time is separate from the operation's execution deadline.
-		my $deadline = time()+86400;
+		# Queue time is separate from the
+		# operation's execution deadline.
+		my $deadline = time() + 86400;
 		while ($self->lock_pid("$self->{directory}/vm-work")) {
 			$job = $self->get($id);
-			if ($job->{'cancel'} && !$job->{'resources'}->{'started'} &&
-				!keys(%{$job->{'resources'}})) {
-				# A queued request with no resources can cancel without cleanup.
+			if ($job->{'cancel'} &&
+			    !$job->{'resources'}->{'started'} &&
+			    !keys(%{$job->{'resources'}})) {
+				# A queued request with no resources can
+				# cancel without cleanup.
 				$self->update($id, sub {
 					$_[0]->{'state'} = 'cancelled';
-					# Discard unused credentials on cancellation.
+					# Discard unused credentials
+					# on cancellation.
 					delete(@{$_[0]->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key source_xml console_password)});
 					});
 				return 1;
 				}
-			die "Timed out waiting for another disk operation\n" if (time() >= $deadline);
+			die "Timed out waiting for another disk operation\n"
+				if (time() >= $deadline);
 			Time::HiRes::sleep(1);
 			}
 		$result = $self->lock('vm-work', sub {
-			# Bridge changes check the queued reservation under this same lock.
+			# Bridge changes check the queued reservation
+			# under this same lock.
 			$self->lock('create-host', sub { return 1; });
 			return $callback->();
 			}, 0, sub {
-			# A competing worker may take the lock after the initial queue check.
-			# Keep cancellation responsive while retrying that acquisition.
-			my $waiting = $self->get($id);
-			die "Virtual machine operation cancelled\n"
-				if ($waiting->{'cancel'} && !keys(%{$waiting->{'resources'}}));
-			});
+				# A competing worker may take the lock after the
+				# initial queue check. Keep cancellation
+				# responsive while retrying that acquisition.
+				my $waiting = $self->get($id);
+				die "Virtual machine operation cancelled\n"
+					if ($waiting->{'cancel'} && !keys(%{$waiting->{'resources'}}));
+				});
 		1;
 		};
 	my $error = $@;
 	if (!$ok) {
 		# Failures before disk work must also release queued jobs.
 		my $failed = $self->update($id, sub {
-			$_[0]->{'state'} = $_[0]->{'cancel'} && !keys(%{$_[0]->{'resources'}})
-				? 'cancelled' : 'failed';
+			$_[0]->{'state'} = $_[0]->{'cancel'} &&
+					   !keys(%{$_[0]->{'resources'}})
+						   ? 'cancelled'
+						   : 'failed';
 			$_[0]->{'error'} = "$error";
 			$_[0]->{'events'}->[-1]->{'state'} = 'failed'
-				if (@{$_[0]->{'events'}} && $_[0]->{'events'}->[-1]->{'state'} eq 'running');
+				if (@{$_[0]->{'events'}} &&
+				    $_[0]->{'events'}->[-1]->{'state'} eq 'running');
 			# Cleanup needs resource IDs, not saved credentials.
-			delete(@{$_[0]->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key source_xml console_password)});
-			$_[0]->{'cleanup_pending'} ||= keys(%{$_[0]->{'resources'}}) ? 1 : 0;
+			delete(
+				@{
+					$_[0]->{'request'}}{qw(password_hash webmin_password virtualmin_serial virtualmin_key source_xml console_password)});
+			$_[0]->{'cleanup_pending'} ||= keys(
+				%{$_[0]->{'resources'}}) ? 1 : 0;
 			});
 		eval { $self->audit('manage_failed', $failed); };
 		return 0;
@@ -154,9 +180,9 @@ return $self->lock('worker-'.$id, sub {
 	});
 }
 
-# busy(self, id)
-# Reports a live worker through Webmin's lock API, excluding exited Linux
-# processes that still have a PID while waiting to be reaped.
+# busy(self, id) Reports a live worker through Webmin's lock API, excluding
+# exited Linux processes that still have a PID while waiting to be reaped.
+
 sub busy
 {
 my ($self, $id) = @_;
@@ -166,6 +192,7 @@ return $self->lock_pid("$self->{directory}/worker-$id") ? 1 : 0;
 
 # zombie(pid) recognizes an exited Linux process that its parent has not reaped.
 # Missing or unreadable process data never authorizes breaking a live lock.
+
 sub zombie
 {
 my ($pid) = @_;
@@ -178,6 +205,7 @@ return $stat && $stat =~ /\A\d+ \(.*\) [ZX] / ? 1 : 0;
 }
 
 # lock_pid(self, file) excludes zombies from Webmin's PID-existence check.
+
 sub lock_pid
 {
 my ($self, $file) = @_;
@@ -185,8 +213,9 @@ my $pid = $self->{'test_lock'}->($file);
 return $pid && !zombie($pid) ? $pid : 0;
 }
 
-# clear_dead_lock(self, file) releases only a lock still owned by a zombie.
-# The file lock and inode check protect a replacement written by another worker.
+# clear_dead_lock(self, file) releases only a lock still owned by a zombie. The
+# file lock and inode check protect a replacement written by another worker.
+
 sub clear_dead_lock
 {
 my ($self, $file) = @_;
@@ -205,12 +234,12 @@ return if (!@current || $opened[0] != $current[0] || $opened[1] != $current[1]);
 unlink($path) || die "Cannot release exited job worker lock: $!\n";
 }
 
-# connect(self, write)
-# Opens a short-lived SQLite connection; only writers initialize its schema.
-# Readers open the existing file read-write without creating it, because a
-# read-only connection cannot roll back the hot journal left by a writer that
-# was killed mid-transaction, and every later read would fail until a writer
-# ran.
+# connect(self, write) Opens a short-lived SQLite connection; only writers
+# initialize its schema. Readers open the existing file read-write without
+# creating it, because a read-only connection cannot roll back the hot journal
+# left by a writer that was killed mid-transaction, and every later read would
+# fail until a writer ran.
+
 sub connect
 {
 my ($self, $write) = @_;
@@ -220,7 +249,8 @@ return undef if (!$write && !-f $path);
 dependencies();
 my $mask = umask(0077);
 my $db = eval { DBI->connect("dbi:SQLite:dbname=$path", '', '', {
-	RaiseError => 1, PrintError => 0, AutoCommit => 1, sqlite_unicode => 0,
+	RaiseError => 1, PrintError => 0, AutoCommit => 1,
+	sqlite_unicode => 0,
 	sqlite_open_flags => $write ? 6 : 2,
 }) };
 my $error = $@;
@@ -229,8 +259,8 @@ umask($mask);
 die $error if (!$db);
 $db->do('PRAGMA busy_timeout = 5000');
 if ($write) {
-	# Refuse unknown schemas instead of silently opening an incompatible
-	# store.
+	# Refuse unknown schemas instead of silently opening
+	# an incompatible store.
 	my ($version) = $db->selectrow_array('PRAGMA user_version');
 	die "Unsupported controller job schema\n" if ($version > 2);
 	$db->do('PRAGMA synchronous = FULL');
@@ -239,7 +269,8 @@ if ($write) {
 	$db->do('CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY,
 			owner TEXT NOT NULL, resource TEXT NOT NULL, state TEXT NOT NULL,
 			created INTEGER NOT NULL, updated INTEGER NOT NULL, record TEXT NOT NULL)');
-	$db->do("CREATE UNIQUE INDEX IF NOT EXISTS active_resource ON jobs(resource)
+	$db->do(
+		"CREATE UNIQUE INDEX IF NOT EXISTS active_resource ON jobs(resource)
 			WHERE state NOT IN ('complete', 'failed', 'cancelled')");
 	# Stored password hashes are bound to the form owner and guest username.
 	$db->do('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY,
@@ -250,10 +281,10 @@ if ($write) {
 return $db;
 }
 
-# write_data(self, callback)
-# Serializes SQLite writers with Webmin; binary database contents never enter
-# diffs.
-# callback(database) runs in a transaction and supplies the scalar return value.
+# write_data(self, callback) Serializes SQLite writers with Webmin; binary
+# database contents never enter diffs. callback(database) runs in a transaction
+# and supplies the scalar return value.
+
 sub write_data
 {
 my ($self, $callback) = @_;
@@ -263,8 +294,8 @@ return $self->lock('jobs.sqlite', sub {
 	my $result;
 	my $ok = eval { $result = $callback->($db); $db->commit(); 1 };
 	my $error = $@;
-	# Discard partial updates while preserving the callback's
-	# failure message.
+	# Discard partial updates while preserving the
+	# callback's failure message.
 	eval { $db->rollback() } if (!$ok);
 	$db->disconnect();
 	# The connection is closed before the enclosing Webmin lock is released.
@@ -273,9 +304,10 @@ return $self->lock('jobs.sqlite', sub {
 	});
 }
 
-# save_credential(self, id, owner, username, hash)
-# Stores a draft hash with a one-day expiry, without logging its value.
-# Later saves purge expired drafts; reads reject them even before removal.
+# save_credential(self, id, owner, username, hash) Stores a draft hash with a
+# one-day expiry, without logging its value. Later saves purge expired drafts;
+# reads reject them even before removal.
+
 sub save_credential
 {
 my ($self, $id, $owner, $username, $hash) = @_;
@@ -284,44 +316,49 @@ return $self->write_data(sub {
 	my ($db) = @_;
 	$db->do('DELETE FROM credentials WHERE expires < ?', undef, time());
 	$db->do('INSERT OR REPLACE INTO credentials VALUES (?, ?, ?, ?, ?)',
-		undef, $id, $owner, $username, time()+86400, $hash);
+		undef, $id, $owner, $username, time() + 86400, $hash);
 	return 1;
 	});
 }
 
-# credential(self, id, owner, username)
-# Returns a matching unexpired draft, or undef before credentials are
-# initialized.
+# credential(self, id, owner, username) Returns a matching unexpired draft, or
+# undef before credentials are initialized.
+
 sub credential
 {
 my ($self, $id, $owner, $username) = @_;
 validate_id($id);
 my $db = $self->connect(0) || return undef;
-my ($exists) = $db->selectrow_array("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'credentials'");
-my ($hash) = $exists ? $db->selectrow_array('SELECT hash FROM credentials
+my ($exists) =
+	$db->selectrow_array(
+		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'credentials'");
+my ($hash) = $exists
+	? $db->selectrow_array('SELECT hash FROM credentials
 		WHERE id = ? AND owner = ? AND username = ? AND expires >= ?',
-			undef,
-	$id, $owner, $username, time()) : ();
+			       undef,
+			       $id, $owner, $username, time())
+	: ();
 $db->disconnect();
 return $hash;
 }
 
-# delete_credential(self, id, owner)
-# Removes a draft after its hash has been handed to a durable creation job.
+# delete_credential(self, id, owner) Removes a draft after its hash has been
+# handed to a durable creation job.
+
 sub delete_credential
 {
 my ($self, $id, $owner) = @_;
 validate_id($id);
 return $self->write_data(sub {
 	$_[0]->do('DELETE FROM credentials WHERE id = ? AND owner = ?', undef,
-		$id, $owner);
+		  $id, $owner);
 	return 1;
 	});
 }
 
-# submit(self, id, owner, resource, request)
-# Reserves a resource and records a request once; retries return the original
-# job.
+# submit(self, id, owner, resource, request) Reserves a resource and records a
+# request once; retries return the original job.
+
 sub submit
 {
 my ($self, $id, $owner, $resource, $request) = @_;
@@ -331,34 +368,37 @@ my $job = $self->write_data(sub {
 	my ($db) = @_;
 	my ($json) =
 		$db->selectrow_array('SELECT record FROM jobs WHERE id = ?',
-		undef, $id);
+				     undef, $id);
 	if ($json) {
-		# A repeated submission cannot change a queued request or its
-		# owner.
+		# A repeated submission cannot change a queued
+		# request or its owner.
 		my $job = convert_from_json($json);
 		die "Job not found\n" if ($job->{'owner'} ne $owner);
 		return $job;
 		}
-	# Only new submissions need admission. Recovery must finish saved work even
-	# when permissions or license terms have changed since it was accepted.
+	# Only new submissions need admission. Recovery must finish saved work
+	# even when permissions or license terms have changed
+	# since it was accepted.
 	$self->{'admit'}->() if ($self->{'admit'});
 	# Clones reserve their source and destination in the same transaction.
 	# Failed cleanup keeps both reservations until recovery releases them.
 	my %wanted = map { $_ => 1 } reserved_resources({ resource => $resource,
-		request => $request });
+							  request => $request });
 	my $busy;
-	foreach my $row (@{$db->selectall_arrayref('SELECT record FROM jobs')}) {
+	foreach my $row (
+		@{$db->selectall_arrayref('SELECT record FROM jobs')}) {
 		my $other = convert_from_json($row->[0]);
 		next if (!$other->{'cleanup_pending'} &&
-			$other->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
-		$busy = 1 if (grep { $wanted{$_} } reserved_resources($other));
-	}
+			 $other->{'state'} =~ /\A(?:complete|failed|cancelled)\z/);
+		$busy = 1
+			if (grep { $wanted{$_} } reserved_resources($other));
+		}
 	# Reject overlapping destination names or source UUIDs across all users.
 	die "A job already uses this virtual machine\n"
-	if ($busy);
+		if ($busy);
 	my $job = { id => $id, owner => $owner, resource => $resource,
-		state => 'queued', created => time(), updated => time(),
-		request => $request, events => [], resources => {} };
+		    state => 'queued', created => time(), updated => time(),
+		    request => $request, events => [ ], resources => { } };
 	$db->do('INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?)', undef,
 		$id, $owner, $resource, $job->{'state'}, $job->{'created'},
 		$job->{'updated'}, convert_to_json($job, 0, 1));
@@ -368,13 +408,15 @@ my $job = $self->write_data(sub {
 # Retries return the existing job without adding another creation audit.
 if ($created) {
 	my $logged = eval {
-		$self->audit(($request->{'operation'} || '') eq 'clone' ? 'clone'
+		$self->audit(($request->{'operation'} || '') eq 'clone'
+			? 'clone'
 			: $request->{'operation'} ? 'manage' : 'create', $job);
 		1;
 		};
 	if (!$logged) {
-		# The committed job can run during recovery even if logging fails.
-		# Return it normally so the caller can follow or cancel its work.
+		# The committed job can run during recovery even if logging
+		# fails. Return it normally so the caller can
+		# follow or cancel its work.
 		$job = $self->update($id, sub {
 			$_[0]->{'audit_warning'} =
 				'Could not write the submission audit log';
@@ -387,19 +429,24 @@ return $job;
 # reserved_resources(job) returns the destination and related reservations.
 # Clones reserve the source UUID; restores reserve the preserved UUID and cached
 # inspection as well as the destination name. All come from validated requests.
+
 sub reserved_resources
 {
 my ($job) = @_;
-return ($job->{'resource'},
-	($job->{'request'}->{'operation'} || '') eq 'restore'
-		? ('guest:'.lc($job->{'request'}->{'uuid'} || ''), 'backup-inspect:'.$job->{'request'}->{'inspection'}) : (),
-	($job->{'request'}->{'operation'} || '') eq 'clone'
-		? ('guest:'.lc($job->{'request'}->{'source_uuid'} || '')) : ());
+return ( $job->{'resource'},
+	 ($job->{'request'}->{'operation'} || '') eq 'restore'
+		 ? ( 'guest:'.lc($job->{'request'}->{'uuid'} || ''),
+		     'backup-inspect:'.$job->{'request'}->{'inspection'} )
+		 : (),
+	 ($job->{'request'}->{'operation'} || '') eq 'clone'
+		 ? ('guest:'.lc($job->{'request'}->{'source_uuid'} || ''))
+		 : () );
 }
 
-# assert_guest_available(self, uuid, [power_action])
-# Unfinished changes block power and further edits until recovery completes.
-# power_action defaults to ''; named stop/resume actions allow limited recovery.
+# assert_guest_available(self, uuid, [power_action]) Unfinished changes block
+# power and further edits until recovery completes. power_action defaults to '';
+# named stop/resume actions allow limited recovery.
+
 sub assert_guest_available
 {
 my ($self, $uuid, $power_action) = @_;
@@ -411,39 +458,47 @@ my $rows = $db->selectall_arrayref(
 $db->disconnect();
 foreach my $row (@$rows) {
 	my $job = convert_from_json($row->[0]);
-	# Creation reservations use names; compare their recorded guest UUIDs too.
+	# Creation reservations use names; compare their
+	# recorded guest UUIDs too.
 	next if (lc($job->{'request'}->{'uuid'} || '') ne lc($uuid) &&
-		!(($job->{'request'}->{'operation'} || '') eq 'clone' &&
-		lc($job->{'request'}->{'source_uuid'} || '') eq lc($uuid)));
-	# Failed thaw or pending shutdown recovery may need the user to stop a guest.
-	# Active workers and unrelated unfinished operations still block it.
-	next if ($power_action =~ /\A(?:shutdown|force_off)\z/ && $job->{'state'} eq 'failed' &&
-		($job->{'request'}->{'operation'} || '') =~ /\A(?:snapshot_create|clone|capture_image|backup)\z/ &&
-		($job->{'resources'}->{'quiescing'} ||
-			($job->{'request'}->{'operation'} || '') =~ /\A(?:clone|capture_image|backup)\z/ &&
-			$job->{'resources'}->{'shutdown_requested'} && !$job->{'resources'}->{'shutdown_complete'}) &&
-		!$self->busy($job->{'id'}));
-	# A guest paused during hotplug may need resuming to acknowledge removal or
-	# ballooning. Stopping it also lets recovery finish the saved definition.
+		 !(($job->{'request'}->{'operation'} || '') eq 'clone' &&
+		   lc($job->{'request'}->{'source_uuid'} ||
+		      '') eq lc($uuid)));
+	# Failed thaw or pending shutdown recovery may need the user to stop a
+	# guest. Active workers and unrelated unfinished
+	# operations still block it.
+	next if ($power_action =~ /\A(?:shutdown|force_off)\z/ &&
+		 $job->{'state'} eq 'failed' &&
+		 ($job->{'request'}->{'operation'} ||
+		  '') =~ /\A(?:snapshot_create|clone|capture_image|backup)\z/ &&
+		 ($job->{'resources'}->{'quiescing'} ||
+		  ($job->{'request'}->{'operation'} ||
+		   '') =~ /\A(?:clone|capture_image|backup)\z/ &&
+		  $job->{'resources'}->{'shutdown_requested'} &&
+		  !$job->{'resources'}->{'shutdown_complete'}) &&
+		 !$self->busy($job->{'id'}));
+	# A guest paused during hotplug may need resuming to acknowledge removal
+	# or ballooning. Stopping it also lets recovery finish
+	# the saved definition.
 	next if ($power_action =~ /\A(?:resume|shutdown|force_off)\z/ &&
-		$job->{'state'} eq 'failed' && $job->{'resources'}->{'live'} &&
-		!$self->busy($job->{'id'}));
+		 $job->{'state'} eq 'failed' && $job->{'resources'}->{'live'} &&
+		 !$self->busy($job->{'id'}));
 	die "Another operation on this virtual machine is unfinished; open Active Jobs for progress or recovery\n"
 		if ($job->{'cleanup_pending'} ||
-		$job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
+		    $job->{'state'} !~ /\A(?:complete|failed|cancelled)\z/);
 	}
 }
 
-# get(self, id, [owner])
-# Returns a job, or undef if absent; optional ownership limits apply before
-# returning.
+# get(self, id, [owner]) Returns a job, or undef if absent; optional ownership
+# limits apply before returning.
+
 sub get
 {
 my ($self, $id, $owner) = @_;
 validate_id($id);
 my $db = $self->connect(0) || return undef;
 my ($json) = $db->selectrow_array('SELECT record FROM jobs WHERE id = ?', undef,
-	$id);
+				  $id);
 $db->disconnect();
 # An absent row is distinct from a job hidden by the optional owner filter.
 return undef if (!$json);
@@ -453,10 +508,10 @@ die "Job not found\n" if (defined($owner) && $job->{'owner'} ne $owner);
 return $job;
 }
 
-# update(self, id, callback)
-# Applies a small atomic change while preserving concurrent cancellation
-# requests.
-# callback(job) edits the current record in place; its return value is ignored.
+# update(self, id, callback) Applies a small atomic change while preserving
+# concurrent cancellation requests. callback(job) edits the current record in
+# place; its return value is ignored.
+
 sub update
 {
 my ($self, $id, $callback) = @_;
@@ -465,89 +520,99 @@ return $self->write_data(sub {
 	my ($db) = @_;
 	my ($json) =
 		$db->selectrow_array('SELECT record FROM jobs WHERE id = ?',
-		undef, $id);
+				     undef, $id);
 	# Updates never create a job implicitly or run against an empty record.
 	die "Job not found\n" if (!$json);
 	my $job = convert_from_json($json);
 	$callback->($job);
 	$job->{'updated'} = time();
-	# Moving committed creation to software setup releases its old reservation.
-	$db->do('UPDATE jobs SET resource = ?, state = ?, updated = ?, record = ? WHERE id = ?',
+	# Moving committed creation to software setup releases
+	# its old reservation.
+	$db->do(
+		'UPDATE jobs SET resource = ?, state = ?, updated = ?, record = ? WHERE id = ?',
 		undef, $job->{'resource'}, $job->{'state'}, $job->{'updated'},
 		convert_to_json($job, 0, 1), $id);
 	return $job;
 	});
 }
 
-# list(self, [owner], [active_only])
-# Lists recent jobs, or all unfinished jobs for recovery after a restart.
+# list(self, [owner], [active_only]) Lists recent jobs, or all unfinished jobs
+# for recovery after a restart.
+
 sub list
 {
 my ($self, $owner, $active) = @_;
-my $db = $self->connect(0) || return [];
+my $db = $self->connect(0) || return [ ];
 my @where;
 my @args;
 if (defined($owner)) {
-	# Restrict ordinary users to their own jobs before applying the row
-	# limit.
+	# Restrict ordinary users to their own jobs before
+	# applying the row limit.
 	push(@where, 'owner = ?');
 	push(@args, $owner);
 	}
 # Recovery needs every unfinished job, including old ones outside history.
 push(@where, "state NOT IN ('complete', 'failed', 'cancelled')") if ($active);
 my $sql = 'SELECT record FROM jobs'.
-	(@where ? ' WHERE '.join(' AND ', @where) : '').
-	' ORDER BY created DESC'.($active ? '' : ' LIMIT 50');
+	  (@where ? ' WHERE '.join(' AND ', @where) : '').
+	  ' ORDER BY created DESC'.($active ? '' : ' LIMIT 50');
 my $rows = $db->selectall_arrayref($sql, undef, @args);
 $db->disconnect();
 return [ map { convert_from_json($_->[0]) } @$rows ];
 }
 
-# list_recovery(self, [owner])
-# Lists failed jobs still holding a reservation, including older history.
+# list_recovery(self, [owner]) Lists failed jobs still holding a reservation,
+# including older history.
+
 sub list_recovery
 {
 my ($self, $owner) = @_;
-my $db = $self->connect(0) || return [];
-my $rows = $db->selectall_arrayref("SELECT record FROM jobs WHERE state = 'failed'".
-	(defined($owner) ? ' AND owner = ?' : ''), undef,
-	(defined($owner) ? ($owner) : ()));
+my $db = $self->connect(0) || return [ ];
+my $rows =
+	$db->selectall_arrayref(
+		"SELECT record FROM jobs WHERE state = 'failed'".
+		(defined($owner) ? ' AND owner = ?' : ''), undef,
+		(defined($owner) ? ($owner) : ()));
 $db->disconnect();
 return [ grep { $_->{'cleanup_pending'} }
-	map { convert_from_json($_->[0]) } @$rows ];
+	 map { convert_from_json($_->[0]) } @$rows ];
 }
 
-# list_pending(self, [owner])
-# Includes retained failures even when they are older than recent job history.
+# list_pending(self, [owner]) Includes retained failures even when they are
+# older than recent job history.
+
 sub list_pending
 {
 my ($self, $owner) = @_;
-return [sort { $b->{'created'} <=> $a->{'created'} }
-	@{$self->list($owner, 1)}, @{$self->list_recovery($owner)}];
+return [ sort { $b->{'created'} <=> $a->{'created'} }
+	 @{$self->list($owner, 1)}, @{$self->list_recovery($owner)} ];
 }
 
-# audit(self, action, job)
-# Logs identity and the stored, redacted outcome, never provisioning inputs.
+# audit(self, action, job) Logs identity and the stored, redacted outcome, never
+# provisioning inputs.
+
 sub audit
 {
 my ($self, $action, $job) = @_;
 $self->{'log'}->($action, 'vm', $job->{'id'}, {
 	name => $job->{'request'}->{'name'}, state => $job->{'state'},
-		owner => $job->{'owner'},
+	owner => $job->{'owner'},
 	uuid => $job->{'request'}->{'uuid'} || '',
-	($job->{'scope'} ? (scope => $job->{'scope'}) : ()),
-	(($job->{'request'}->{'operation'} || '') =~ /^snapshot_/ ? (
-		snapshot => $job->{'request'}->{'label'},
-		snapshot_id => $job->{'request'}->{'snapshot'}) : ()),
-	($job->{'error'} ? (error => $job->{'error'}) : ()),
-	($job->{'cleanup_pending'} ? (cleanup_pending => 1) : ()),
+	($job->{'scope'} ? ( scope => $job->{'scope'} ) : ()),
+	(($job->{'request'}->{'operation'} || '') =~ /^snapshot_/
+		? (
+			snapshot => $job->{'request'}->{'label'},
+			snapshot_id => $job->{'request'}->{'snapshot'} )
+		: ()),
+	($job->{'error'} ? ( error => $job->{'error'} ) : ()),
+	($job->{'cleanup_pending'} ? ( cleanup_pending => 1 ) : ()),
 });
 }
 
-# spawn(self, id, callback)
-# Starts a detached worker; the callback rechecks the job under its resource
-# lock.
-# callback(id) runs in the child; the parent returns the child's PID.
+# spawn(self, id, callback) Starts a detached worker; the callback rechecks the
+# job under its resource lock. callback(id) runs in the child; the parent
+# returns the child's PID.
+
 sub spawn
 {
 my ($self, $id, $callback) = @_;
@@ -575,8 +640,9 @@ rmdir($links) if ($links);
 _exit($ok ? 0 : 1);
 }
 
-# validate_id(id)
-# Keeps identifiers safe for SQLite lookups and Webmin lock filenames.
+# validate_id(id) Keeps identifiers safe for SQLite lookups and
+# Webmin lock filenames.
+
 sub validate_id
 {
 die "Invalid job ID\n" if (($_[0] || '') !~ /\A[a-f0-9]{32}\z/);

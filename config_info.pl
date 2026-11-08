@@ -5,6 +5,7 @@ require 'server-manager-lib.pl';
 
 # config_post_save(new, old) applies collection settings after Webmin saves.
 # Both arguments are configuration hashes. Old is unused.
+
 sub config_post_save
 {
 my ($new, $old) = @_;
@@ -13,55 +14,63 @@ return unless exists($in{'statistics_enabled'});
 require "$module_root_directory/cloudmin-statistics-lib.pl";
 # Apply every save so a failed service action can be retried.
 my $ok = eval {
-	set_statistics_service_enabled(($new->{'statistics_enabled'} // '1') ne '0');
+	set_statistics_service_enabled(
+		($new->{'statistics_enabled'} // '1') ne '0');
 	1;
 	};
 # A saved preference does not prove that the service change succeeded.
 error(error_html(error_message($@))) unless $ok;
-# Return to the overview to refresh the menu after headers are sent.
-# Keep SPA navigation, but drop old parameters that could trigger an action.
+# Return to the overview to refresh the menu after headers are sent. Keep SPA
+# navigation, but drop old parameters that could trigger an action.
 delete @in{grep { /^_cparam_/ && $_ ne '_cparam_xnavigation' } keys %in};
 $in{'_cscript'} = 'index.cgi';
 $in{'_cparam_refresh'} = 1;
 }
 
-# Webmin passes the saved value and config.info metadata to custom widgets.
-# Save hooks read submitted controls from %in; old_value is unused below.
-# show_cloudmin_fields(value, label, type, handler, key)
-# Shows optional columns or initially expanded sections in their display order.
+# Webmin passes the saved value and config.info metadata to custom widgets. Save
+# hooks read submitted controls from %in; old_value is unused below.
+# show_cloudmin_fields(value, label, type, handler, key) Shows optional columns
+# or initially expanded sections in their display order.
+
 sub show_cloudmin_fields
 {
 my ($value, undef, undef, undef, $key) = @_;
 # Required fields remain selected and disabled in the editor.
 my %selected = map { $_->[0] => 1 } view_selection($key, $value);
 my @rows = map { ui_checkbox($key.'_'.$_->[0], 1, $text{$_->[1]},
-	$selected{$_->[0]} ? 1 : 0, undef, $_->[3]) } view_fields($key);
+			     $selected{$_->[0]} ? 1 : 0,
+			     undef, $_->[3]) } view_fields($key);
 return ui_grid(\@rows, { min => '180px' });
 }
 
-# parse_cloudmin_fields(old_value, label, type, handler, key)
-# Saves known checkbox choices, retaining required columns.
+# parse_cloudmin_fields(old_value, label, type, handler, key) Saves known
+# checkbox choices, retaining required columns.
+
 sub parse_cloudmin_fields
 {
 my (undef, undef, undef, undef, $key) = @_;
 return join(',', map { $_->[0] }
-	grep { $_->[3] || $in{$key.'_'.$_->[0]} } view_fields($key));
+	    grep { $_->[3] || $in{$key.'_'.$_->[0]} } view_fields($key));
 }
 
-# show_cloudmin_number(value, label, type, handler, key)
-# Shows a whole-number setting with the same bounds used by its save parser.
+# show_cloudmin_number(value, label, type, handler, key) Shows a whole-number
+# setting with the same bounds used by its save parser.
+
 sub show_cloudmin_number
 {
 my ($value, undef, undef, undef, $key) = @_;
 my (undef, $min, $max) = number_setting($key);
 return ui_tag('input', undef, { type => 'number', name => $key, id => $key,
-	class => 'ui_textbox', value => config_number($key, $value),
-	min => $min, max => $max, step => 1, required => undef,
-	style => 'width:8em', inputmode => 'numeric' });
+				class => 'ui_textbox',
+				value => config_number($key, $value),
+				min => $min, max => $max, step => 1,
+				required => undef,
+				style => 'width:8em', inputmode => 'numeric' });
 }
 
-# parse_cloudmin_number(old_value, label, type, handler, key)
-# Rejects invalid values before Webmin saves any of this section's settings.
+# parse_cloudmin_number(old_value, label, type, handler, key) Rejects invalid
+# values before Webmin saves any of this section's settings.
+
 sub parse_cloudmin_number
 {
 my (undef, $label, undef, undef, $key) = @_;
@@ -74,17 +83,19 @@ error(text('config_number_error', $label, $min, $max))
 return 0 + $value;
 }
 
-# show_image_max_size(value)
-# Offers an optional import cap; available storage remains the default limit.
+# show_image_max_size(value) Offers an optional import cap; available storage
+# remains the default limit.
+
 sub show_image_max_size
 {
 my ($value) = @_;
 return ui_opt_textbox('image_max_size', $value || '', 8,
-	$text{'config_image_space'});
+		      $text{'config_image_space'});
 }
 
-# parse_image_max_size(old_value)
-# Validates the submitted cap before Webmin saves it; old_value is unused.
+# parse_image_max_size(old_value) Validates the submitted cap before Webmin
+# saves it; old_value is unused.
+
 sub parse_image_max_size
 {
 # Selecting the default removes the explicit size cap.
@@ -96,25 +107,28 @@ error($text{'config_image_max_error'}) if (!$bytes || $@);
 return 0 + $value;
 }
 
-# show_image_pool(value) offers file-backed pools and automatic selection.
-# value is the saved pool UUID, or empty for automatic selection. Stopped pools
-# are selectable here; the import form falls back until they are active again.
+# show_image_pool(value) offers file-backed pools and automatic selection. value
+# is the saved pool UUID, or empty for automatic selection. Stopped pools are
+# selectable here; the import form falls back until they are active again.
+
 sub show_image_pool
 {
 my ($value) = @_;
 my $storage = get_storage_info();
-my @choices = (['', $text{'config_image_pool_auto'}], map {
-	[$_->{'id'}, html_escape($_->{'name'})]
+my @choices = ( [ '', $text{'config_image_pool_auto'} ], map {
+	[ $_->{'id'}, html_escape($_->{'name'}) ]
 	} grep { ($_->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/ }
-	@{$storage->{'pools'} || []});
+		@{$storage->{'pools'} || [ ]} );
 # Keep a missing saved choice visible when the user edits other settings.
-push(@choices, [$value, html_escape(text('config_image_pool_missing', $value))])
+push(@choices, [ $value, html_escape(text('config_image_pool_missing',
+					  $value)) ])
 	if ($value && !grep { $_->[0] eq $value } @choices);
 return ui_select('image_pool', $value || '', \@choices);
 }
 
-# parse_image_pool(old_value) validates the submitted image_pool UUID.
-# old_value is the previous UUID or empty. Stopped pools can also be saved.
+# parse_image_pool(old_value) validates the submitted image_pool UUID. old_value
+# is the previous UUID or empty. Stopped pools can also be saved.
+
 sub parse_image_pool
 {
 my ($old) = @_;
@@ -123,19 +137,20 @@ my $value = $in{'image_pool'} // '';
 return '' if ($value eq '');
 # Reject malformed IDs even when they match a previously saved value.
 error($text{'config_image_pool_error'}) if ($value !~
-	/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
+					    /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i);
 # An unavailable old choice may be retained when editing another setting.
 return $value if ($value eq ($old || ''));
 # New choices must name an existing pool with a supported file-backed type.
 my $storage = get_storage_info();
 error($text{'config_image_pool_error'}) if (!grep {
 	$_->{'id'} eq $value && ($_->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/
-	} @{$storage->{'pools'} || []});
+	} @{$storage->{'pools'} || [ ]});
 return $value;
 }
 
-# show_catalogue_columns(value)
-# Shows known catalogue columns, keeping the required image-name column checked.
+# show_catalogue_columns(value) Shows known catalogue columns, keeping the
+# required image-name column checked.
+
 sub show_catalogue_columns
 {
 my ($value) = @_;
@@ -143,24 +158,25 @@ my %selected = map { $_->{'id'} => 1 } get_catalogue_columns($value);
 my @rows;
 foreach my $def (list_catalogue_columns()) {
 	my $id = $def->{'id'};
-	push(@rows, ui_checkbox('cataloguecol_'.$id, 1, $text{$def->{'label'}},
-		$selected{$id} ? 1 : 0, undef, $id eq 'name'));
+	push(@rows,
+	     ui_checkbox('cataloguecol_'.$id, 1, $text{$def->{'label'}},
+			 $selected{$id} ? 1 : 0, undef, $id eq 'name'));
 	}
 # Wrap choices into columns like the other module configuration checkboxes.
 return ui_grid(\@rows, { min => '180px' });
 }
 
-# parse_catalogue_columns(old_value)
-# Stores only known columns in display order and always retains the image link.
-# Webmin supplies old_value; selections are read from the submitted form
-# instead.
+# parse_catalogue_columns(old_value) Stores only known columns in display order
+# and always retains the image link. Webmin supplies old_value; selections are
+# read from the submitted form instead.
+
 sub parse_catalogue_columns
 {
 my @selected = ('name');
 foreach my $def (list_catalogue_columns()) {
 	my $id = $def->{'id'};
-	# Name is already included; accept only selected, recognized
-	# extra columns.
+	# Name is already included; accept only selected,
+	# recognized extra columns.
 	push(@selected, $id) if ($id ne 'name' && $in{'cataloguecol_'.$id});
 	}
 return join(',', @selected);

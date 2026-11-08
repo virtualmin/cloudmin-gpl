@@ -10,15 +10,17 @@ ReadParse();
 # Only enabled catalogue entries for this host may trigger a metadata lookup.
 my ($result, $error);
 eval {
-	# Delegated page requests must not open the cache or trigger a host size probe.
+	# Delegated page requests must not open the cache or
+	# trigger a host size probe.
 	require_access('host');
 	my $entry = get_available_server_image($in{'id'});
 	die "Image is not available on this host\n" if (!$entry);
 	my $sizes = get_image_sizes();
-	$result = is_readonly_mode() ? $sizes->get($entry)
+	$result = is_readonly_mode()
+		? $sizes->get($entry)
 		: $sizes->refresh($entry);
 	$result = { bytes => $result->{'bytes'},
-		checked => $result->{'checked'} };
+		    checked => $result->{'checked'} };
 	};
 $error = "$@" if ($@);
 print "Cache-Control: no-store\r\n";

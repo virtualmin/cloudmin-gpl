@@ -13,10 +13,10 @@ our (%text);
 require "$Bin/../cloudmin-pages.pl";
 
 my $vm = { 'uuid' => '0f9c2b7e-3a1d-4c5e-9b8a-7d6e5f4c3b2a',
-	'name' => 'web-01' };
+	   'name' => 'web-01' };
 
-# capture(code)
-# Returns everything the code prints.
+# capture(code) Returns everything the code prints.
+
 sub capture
 {
 my ($code) = @_;
@@ -31,9 +31,9 @@ return $out;
 
 # Themes without guest navigation need no selection or refresh output.
 is(capture(sub { select_theme_server($vm) }), '',
-	'guest selection is optional when the theme has no hook');
+   'guest selection is optional when the theme has no hook');
 is(capture(sub { notify_theme_save($vm, 'create') }), '',
-	'guest changes are optional when the theme has no hook');
+   'guest changes are optional when the theme has no hook');
 
 # Load named subs through Webmin's loader so the exported aliases stay intact.
 our (@selected, @saved, $markers);
@@ -71,26 +71,27 @@ close($theme) or die $!;
 {
 	# Hooks loaded after the module imports WebminCore must still be called.
 	is(capture(sub { select_theme_server($vm) }), "select-hook\n",
-		'guest selection calls the theme hook');
-	is_deeply(\@selected, [ { 'id' => $vm->{'uuid'}, 'host' => 'web-01' } ],
+	   'guest selection calls the theme hook');
+	is_deeply(
+		\@selected, [ { 'id' => $vm->{'uuid'}, 'host' => 'web-01' } ],
 		'the selection hook receives the Cloudmin 9 id and host keys');
 	is(capture(sub { notify_theme_save($vm, 'create') }), "save-hook\n",
-		'guest changes call the theme hook');
+	   'guest changes call the theme hook');
 	is_deeply(\@saved,
-		[ { 'id' => $vm->{'uuid'}, 'host' => 'web-01' }, 'create' ],
-		'the change hook receives the guest record and action');
+		  [ { 'id' => $vm->{'uuid'}, 'host' => 'web-01' }, 'create' ],
+		  'the change hook receives the guest record and action');
 	@saved = ();
 	is(capture(sub { notify_theme_save($vm, 'delete') }), "save-hook\n",
-		'the same hook supports guest deletion');
+	   'the same hook supports guest deletion');
 	is($saved[1], 'delete', 'the deletion action is passed unchanged');
 
 	# Themes that return markers also supply their own hook output.
 	$markers = 1;
 	is(capture(sub { select_theme_server($vm) }),
-		"<!--\ntheme_select_server=$vm->{'uuid'}\n-->\n",
-		'the theme hook supplies its own selection marker');
+	   "<!--\ntheme_select_server=$vm->{'uuid'}\n-->\n",
+	   'the theme hook supplies its own selection marker');
 	is(capture(sub { notify_theme_save($vm, 'create') }),
-		"<!--\ntheme_post_save=$vm->{'uuid'}\n-->\n",
-		'the theme hook supplies its own change marker');
+	   "<!--\ntheme_post_save=$vm->{'uuid'}\n-->\n",
+	   'the theme hook supplies its own change marker');
 	}
 done_testing();

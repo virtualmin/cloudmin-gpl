@@ -1,7 +1,11 @@
 # Common Cloudmin module setup and public functions.
 
 # Make WebminCore available when the CGI runs from this module's directory.
-BEGIN { push(@INC, '..'); }
+
+BEGIN
+{
+push(@INC, '..');
+}
 
 use strict;
 use warnings;
@@ -10,7 +14,7 @@ use WebminCore;
 
 our (%access, %config, %text);
 our ($module_config_directory, $module_name, $module_root_directory,
-	 $module_var_directory);
+     $module_var_directory);
 
 # Load Webmin's configuration, language, and module access controls.
 init_config();

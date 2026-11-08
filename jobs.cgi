@@ -18,7 +18,7 @@ if ($in{'action'}) {
 	error(error_html(error_message($@))) if (!$ok);
 	redirect('jobs.cgi');
 	exit;
-}
+	}
 
 # Refresh only the status content; never start, recover or cancel work here.
 my $data = get_active_jobs();
@@ -28,25 +28,32 @@ $data->{'log_url'} = get_action_log_url() if (foreign_available('webminlog'));
 if ($data->{'can_control'}) {
 	$data->{'token'} = eval { get_image_jobs()->form_token($remote_user) };
 	if (!$data->{'token'}) {
-		# Without a signed token, show diagnostics but no action buttons.
+		# Without a signed token, show diagnostics
+		# but no action buttons.
 		$data->{'can_control'} = 0;
-		push(@{$data->{'errors'}}, text('jobs_error_image', error_message($@)));
+		push(@{$data->{'errors'}},
+		     text('jobs_error_image', error_message($@)));
+		}
 	}
-}
 if ($in{'refresh'}) {
-	# Fragment responses skip the page header that normally loads theme widgets.
+	# Fragment responses skip the page header that normally
+	# loads theme widgets.
 	load_theme_library();
 	print "Cache-Control: no-store\r\n";
 	# Stable revisions avoid replacing unchanged widgets just because HTML
-	# attributes were serialized in a different order by another CGI process.
+	# attributes were serialized in a different order by
+	# another CGI process.
 	my $revision = Digest::SHA::sha256_hex(
 		convert_to_json($data, 1, 1));
-	print_json({ html => show_jobs_status($data), revision => $revision }, 0, 1);
+	print_json({ html => show_jobs_status($data), revision => $revision },
+		   0,
+		   1);
 	exit;
 	}
 ui_print_header(undef, $text{'index_jobs'}, '');
 my $css_version = (stat("$module_root_directory/jobs.css"))[9] || 0;
-print ui_tag('link', undef, { rel => 'stylesheet', href => 'jobs.css?'.$css_version });
+print ui_tag('link', undef,
+	     { rel => 'stylesheet', href => 'jobs.css?'.$css_version });
 $data->{'refresh_url'} = get_webprefix().'/server-manager/jobs.cgi?refresh=1';
 print show_jobs_page($data);
 my $version = (stat("$module_root_directory/jobs.js"))[9] || 0;

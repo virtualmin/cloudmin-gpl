@@ -6,7 +6,8 @@ require './server-manager-lib.pl';
 # Check access before parsing input or accessing any user's preferences.
 error($text{'acl_denied'}) if (!can_access('host') || is_readonly_mode());
 # GET requests must never write a preference.
-error('Use a signed POST to save a tab') if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+error('Use a signed POST to save a tab')
+	if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
 # The page, tab and token are small; reject oversized forms before parsing.
 error('Form is too large') if (($ENV{'CONTENT_LENGTH'} || 0) > 4096);
 ReadParse();

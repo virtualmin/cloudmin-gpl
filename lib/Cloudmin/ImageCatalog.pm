@@ -13,8 +13,9 @@ require(Cwd::abs_path(dirname(__FILE__).'/ImageChoices.pm'));
 
 # new(class, path => file, [custom_path => file], [lock_file => callback],
 #     [unlock_file => callback], [log => callback])
-# Creates a lazy catalogue reader; lock/unlock/log callbacks are required for
-# edits.
+# Creates a lazy catalogue reader; lock/unlock/log callbacks
+# are required for edits.
+
 sub new
 {
 my ($class, %opts) = @_;
@@ -23,8 +24,8 @@ die "Image catalogue path is required" if (!$opts{'path'});
 return bless({ %opts }, $class);
 }
 
-# load(self)
-# Loads, validates, and caches the catalogue manifest.
+# load(self) Loads, validates, and caches the catalogue manifest.
+
 sub load
 {
 my ($self) = @_;
@@ -44,25 +45,29 @@ $self->{'catalogue'} = $catalogue;
 return $catalogue;
 }
 
-# list_entries(self)
-# Combines supplied and custom images, including disabled architectures.
+# list_entries(self) Combines supplied and custom images, including
+# disabled architectures.
+
 sub list_entries
 {
 my ($self) = @_;
 my $custom = $self->custom_catalogue();
 my @records;
-foreach my $source ([ $self->load(), 'bundled' ], [ $custom, 'custom' ]) {
-	# Flatten each release into architecture-specific rows with stable edit
-	# keys.
+foreach my $source ( [ $self->load(), 'bundled' ], [ $custom, 'custom' ] ) {
+	# Flatten each release into architecture-specific rows
+	# with stable edit keys.
 	foreach my $image (@{$source->[0]->{'images'}}) {
 		foreach my $asset (@{$image->{'assets'}}) {
-			my $arch = normalize_architecture($asset->{'architecture'});
+			my $arch =
+				normalize_architecture(
+					$asset->{'architecture'});
 			my $key = $image->{'id'}.':'.$arch;
-			my %record = (%$image, %$asset, architecture => $arch,
-				catalogue_key => $key,
-				catalogue_origin => $source->[1],
-				enabled => $custom->{'disabled'}->{$key} ? 0
-				: 1);
+			my %record = ( %$image, %$asset, architecture => $arch,
+				       catalogue_key => $key,
+				       catalogue_origin => $source->[1],
+				       enabled => $custom->{'disabled'}->{$key}
+					       ? 0
+					       : 1 );
 			delete($record{'assets'});
 			push(@records, \%record);
 			}
@@ -72,74 +77,78 @@ foreach my $source ([ $self->load(), 'bundled' ], [ $custom, 'custom' ]) {
 return Cloudmin::ImageChoices::sort_images(\@records);
 }
 
-# list_images(self, [architecture])
-# Returns enabled entries, optionally limited to the host architecture.
-# An omitted or empty architecture includes all architectures.
+# list_images(self, [architecture]) Returns enabled entries, optionally limited
+# to the host architecture. An omitted or empty architecture
+# includes all architectures.
+
 sub list_images
 {
 my ($self, $architecture) = @_;
 $architecture = normalize_architecture($architecture);
 return [ grep { $_->{'enabled'} &&
-	(!$architecture || $_->{'architecture'} eq $architecture) }
-	@{$self->list_entries()} ];
+	(!$architecture ||
+	 $_->{'architecture'} eq $architecture) }
+	 @{$self->list_entries()} ];
 }
 
-# find_entry(self, key)
-# Looks up an entry for editing, including disabled entries.
-# key has the form id:architecture; no match returns undef.
+# find_entry(self, key) Looks up an entry for editing, including disabled
+# entries. key has the form id:architecture; no match returns undef.
+
 sub find_entry
 {
 my ($self, $key) = @_;
 my ($record) = grep { $_->{'catalogue_key'} eq ($key || '') }
-	@{$self->list_entries()};
+	       @{$self->list_entries()};
 return $record;
 }
 
-# custom_catalogue(self)
-# Reads the separate custom catalogue without creating it during page views.
+# custom_catalogue(self) Reads the separate custom catalogue without creating
+# it during page views.
+
 sub custom_catalogue
 {
 my ($self) = @_;
 my $path = $self->{'custom_path'};
 # A fresh installation has an empty custom catalogue without needing a file.
-return { schema => 1, images => [], disabled => {} } if (!$path || !-e $path);
+return { schema => 1, images => [ ], disabled => { } } if (!$path || !-e $path);
 my $json = read_file_contents($path);
 # Existing but unreadable settings must not be silently overwritten as empty.
 die "Cannot read custom image catalogue: $!\n" if (!defined($json));
 my $catalogue = convert_from_json($json);
 validate_catalogue($catalogue, 1);
-$catalogue->{'disabled'} ||= {};
+$catalogue->{'disabled'} ||= { };
 # Disabled entries are an architecture-keyed map, separate from image records.
 die "Invalid disabled image settings\n"
 	if (ref($catalogue->{'disabled'}) ne 'HASH');
 my %bundled = map { $_->{'id'} => 1 } @{$self->load()->{'images'}};
 foreach my $image (@{$catalogue->{'images'}}) {
-	# Reserve bundled IDs so local edits cannot replace publisher-controlled
-	# data.
+	# Reserve bundled IDs so local edits cannot replace
+	# publisher-controlled data.
 	die "Invalid custom catalogue ID\n" if ($image->{'id'} !~ /\Acustom-/);
-	# Custom releases must not shadow a bundled ID, even with
-	# another asset.
+	# Custom releases must not shadow a bundled ID, even with another asset.
 	die "Custom image conflicts with Cloudmin catalogue\n"
 		if ($bundled{$image->{'id'}});
 	}
 return $catalogue;
 }
 
-# validate_record(record)
-# Applies the same schema to custom entries and bundled image assets.
+# validate_record(record) Applies the same schema to custom entries and
+# bundled image assets.
+
 sub validate_record
 {
 my ($record) = @_;
-# Wrap the editor's flat record as a single-asset manifest for shared
-# validation.
+# Wrap the editor's flat record as a single-asset manifest
+# for shared validation.
 die "Invalid catalogue entry\n" if (ref($record) ne 'HASH');
 validate_catalogue({ schema => 1, images => [ { %$record,
 	assets => [ $record ] } ] });
 }
 
-# change(self, action, keys, callback)
-# Serializes edits with Webmin locks and records configuration diffs in its log.
-# keys is an array of catalogue keys; callback(settings) edits the locked hash.
+# change(self, action, keys, callback) Serializes edits with Webmin locks and
+# records configuration diffs in its log. keys is an array of catalogue keys;
+# callback(settings) edits the locked hash.
+
 sub change
 {
 my ($self, $action, $keys, $callback) = @_;
@@ -149,25 +158,28 @@ my @names;
 my $ok = eval {
 	my $settings = $self->custom_catalogue();
 	my %entries = map { $_->{'catalogue_key'} => $_ }
-		@{$self->list_entries()};
+		      @{$self->list_entries()};
 	$callback->($settings);
 	validate_catalogue($settings, 1);
 	# The catalogue contains small configuration records, so retain diffs.
 	local $main::error_must_die = 1;
 	my $mask = umask(0077);
 	my $written = eval { write_file_contents($path,
-		convert_to_json($settings, 0, 1)); 1 };
+						 convert_to_json($settings, 0,
+								 1)); 1 };
 	my $error = $@;
 	umask($mask);
 	# Restore process permissions before propagating a write error.
 	die $error if (!$written);
-	# Deleted entries need their old names; saved entries use their new
-	# names.
+	# Deleted entries need their old names; saved entries
+	# use their new names.
 	%entries = map { $_->{'catalogue_key'} => $_ } @{$self->list_entries()}
 		if ($action eq 'create' || $action eq 'modify');
 	@names = map { my $entry = $entries{$_};
-		$entry ? $entry->{'name'}.' ('.$entry->{'architecture'}.')'
-		: $_ } @$keys;
+		$entry
+			? $entry->{'name'}.' ('.
+			$entry->{'architecture'}.')'
+			: $_ } @$keys;
 	1;
 	};
 my $error = $@;
@@ -175,13 +187,14 @@ $self->{'unlock_file'}->($path);
 # Do not audit a successful change until the write and validation succeeded.
 die $error if (!$ok);
 $self->{'log'}->($action, 'catalogue', join(',', @$keys),
-	{ names => join("\0", @names) });
+		 { names => join("\0", @names) });
 return 1;
 }
 
-# save_entry(self, record, [new])
-# Adds or edits a custom image without modifying Cloudmin's supplied catalogue.
-# new defaults to false and then requires an existing custom entry.
+# save_entry(self, record, [new]) Adds or edits a custom image without modifying
+# Cloudmin's supplied catalogue. new defaults to false and then requires an
+# existing custom entry.
+
 sub save_entry
 {
 my ($self, $record, $new) = @_;
@@ -197,11 +210,10 @@ return $self->change($new ? 'create' : 'modify', [ $key ], sub {
 	my $existing = $self->find_entry($key);
 	# Creation, editing and bundled entries have distinct conflict rules.
 	die "Catalogue entry already exists\n" if ($new && $existing);
-	# Editing cannot recreate an entry removed since the form was
-	# loaded.
+	# Editing cannot recreate an entry removed since the form was loaded.
 	die "Catalogue entry no longer exists\n" if (!$new && !$existing);
-	# Bundled records can be disabled, but their supplied metadata
-	# is immutable.
+	# Bundled records can be disabled, but their supplied
+	# metadata is immutable.
 	die "Only custom entries can be edited\n"
 		if ($existing && $existing->{'catalogue_origin'} ne 'custom');
 	# Keep locally managed release IDs in their reserved namespace.
@@ -214,24 +226,26 @@ return $self->change($new ? 'create' : 'modify', [ $key ], sub {
 			     guest_agent);
 	my %image = %$record;
 	my %asset = map { $_ => delete($image{$_}) }
-		grep { exists($image{$_}) } @asset_fields;
+		    grep { exists($image{$_}) } @asset_fields;
 	my ($saved) = grep { $_->{'id'} eq $record->{'id'} }
-	@{$catalogue->{'images'}};
-	# Updating one architecture retains the release's other downloadable
-	# assets.
-	my @assets = grep { normalize_architecture($_->{'architecture'}) ne $record->{'architecture'} }
-		@{$saved->{'assets'} || []};
+		      @{$catalogue->{'images'}};
+	# Updating one architecture retains the release's other
+	# downloadable assets.
+	my @assets =
+		grep { normalize_architecture(
+			$_->{'architecture'}) ne $record->{'architecture'} }
+		@{$saved->{'assets'} || [ ]};
 	$image{'assets'} = [ @assets, \%asset ];
 	$catalogue->{'images'} = [
 		grep({ $_->{'id'} ne $record->{'id'} }
-		@{$catalogue->{'images'}}), \%image ];
+		     @{$catalogue->{'images'}}), \%image ];
 	});
 }
 
-# update_entries(self, action, keys)
-# Enables/disables either source or removes selected custom image architectures.
-# action is enable, disable or delete; keys is an array of id:architecture
-# strings.
+# update_entries(self, action, keys) Enables/disables either source or removes
+# selected custom image architectures. action is enable, disable or delete; keys
+# is an array of id:architecture strings.
+
 sub update_entries
 {
 my ($self, $action, $keys) = @_;
@@ -244,86 +258,91 @@ return $self->change($action, $keys, sub {
 	# edit(catalogue) applies the selection against current settings.
 	my ($catalogue) = @_;
 	my %entries = map { $_->{'catalogue_key'} => $_ }
-	@{$self->list_entries()};
+		      @{$self->list_entries()};
 	# Validate the full selection before changing any entry.
 	foreach my $key (@$keys) {
 		my $entry = $entries{$key} ||
-			die "Catalogue entry no longer exists\n";
-		# Disabling preserves vendor entries; deletion is for
-		# local records only.
+			    die "Catalogue entry no longer exists\n";
+		# Disabling preserves vendor entries; deletion is
+		# for local records only.
 		die "Only custom entries can be deleted; disable Cloudmin entries instead\n"
 			if ($action eq 'delete' && $entry->{'catalogue_origin'}
-			ne 'custom');
+			    ne 'custom');
 		}
 	foreach my $key (@$keys) {
 		if ($action eq 'disable') {
-			# Retain the record but exclude it from download
-			# choices.
+			# Retain the record but exclude it
+			# from download choices.
 			$catalogue->{'disabled'}->{$key} = 1;
 			}
 		else {
-			# Enabling or deleting removes the saved disabled
-			# marker.
+			# Enabling or deleting removes the
+			# saved disabled marker.
 			delete($catalogue->{'disabled'}->{$key});
 			}
 		}
 	if ($action eq 'delete') {
-		# Remove selected architectures and any now-empty custom
-		# releases.
+		# Remove selected architectures and any
+		# now-empty custom releases.
 		my %remove = map { $_ => 1 } @$keys;
 		foreach my $image (@{$catalogue->{'images'}}) {
 			$image->{'assets'} = [ grep {
 				!$remove{$image->{'id'}.':'.
-					normalize_architecture($_->{'architecture'})}
+					 normalize_architecture($_->{'architecture'})}
 				} @{$image->{'assets'}} ];
 			}
 		$catalogue->{'images'} = [ grep { @{$_->{'assets'}} }
-			@{$catalogue->{'images'}} ];
+					   @{$catalogue->{'images'}} ];
 		}
 	});
 }
 
-# search_images(self, query, [architecture])
-# Returns compatible images whose searchable metadata contains every term.
-# An empty query returns all enabled matches; omitted architecture includes all.
+# search_images(self, query, [architecture]) Returns compatible images whose
+# searchable metadata contains every term. An empty query returns all enabled
+# matches; omitted architecture includes all.
+
 sub search_images
 {
 my ($self, $query, $architecture) = @_;
 my @terms = grep { length($_) }
-	map { lc($_) } split(/\s+/, $query || '');
+	    map { lc($_) } split(/\s+/, $query || '');
 my $records = $self->list_images($architecture);
 # No search terms means the normal architecture-filtered list.
 return $records if (!@terms);
 
 my @matches = grep {
-	# Match common architecture spellings without changing stored
-	# identifiers.
+	# Match common architecture spellings without
+	# changing stored identifiers.
 	my $architecture = $_->{'architecture'} || '';
-	my $aliases = $architecture eq 'aarch64' ? 'arm64'
+	my $aliases = $architecture eq 'aarch64'
+		? 'arm64'
 		: $architecture eq 'x86_64' ? 'amd64 x86-64' : '';
 	my $haystack = lc(join(' ', (map { $_ || '' }
-		@{$_}{qw(id name vendor os release architecture format status)}),
-		$aliases));
+				     @{
+			$_}{qw(id name vendor os release architecture format status)}),
+			       $aliases));
 	!grep { index($haystack, $_) < 0 } @terms;
 	} @$records;
 return \@matches;
 }
 
-# find_image(self, id, [architecture])
-# Returns one compatible image record by stable catalogue ID.
-# Without architecture, returns the first enabled architecture for that ID.
+# find_image(self, id, [architecture]) Returns one compatible image record by
+# stable catalogue ID. Without architecture, returns the first enabled
+# architecture for that ID.
+
 sub find_image
 {
 my ($self, $id, $architecture) = @_;
 # An empty selection is not a catalogue lookup failure.
 return undef if (!defined($id) || $id eq '');
 my ($image) = grep { $_->{'id'} eq $id }
-	@{$self->list_images($architecture)};
+	      @{$self->list_images($architecture)};
 return $image;
 }
 
-# image_count(self)
-# Counts enabled operating-system IDs once, regardless of architecture count.
+# image_count(self) Counts enabled operating-system IDs once, regardless
+# of architecture count.
+
 sub image_count
 {
 my ($self) = @_;
@@ -331,10 +350,10 @@ my %ids = map { $_->{'id'} => 1 } @{$self->list_images()};
 return scalar(keys %ids);
 }
 
-# normalize_architecture([architecture])
-# Converts common architecture aliases to libvirt and distribution names.
-# Omitted input becomes an empty filter; unknown names are lowercased and
-# trimmed.
+# normalize_architecture([architecture]) Converts common architecture aliases to
+# libvirt and distribution names. Omitted input becomes an empty filter; unknown
+# names are lowercased and trimmed.
+
 sub normalize_architecture
 {
 my ($architecture) = @_;
@@ -349,9 +368,10 @@ return 'armv7l' if ($architecture =~ /^(?:arm|armhf|armv7|armv7l)$/);
 return $architecture;
 }
 
-# validate_catalogue(catalogue, [allow_empty])
-# Rejects malformed or unsafe manifests before their values reach the UI.
-# allow_empty defaults to false; custom catalogues may opt into an empty list.
+# validate_catalogue(catalogue, [allow_empty]) Rejects malformed or unsafe
+# manifests before their values reach the UI. allow_empty defaults to false;
+# custom catalogues may opt into an empty list.
+
 sub validate_catalogue
 {
 my ($catalogue, $allow_empty) = @_;
@@ -368,122 +388,127 @@ die "Image catalogue has no images"
 
 my %ids;
 foreach my $image (@{$catalogue->{'images'}}) {
-	# Each release needs one safe, unique ID and scalar identifying
-	# metadata.
+	# Each release needs one safe, unique ID and scalar
+	# identifying metadata.
 	die "Image catalogue entry must be an object"
 		if (ref($image) ne 'HASH');
 	my $id = $image->{'id'} || '';
-	# IDs enter form values, catalogue keys and generated volume
-	# names.
+	# IDs enter form values, catalogue keys and generated volume names.
 	die "Invalid image catalogue ID '$id'"
 		if (length($id) > 96 || $id !~ /\A[a-z0-9][a-z0-9._-]*\z/);
-	# One ID must identify one release before its architectures are
-	# expanded.
+	# One ID must identify one release before its
+	# architectures are expanded.
 	die "Duplicate image catalogue ID '$id'" if ($ids{$id}++);
 	foreach my $field (qw(name vendor os release status source_url)) {
-		# UI labels and sorting require nonempty scalar
-		# metadata.
+		# UI labels and sorting require nonempty scalar metadata.
 		die "Image '$id' is missing $field"
 			if (!defined($image->{$field}) ||
-			ref($image->{$field}) || $image->{$field} eq '');
+			    ref($image->{$field}) ||
+			    $image->{$field} eq '');
 		}
-	# Source links and status labels are constrained independently of
-	# assets.
+	# Source links and status labels are constrained
+	# independently of assets.
 	die "Image '$id' has an unsafe source_url"
 		if (!valid_url($image->{'source_url'}));
 	# Status determines which label and sort priority the UI uses.
 	die "Image '$id' has an invalid status"
-		if ($image->{'status'} !~ /\A(?:recommended|supported|older)\z/);
-	# Optional lifecycle dates must be real calendar dates in sortable ISO
-	# form.
+		if (
+			$image->{'status'} !~ /\A(?:recommended|supported|older)\z/);
+	# Optional lifecycle dates must be real calendar dates
+	# in sortable ISO form.
 	foreach my $field (qw(release_date end_of_life)) {
 		# Missing dates are allowed; supplied dates must survive
 		# calendar validation.
 		next if (!defined($image->{$field}) || $image->{$field} eq '');
 		my ($year, $month,
-			$day) = $image->{$field} =~ /\A([1-9]\d{3})-(\d{2})-(\d{2})\z/;
+		    $day) =
+			$image->{$field} =~ /\A([1-9]\d{3})-(\d{2})-(\d{2})\z/;
 		die "Image '$id' has an invalid $field; use YYYY-MM-DD\n"
 			if (!$year ||
-			!eval { timegm(0, 0, 12, $day, $month - 1, $year); 1 });
+			    !eval { timegm(0, 0, 12, $day, $month - 1,
+					   $year); 1 });
 		}
 	# A supported lifetime cannot end before the release begins.
 	die "Image '$id' reaches end of life before its release date\n"
 		if ($image->{'release_date'} && $image->{'end_of_life'} &&
-			$image->{'end_of_life'} lt $image->{'release_date'});
-	# Every release must retain at least one architecture that can be
-	# downloaded.
+		    $image->{'end_of_life'} lt $image->{'release_date'});
+	# Every release must retain at least one architecture
+	# that can be downloaded.
 	die "Image '$id' has no downloadable assets"
 		if (ref($image->{'assets'}) ne 'ARRAY' ||
-		!@{$image->{'assets'}});
+		    !@{$image->{'assets'}});
 
 	my %architectures;
 	foreach my $asset (@{$image->{'assets'}}) {
-		# Architecture keys must remain unique after alias
-		# normalization.
+		# Architecture keys must remain unique after
+		# alias normalization.
 		die "Image '$id' asset must be an object"
 			if (ref($asset) ne 'HASH');
 		my $architecture = normalize_architecture(
 			$asset->{'architecture'});
-		# Bound normalized architecture keys before they reach
-		# catalogue lookup.
+		# Bound normalized architecture keys before they
+		# reach catalogue lookup.
 		die "Image '$id' has an invalid architecture"
 			if ($architecture !~ /\A[a-z0-9_]+\z/ ||
-			length($architecture) > 32);
-		# Alias spellings cannot create two assets for the same
-		# CPU family.
+			    length($architecture) > 32);
+		# Alias spellings cannot create two assets for
+		# the same CPU family.
 		die "Image '$id' repeats architecture '$architecture'"
 			if ($architectures{$architecture}++);
-		# Accept only formats, digests and boot modes the import flow
-		# understands.
+		# Accept only formats, digests and boot modes the
+		# import flow understands.
 		die "Image '$id' has an unsupported disk format"
-			if (($asset->{'format'} || '') !~ /\A(?:qcow2|raw|iso)\z/);
-		# Digest parsing supports only the two algorithms used
-		# by the importer.
+			if (($asset->{'format'} ||
+			     '') !~ /\A(?:qcow2|raw|iso)\z/);
+		# Digest parsing supports only the two algorithms
+		# used by the importer.
 		die "Image '$id' has an unsupported checksum algorithm"
 			if (($asset->{'checksum_algorithm'} ||
-			'sha256') !~ /\Asha(?:256|512)\z/);
-		# Empty firmware leaves selection to host capabilities
-		# and image checks.
+			     'sha256') !~ /\Asha(?:256|512)\z/);
+		# Empty firmware leaves selection to host
+		# capabilities and image checks.
 		die "Image '$id' has an unsupported firmware type"
 			if (($asset->{'firmware'} ||
-			'') !~ /\A(?:bios|uefi|uefi-or-bios)?\z/);
+			     '') !~ /\A(?:bios|uefi|uefi-or-bios)?\z/);
 		foreach my $field (qw(url checksum_url)) {
 			# Both the image and its checksum manifest must pass
 			# download URL policy.
 			die "Image '$id' has an unsafe $field"
 				if (!valid_url($asset->{$field}));
 			}
-		# Signature links are metadata only today, but still require
-		# safe URLs.
+		# Signature links are metadata only today, but
+		# still require safe URLs.
 		die "Image '$id' has an unsafe signature_url"
 			if ($asset->{'signature_url'} &&
 			    !valid_url($asset->{'signature_url'}));
-		# Disk capacity and optional transfer size describe different
-		# quantities.
+		# Disk capacity and optional transfer size describe
+		# different quantities.
 		die "Image '$id' has an invalid minimum disk size"
 			if (!defined($asset->{'min_disk_bytes'}) ||
-			$asset->{'min_disk_bytes'} !~ /\A\d+\z/);
+			    $asset->{'min_disk_bytes'} !~ /\A\d+\z/);
 		# Optional transfer estimates must remain exact
 		# JavaScript integers.
 		die "Image '$id' has an invalid download size"
 			if (exists($asset->{'download_size_bytes'}) &&
 			    (ref($asset->{'download_size_bytes'}) ||
 			     ($asset->{'download_size_bytes'} ||
-			'') !~ /\A[1-9]\d{0,14}\z/));
+			      '') !~ /\A[1-9]\d{0,14}\z/));
 		}
 	}
 }
 
-# valid_url(url)
-# Applies the image downloader's URL rules to catalogue metadata too.
+# valid_url(url) Applies the image downloader's URL rules to
+# catalogue metadata too.
+
 sub valid_url
 {
 my ($url) = @_;
 return eval { Cloudmin::Images::validate_url($url); 1 } ? 1 : 0;
 }
 
-# error_message(error)
-# Removes Perl source locations from manifest errors shown to callers.
+# error_message(error) Removes Perl source locations from manifest
+# errors shown to callers.
+
 sub error_message
 {
 my ($error) = @_;

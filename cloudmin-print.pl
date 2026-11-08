@@ -14,32 +14,36 @@ if (!defined($first_print)) {
 	$outdent_print = \&outdent_html_print;
 	}
 
-# first_html_print(html, [html...])
-# Starts a progress step with Virtualmin's theme markup. Escape dynamic text
-# before calling this function, as callers may also supply trusted HTML.
+# first_html_print(html, [html...]) Starts a progress step with Virtualmin's
+# theme markup. Escape dynamic text before calling this function, as callers may
+# also supply trusted HTML.
+
 sub first_html_print
 {
 print "<span data-first-print>@_</span><br>\n";
 }
 
-# second_html_print(html, [html...])
-# Keeps nested results compact and separates top-level steps with a blank line.
+# second_html_print(html, [html...]) Keeps nested results compact and separates
+# top-level steps with a blank line.
+
 sub second_html_print
 {
 my $break = $print_indent ? '' : ui_brh();
 print "<span data-second-print>@_</span><br>$break\n";
 }
 
-# indent_html_print()
-# Opens a nested progress section using Virtualmin's theme markup.
+# indent_html_print() Opens a nested progress section using
+# Virtualmin's theme markup.
+
 sub indent_html_print
 {
 $print_indent++;
 print "<ul data-indent-print>\n";
 }
 
-# outdent_html_print()
-# Closes the nested progress section opened by indent_html_print.
+# outdent_html_print() Closes the nested progress section opened
+# by indent_html_print.
+
 sub outdent_html_print
 {
 # Extra closes must not make later top-level progress appear nested.

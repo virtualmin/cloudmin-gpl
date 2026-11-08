@@ -6,14 +6,16 @@ use warnings;
 use File::Basename ();
 use Cwd ();
 # Load ACL helpers once, even when callers use different paths.
-require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-access-lib.pl'));
+require(
+	Cwd::abs_path(File::Basename::dirname(__FILE__).
+		      '/cloudmin-access-lib.pl'));
 no warnings 'once';
 use List::Util qw(sum);
 use POSIX qw(uname);
 
 our (%config, %text);
 our ($cloudmin_last_error, $module_root_directory, $module_var_directory,
-	$module_config_directory, $remote_user);
+     $module_config_directory, $remote_user);
 
 require "$module_root_directory/lib/Cloudmin/Libvirt.pm";
 require "$module_root_directory/lib/Cloudmin/SSHKeys.pm";
@@ -21,14 +23,16 @@ require "$module_root_directory/lib/Cloudmin/ImageCatalog.pm";
 require "$module_root_directory/lib/Cloudmin/Images.pm";
 require "$module_root_directory/cloudmin-image-sizes.pl";
 
-# get_image_jobs()
-# Keeps persistent image jobs outside the web-accessible module directory.
+# get_image_jobs() Keeps persistent image jobs outside the
+# web-accessible module directory.
+
 sub get_image_jobs
 {
 return Cloudmin::Images->new(
 	directory => "$module_var_directory/image-jobs",
 	uri => $config{'libvirt_uri'},
-	max_bytes => Cloudmin::Images::import_limit_bytes($config{'image_max_size'}),
+	max_bytes =>
+		Cloudmin::Images::import_limit_bytes($config{'image_max_size'}),
 	lock_file => \&lock_data_file,
 	unlock_file => \&unlock_data_file,
 	test_lock => \&test_lock,
@@ -42,8 +46,10 @@ return Cloudmin::Images->new(
 		return get_vm_jobs()->lock('create-host', sub {
 			# New reservations require an active destination pool.
 			if ($creating) {
-				my $pool = get_libvirt()->connect()->get_storage_pool_by_uuid($uuid);
-				die "The selected storage pool is no longer active\n" if (!$pool->is_active());
+				my $pool = get_libvirt()->connect()
+					   ->get_storage_pool_by_uuid($uuid);
+				die "The selected storage pool is no longer active\n"
+					if (!$pool->is_active());
 				}
 			return $callback->();
 			});
@@ -51,9 +57,9 @@ return Cloudmin::Images->new(
 );
 }
 
-# get_free_disk_space(directory)
-# Returns available bytes on the directory's filesystem through Webmin's mount
-# API.
+# get_free_disk_space(directory) Returns available bytes on the directory's
+# filesystem through Webmin's mount API.
+
 sub get_free_disk_space
 {
 my ($directory) = @_;
@@ -69,11 +75,12 @@ die "Cannot determine free staging space.\n"
 return $free * 1024;
 }
 
-# lock_data_file(file, [readonly], [forcefile], [nodiff])
-# Takes a Webmin lock for job stores and catalogue files, reporting failures as
-# exceptions. Webmin's file locking can be turned off or limited to chosen
-# directories in its configuration; without a real lock, workers and requests
-# would no longer exclude each other, so that setting is an error here.
+# lock_data_file(file, [readonly], [forcefile], [nodiff]) Takes a Webmin lock
+# for job stores and catalogue files, reporting failures as exceptions. Webmin's
+# file locking can be turned off or limited to chosen directories in its
+# configuration; without a real lock, workers and requests would no longer
+# exclude each other, so that setting is an error here.
+
 sub lock_data_file
 {
 my ($file, @options) = @_;
@@ -84,9 +91,10 @@ local $main::error_must_die = 1;
 return lock_file($file, @options);
 }
 
-# unlock_data_file(file)
-# Releases the Webmin lock and removes its expired exit-cleanup entry, so this
-# CGI cannot later unlink a lock acquired by a background worker or new request.
+# unlock_data_file(file) Releases the Webmin lock and removes its expired
+# exit-cleanup entry, so this CGI cannot later unlink a lock acquired by a
+# background worker or new request.
+
 sub unlock_data_file
 {
 my ($file) = @_;
@@ -95,19 +103,22 @@ my $lockfile = translate_filename($file).'.lock';
 @main::temporary_files = grep { $_ ne $lockfile } @main::temporary_files;
 }
 
-# start_image_imports(input)
-# Validates a complete batch before queuing it; each selection is idempotent.
+# start_image_imports(input) Validates a complete batch before queuing it; each
+# selection is idempotent.
+
 sub start_image_imports
 {
 my ($input) = @_;
-# Refuse read-only and delegated callers before token validation or job creation.
+# Refuse read-only and delegated callers before token
+# validation or job creation.
 die "$text{'image_ereadonly'}\n" if (is_readonly_mode());
 require_access('manage');
 my $jobs = get_image_jobs();
 $jobs->check_token($remote_user, $input->{'token'});
 # A download batch has catalogue IDs; custom imports use one empty slot.
 my @ids = ($input->{'install_type'} || '') eq 'download'
-	? grep { length } split(/[\r\n\0]+/, $input->{'id'} || '') : ('');
+	? grep { length } split(/[\r\n\0]+/, $input->{'id'} || '')
+	: ('');
 @ids = unique(@ids);
 # Bound the selection before preparing any import or starting a worker.
 die "$text{'images_enone'}\n" if (!@ids);
@@ -116,9 +127,9 @@ my @requests = map { prepare_image_import({ %$input, id => $_ }) } @ids;
 # Repeated attempts return the same jobs; locks serialize repeated starts.
 my $attempts = Cloudmin::Attempts::image_attempts($input);
 my @records;
-foreach my $i (0..$#requests) {
+foreach my $i (0 .. $#requests) {
 	my $job = $jobs->create($remote_user, $input->{'token'}, $requests[$i],
-		$ids[$i], $attempts->{$ids[$i]});
+				$ids[$i], $attempts->{$ids[$i]});
 	push(@records, $job);
 	# Completed imports and uploads still waiting for data need no worker.
 	$jobs->start($job->{'id'}) if ($job->{'state'} eq 'queued');
@@ -126,22 +137,23 @@ foreach my $i (0..$#requests) {
 return \@records;
 }
 
-# prepare_image_import(input)
-# Resolves trusted catalogue metadata and current storage before any write.
+# prepare_image_import(input) Resolves trusted catalogue metadata and current
+# storage before any write.
+
 sub prepare_image_import
 {
 my ($input) = @_;
 my $data = get_images_info();
 my ($pool) = grep { $_->{'id'} eq ($input->{'pool'} || '') }
-	@{$data->{'pools'}};
+	     @{$data->{'pools'}};
 # A stale form cannot select a pool that is no longer writable by this flow.
 die "$text{'image_epool'}\n" if (!$pool);
 my $source = $input->{'install_type'} || '';
 my $request = { source => $source, pool => $pool->{'id'},
-	pool_name => $pool->{'name'}, slug => 'image' };
+		pool_name => $pool->{'name'}, slug => 'image' };
 if ($source eq 'download') {
-	# Use the enabled catalogue entry, from Cloudmin or the custom
-	# catalogue.
+	# Use the enabled catalogue entry, from Cloudmin or
+	# the custom catalogue.
 	my $image = get_available_server_image($input->{'id'});
 	# Reject removed, disabled or host-incompatible catalogue selections.
 	die "$text{'image_enotfound'}\n" if (!$image);
@@ -151,7 +163,8 @@ else {
 	# Custom images require a declared format and may include a checksum.
 	die "$text{'image_etype'}\n" if ($source !~ /\A(?:url|local|upload)\z/);
 	$request->{'format'} = $input->{'format'} || 'qcow2';
-	# ISO imports skip disk inspection but still verify any supplied checksum.
+	# ISO imports skip disk inspection but still verify
+	# any supplied checksum.
 	die "$text{'image_eformat'}\n"
 		if ($request->{'format'} !~ /\A(?:qcow2|raw|iso)\z/);
 	my $digest = $input->{'sha256'} || '';
@@ -162,15 +175,15 @@ else {
 	$request->{'sha256'} = lc($digest);
 	my $name;
 	if ($source eq 'url') {
-		# Validate the download address and derive a display name from
-		# its path.
+		# Validate the download address and derive a
+		# display name from its path.
 		$request->{'url'} =
 			Cloudmin::Images::validate_url($input->{'url'});
 		($name) = $request->{'url'} =~ m{/([^/?]+)(?:\?.*)?$};
 		}
 	elsif ($source eq 'local') {
-		# The worker later opens this regular host file without root
-		# privileges.
+		# The worker later opens this regular host file
+		# without root privileges.
 		my $path = $input->{'path'} || '';
 		die "$text{'image_epath'}\n"
 			if ($path !~ m{\A/} || $path =~ /[\x00-\x1f]/);
@@ -178,8 +191,8 @@ else {
 		($name) = $path =~ m{([^/]+)$};
 		}
 	else {
-		# Upload bytes arrive separately; the form must identify the
-		# chosen file.
+		# Upload bytes arrive separately; the form must
+		# identify the chosen file.
 		$name = $input->{'filename'};
 		die "$text{'image_eupload'}\n" if (!$name);
 		}
@@ -191,9 +204,9 @@ else {
 return $request;
 }
 
-# get_image_catalogue()
-# Combines the Cloudmin catalogue with the custom catalogue in module
-# configuration.
+# get_image_catalogue() Combines the Cloudmin catalogue with the custom
+# catalogue in module configuration.
+
 sub get_image_catalogue
 {
 return Cloudmin::ImageCatalog->new(
@@ -206,31 +219,36 @@ return Cloudmin::ImageCatalog->new(
 );
 }
 
-# prepare_catalogue_entry(input, catalogue)
-# Validates editor fields while retaining metadata not exposed by the form.
+# prepare_catalogue_entry(input, catalogue) Validates editor fields while
+# retaining metadata not exposed by the form.
+
 sub prepare_catalogue_entry
 {
 my ($input, $catalogue) = @_;
-my $architecture = Cloudmin::ImageCatalog::normalize_architecture($input->{'architecture'});
+my $architecture =
+	Cloudmin::ImageCatalog::normalize_architecture(
+		$input->{'architecture'});
 my $id = $input->{'id'} || '';
 # IDs are stable catalogue keys rather than arbitrary filenames.
 die "Invalid catalogue ID\n"
 	if (length($id) > 96 || $id !~ /\A[a-z0-9][a-z0-9._-]*\z/);
-my $existing = $input->{'new'} ? undef
+my $existing = $input->{'new'}
+	? undef
 	: $catalogue->find_entry($id.':'.$architecture);
 # Editing must not silently recreate an entry removed since the form loaded.
 die "Catalogue entry no longer exists\n" if (!$input->{'new'} && !$existing);
-my $entry = { %{$existing || {}}, id => $id, architecture => $architecture };
+my $entry = { %{$existing || { }}, id => $id, architecture => $architecture };
 # Preserve hidden metadata while limiting the editable text fields.
-foreach my $field (qw(name vendor os release url checksum_url source_url status checksum_algorithm firmware
+foreach my $field (
+	qw(name vendor os release url checksum_url source_url status checksum_algorithm firmware
 		release_date end_of_life)) {
 	my $value = $input->{$field} || '';
 	$value =~ s/^\s+|\s+$//g;
-	# URLs need more room than labels, but neither may contain control
-	# bytes.
+	# URLs need more room than labels, but neither may
+	# contain control bytes.
 	die "Invalid catalogue field $field\n"
 		if ($value =~ /[\x00-\x1f]/ || length($value) >
-		($field =~ /url\z/ ? 4096 : 200));
+		    ($field =~ /url\z/ ? 4096 : 200));
 	$entry->{$field} = $value;
 	}
 $entry->{'source_url'} ||= $entry->{'url'};
@@ -239,7 +257,8 @@ $entry->{'format'} = $input->{'format'} || '';
 delete($entry->{'download_size_bytes'})
 	if ($existing && $entry->{'url'} ne $existing->{'url'});
 # Catalogue imports always fetch a checksum file before inspecting the image.
-Cloudmin::Images::validate_url($entry->{$_}) for qw(url checksum_url source_url);
+Cloudmin::Images::validate_url(
+	$entry->{$_}) for qw(url checksum_url source_url);
 my $disk = $input->{'min_disk_gib_def'} ? 0 : $input->{'min_disk_gib'} || 0;
 # Store a bounded byte count; zero means no stated minimum.
 die "Enter a valid minimum disk size in GiB\n"
@@ -249,8 +268,9 @@ $entry->{$_} = $input->{$_} ? 1 : 0 for qw(cloud_init guest_agent);
 return $entry;
 }
 
-# save_catalogue_form(input)
-# Validates raw editor fields within the privileged backend before saving them.
+# save_catalogue_form(input) Validates raw editor fields within the privileged
+# backend before saving them.
+
 sub save_catalogue_form
 {
 # Catalogue entries affect the host; VM assignments grant no editing access.
@@ -258,20 +278,22 @@ require_access('host');
 my ($input) = @_;
 my $catalogue = get_image_catalogue();
 return $catalogue->save_entry(prepare_catalogue_entry($input, $catalogue),
-	$input->{'new'});
+			      $input->{'new'});
 }
 
-# get_host_image_architecture()
-# Returns the normalized architecture used to filter bootable VM images.
+# get_host_image_architecture() Returns the normalized architecture used to
+# filter bootable VM images.
+
 sub get_host_image_architecture
 {
 my (undef, undef, undef, undef, $machine) = uname();
 return Cloudmin::ImageCatalog::normalize_architecture($machine);
 }
 
-# list_available_server_images([architecture], [catalogue])
-# Returns enabled catalogue images for the requested architecture.
-# Defaults to the local architecture and configured catalogue.
+# list_available_server_images([architecture], [catalogue]) Returns enabled
+# catalogue images for the requested architecture. Defaults to the local
+# architecture and configured catalogue.
+
 sub list_available_server_images
 {
 my ($architecture, $catalogue) = @_;
@@ -281,9 +303,10 @@ $catalogue ||= get_image_catalogue();
 return @{$catalogue->list_images($architecture)};
 }
 
-# get_available_server_image(id, [architecture], [catalogue])
-# Returns one compatible catalogue image by its stable ID.
-# Defaults to the local architecture and configured catalogue.
+# get_available_server_image(id, [architecture], [catalogue]) Returns one
+# compatible catalogue image by its stable ID. Defaults to the local
+# architecture and configured catalogue.
+
 sub get_available_server_image
 {
 my ($id, $architecture, $catalogue) = @_;
@@ -293,9 +316,10 @@ $catalogue ||= get_image_catalogue();
 return $catalogue->find_image($id, $architecture);
 }
 
-# search_available_server_images(query, [architecture], [catalogue])
-# Searches compatible catalogue records by name, OS, release, and format.
-# Defaults to the local architecture and configured catalogue.
+# search_available_server_images(query, [architecture], [catalogue]) Searches
+# compatible catalogue records by name, OS, release, and format. Defaults to the
+# local architecture and configured catalogue.
+
 sub search_available_server_images
 {
 my ($query, $architecture, $catalogue) = @_;
@@ -305,9 +329,10 @@ $catalogue ||= get_image_catalogue();
 return @{$catalogue->search_images($query, $architecture)};
 }
 
-# get_images_info([query], [architecture], [catalogue])
-# Collects filtered catalogue records and summary counts for the images page. An
-# omitted query lists all host-compatible images from the configured catalogue.
+# get_images_info([query], [architecture], [catalogue]) Collects filtered
+# catalogue records and summary counts for the images page. An omitted query
+# lists all host-compatible images from the configured catalogue.
+
 sub get_images_info
 {
 my ($query, $architecture, $catalogue) = @_;
@@ -324,16 +349,17 @@ my $ok = eval {
 	# entries and the picker unchanged.
 	if (($config{'catalogue_host_arch'} // 1) eq '1') {
 		my $host_arch = get_host_image_architecture();
-		$entries = [grep { $_->{'architecture'} eq $host_arch } @$entries];
+		$entries =
+			[ grep { $_->{'architecture'} eq $host_arch } @$entries ];
 		}
 	1;
 	};
 # Retain the failure for display without passing an undefined image list on.
 $error = error_message($@) if (!$ok);
-$records ||= [];
+$records ||= [ ];
 # Render cached estimates immediately; browser requests refresh stale entries.
 my $sizes = get_image_sizes();
-foreach my $entry (@$records, @{$entries || []}) {
+foreach my $entry ( @$records, @{$entries || [ ]} ) {
 	my $size = $sizes->get($entry);
 	$entry->{'download_size_bytes'} = $size->{'bytes'};
 	$entry->{'download_size_refresh'} = $size->{'refresh'};
@@ -342,13 +368,14 @@ my $storage = get_storage_info();
 # File images can be uploaded to these libvirt file-backed pool types.
 my @pools = grep {
 	$_->{'active'} && ($_->{'type'} || '') =~ /\A(?:dir|fs|netfs)\z/
-	} @{$storage->{'pools'} || []};
+	} @{$storage->{'pools'} || [ ]};
 
 return {
 	'images' => $records,
-	'catalogue_entries' => $entries || [],
+	'catalogue_entries' => $entries || [ ],
 	'catalogue_columns' => $config{'catalogue_columns'},
-	'max_image_bytes' => Cloudmin::Images::import_limit_bytes($config{'image_max_size'}),
+	'max_image_bytes' =>
+		Cloudmin::Images::import_limit_bytes($config{'image_max_size'}),
 	'error' => $error,
 	'architecture' => $architecture,
 	'pools' => \@pools,
@@ -363,17 +390,19 @@ return {
 };
 }
 
-# get_ssh_keys()
-# Stores guest login keys separately from administrator SSH identities.
+# get_ssh_keys() Stores guest login keys separately from
+# administrator SSH identities.
+
 sub get_ssh_keys
 {
 return Cloudmin::SSHKeys->new("$module_var_directory/vm-ssh-keys");
 }
 
-# get_libvirt([writable])
-# Returns a new adapter for the configured libvirt URI. Inventory pages use the
-# default read-only connection. Pass a true value for calls that libvirt
-# refuses on read-only connections, such as guest-agent address queries.
+# get_libvirt([writable]) Returns a new adapter for the configured libvirt URI.
+# Inventory pages use the default read-only connection. Pass a true value for
+# calls that libvirt refuses on read-only connections, such as
+# guest-agent address queries.
+
 sub get_libvirt
 {
 my ($writable) = @_;
@@ -383,12 +412,20 @@ return Cloudmin::Libvirt->new(
 	'uri' => $config{'libvirt_uri'} || 'qemu:///system',
 	'readonly' => $writable ? 0 : 1,
 	# Native serial logs belong only to this local hypervisor.
-	'serial_log' => (!$config{'libvirt_uri'} || $config{'libvirt_uri'} eq 'qemu:///system')
-		? Cloudmin::SerialLog->new() : undef,
+	'serial_log' =>
+		(!$config{'libvirt_uri'} ||
+		 $config{'libvirt_uri'} eq 'qemu:///system')
+			 ? Cloudmin::SerialLog->new()
+			 : undef,
 	# Startup memory belongs to this host, not a remote libvirt connection.
-	'startup' => (!$config{'libvirt_uri'} || $config{'libvirt_uri'} eq 'qemu:///system')
-		? Cloudmin::VMStartup->new("$module_var_directory/vm-startup") : undef,
-	# on_remove(uuid, job_id) removes only this creation's local access records.
+	'startup' =>
+		(!$config{'libvirt_uri'} ||
+		 $config{'libvirt_uri'} eq 'qemu:///system')
+			 ? Cloudmin::VMStartup->new(
+				 "$module_var_directory/vm-startup")
+			 : undef,
+	# on_remove(uuid, job_id) removes only this creation's
+	# local access records.
 	'on_remove' => sub {
 		require "$module_root_directory/cloudmin-webmin-lib.pl";
 		remove_vm_webmin(@_);
@@ -397,10 +434,11 @@ return Cloudmin::Libvirt->new(
 );
 }
 
-# list_managed_servers([skip-completion], [adapter])
-# Returns guest hash references visible under the current ACL; skip-completion
-# is unused. The optional adapter replaces the configured libvirt connection.
-# On failure, returns an empty list and sets cloudmin_last_error.
+# list_managed_servers([skip-completion], [adapter]) Returns guest hash
+# references visible under the current ACL; skip-completion is unused. The
+# optional adapter replaces the configured libvirt connection. On failure,
+# returns an empty list and sets cloudmin_last_error.
+
 sub list_managed_servers
 {
 my ($nocomplete, $adapter) = @_;
@@ -417,9 +455,10 @@ $cloudmin_last_error = undef;
 return grep { can_access('view', $_->{'uuid'}) } @$servers;
 }
 
-# list_managed_servers_sorted([mode], [skip-completion], [adapter])
-# Returns guests sorted by name, ignoring case. Mode and skip-completion are
-# accepted for existing callers but do not change discovery or sorting.
+# list_managed_servers_sorted([mode], [skip-completion], [adapter]) Returns
+# guests sorted by name, ignoring case. Mode and skip-completion are accepted
+# for existing callers but do not change discovery or sorting.
+
 sub list_managed_servers_sorted
 {
 my ($mode, $nocomplete, $adapter) = @_;
@@ -428,8 +467,9 @@ return sort {
 	} list_managed_servers($nocomplete, $adapter);
 }
 
-# get_managed_server(id, [adapter])
-# Finds one libvirt guest by UUID or name; returns undef on no match or failure.
+# get_managed_server(id, [adapter]) Finds one libvirt guest by UUID or name;
+# returns undef on no match or failure.
+
 sub get_managed_server
 {
 my ($id, $adapter) = @_;
@@ -441,9 +481,10 @@ my ($server) = grep {
 return $server;
 }
 
-# get_managed_server_by(key, value, [adapter])
-# Matches a scalar inventory field. Returns all matches in list context or the
-# first match in scalar context; no match or a lookup error returns no record.
+# get_managed_server_by(key, value, [adapter]) Matches a scalar inventory field.
+# Returns all matches in list context or the first match in scalar context; no
+# match or a lookup error returns no record.
+
 sub get_managed_server_by
 {
 my ($key, $value, $adapter) = @_;
@@ -453,9 +494,10 @@ my @servers = grep {
 return wantarray ? @servers : $servers[0];
 }
 
-# get_server_ip(server)
-# Returns discovered IPv4 addresses in list context, or the first in scalar
-# context. Loads addresses only when the supplied inventory lacks them.
+# get_server_ip(server) Returns discovered IPv4 addresses in list context, or
+# the first in scalar context. Loads addresses only when the supplied
+# inventory lacks them.
+
 sub get_server_ip
 {
 my ($server) = @_;
@@ -463,9 +505,10 @@ my @ips = grep { !/:/ } get_server_addresses($server);
 return wantarray ? @ips : $ips[0];
 }
 
-# get_server_ip6(server)
-# Returns discovered IPv6 addresses in list context, or the first in scalar
-# context, for callers such as Virtualmin's address allocation checks.
+# get_server_ip6(server) Returns discovered IPv6 addresses in list context, or
+# the first in scalar context, for callers such as Virtualmin's
+# address allocation checks.
+
 sub get_server_ip6
 {
 my ($server) = @_;
@@ -473,9 +516,10 @@ my @ips = grep { /:/ } get_server_addresses($server);
 return wantarray ? @ips : $ips[0];
 }
 
-# get_server_addresses(server)
-# Shares one address lookup between the IPv4 and IPv6 helpers. Ordinary menu
-# inventory stays cheap because it does not call these helpers.
+# get_server_addresses(server) Shares one address lookup between the IPv4 and
+# IPv6 helpers. Ordinary menu inventory stays cheap because it does
+# not call these helpers.
+
 sub get_server_addresses
 {
 my ($server) = @_;
@@ -485,27 +529,30 @@ if (!exists($server->{'addresses'})) {
 	# Inventory omits addresses; fetch them on demand and retain the result
 	# in this caller's record. A deleted guest has no current addresses.
 	my $vm = $server->{'id'}
-		? get_libvirt(1)->get_domain($server->{'id'}) : undef;
-	$server->{'addresses'} = $vm ? $vm->{'addresses'} : [];
+		? get_libvirt(1)->get_domain($server->{'id'})
+		: undef;
+	$server->{'addresses'} = $vm ? $vm->{'addresses'} : [ ];
 	}
-return map { $_->{'address'} } @{$server->{'addresses'} || []};
+return map { $_->{'address'} } @{$server->{'addresses'} || [ ]};
 }
 
-# get_server_mac(server)
-# Reads Cloudmin's mac_addresses field, or the libvirt macs array.
-# Returns the first address in scalar context, or all in list context.
+# get_server_mac(server) Reads Cloudmin's mac_addresses field, or the libvirt
+# macs array. Returns the first address in scalar context, or
+# all in list context.
+
 sub get_server_mac
 {
 my ($server) = @_;
 my @macs = defined($server->{'mac_addresses'})
 	? split(/\s+/, $server->{'mac_addresses'})
-	: @{$server->{'macs'} || []};
+	: @{$server->{'macs'} || [ ]};
 return wantarray ? @macs : $macs[0];
 }
 
-# check_server_status(server, [regen], [skipinfo], [time], [adapter])
-# Refreshes the supplied hash in place and returns whether libvirt marks it
-# active. Regen, skipinfo, and time are accepted but unused.
+# check_server_status(server, [regen], [skipinfo], [time], [adapter]) Refreshes
+# the supplied hash in place and returns whether libvirt marks it active. Regen,
+# skipinfo, and time are accepted but unused.
+
 sub check_server_status
 {
 my ($server, $regen, $skipinfo, $time, $adapter) = @_;
@@ -516,9 +563,10 @@ return 0 if (!$fresh);
 return $server->{'active'} ? 1 : 0;
 }
 
-# validate_server(server)
-# Returns error messages for a missing UUID, missing name, or unknown state.
-# This checks the supplied record, not whether the guest can be managed safely.
+# validate_server(server) Returns error messages for a missing UUID, missing
+# name, or unknown state. This checks the supplied record, not whether the guest
+# can be managed safely.
+
 sub validate_server
 {
 my ($server) = @_;
@@ -533,9 +581,10 @@ push(@errors, $text{'validate_estate'})
 return @errors;
 }
 
-# can_host_kvm([server])
-# Accepts an omitted host or a record marked this/libvirt. Checks the record
-# type only, not the host's KVM capabilities or address.
+# can_host_kvm([server]) Accepts an omitted host or a record marked
+# this/libvirt. Checks the record type only, not the host's KVM
+# capabilities or address.
+
 sub can_host_kvm
 {
 my ($server) = @_;
@@ -544,8 +593,9 @@ return 1 if (!$server);
 return ($server->{'manager'} || '') =~ /^(this|libvirt)$/ ? 1 : 0;
 }
 
-# check_kvm_host_software([server], [adapter])
-# Returns undef when the local KVM/libvirt host is ready, or an error message.
+# check_kvm_host_software([server], [adapter]) Returns undef when the local
+# KVM/libvirt host is ready, or an error message.
+
 sub check_kvm_host_software
 {
 my ($server, $adapter) = @_;
@@ -558,9 +608,10 @@ my ($failed) = grep { !$_->{'ok'} } @{$readiness->{'checks'}};
 return $failed ? $failed->{'detail'} : undef;
 }
 
-# list_kvm_instances([host], [adapter])
-# Returns an array reference of guest records, or an error string on failure.
-# Host is an optional record checked by can_host_kvm, not a connection address.
+# list_kvm_instances([host], [adapter]) Returns an array reference of guest
+# records, or an error string on failure. Host is an optional record checked by
+# can_host_kvm, not a connection address.
+
 sub list_kvm_instances
 {
 my ($host, $adapter) = @_;
@@ -571,11 +622,12 @@ my $domains = eval { $adapter->list_domains() };
 # Return discovery failures as text, not an empty guest list.
 return error_message($@) if (!$domains);
 # Legacy host lookups expose the same assigned guests as the main inventory.
-return [grep { can_access('view', $_->{'uuid'}) } @$domains];
+return [ grep { can_access('view', $_->{'uuid'}) } @$domains ];
 }
 
-# list_available_managed_servers_sorted()
-# Supplies visible guests, sorted by name, for theme default-server settings.
+# list_available_managed_servers_sorted() Supplies visible guests, sorted by
+# name, for theme default-server settings.
+
 sub list_available_managed_servers_sorted
 {
 return list_managed_servers_sorted();
@@ -585,6 +637,7 @@ return list_managed_servers_sorted();
 # Host administration and unknown legacy actions require an administrator.
 # Returns (ok, error) in list context or ok in scalar context. Omitted arguments
 # check host access; view accepts one server record or an array of records.
+
 sub can_action
 {
 my ($servers, $action) = @_;
@@ -592,15 +645,17 @@ my $ok = can_access('host');
 # Delegated users must be allowed to view every guest in the requested list.
 if ($servers && ($action || '') eq 'view') {
 	my @servers = ref($servers) eq 'ARRAY' ? @$servers : ($servers);
-	$ok = !grep { !can_access('view', $_->{'uuid'} || $_->{'id'}) } @servers;
+	$ok = !grep { !can_access('view',
+				  $_->{'uuid'} || $_->{'id'}) } @servers;
 	}
-return wantarray ? ($ok ? 1 : 0, $ok ? undef : $text{'acl_denied'}) : $ok;
+return wantarray ? ( $ok ? 1 : 0, $ok ? undef : $text{'acl_denied'} ) : $ok;
 }
 
-# get_parent_server(server)
-# Returns the host system record that runs a guest, or undef without a guest.
-# Webmin's LVM module compares its id with '0', Cloudmin 9's ID for the system
-# running Cloudmin itself. Every Cloudmin 10 guest runs on this host.
+# get_parent_server(server) Returns the host system record that runs a guest, or
+# undef without a guest. Webmin's LVM module compares its id with '0', Cloudmin
+# 9's ID for the system running Cloudmin itself. Every Cloudmin 10
+# guest runs on this host.
+
 sub get_parent_server
 {
 my ($server) = @_;
@@ -609,8 +664,10 @@ return undef if (!$server);
 return { 'id' => '0', 'host' => get_system_hostname(), 'manager' => 'this' };
 }
 
-# type_kvm_list_disk_devices(server, [adapter]) returns guest block-device paths.
-# Webmin's LVM module uses this hook to identify attached logical volumes.
+# type_kvm_list_disk_devices(server, [adapter]) returns guest block-device
+# paths. Webmin's LVM module uses this hook to identify
+# attached logical volumes.
+
 sub type_kvm_list_disk_devices
 {
 my ($server, $adapter) = @_;
@@ -619,12 +676,16 @@ my $domain = $adapter->find_domain($server->{'uuid'} || $server->{'id'});
 return () if (!$domain);
 my %paths;
 # Include both current and next-boot attachments so Webmin sees pending use.
-foreach my $flags (0, 2) {
-	my $doc = Cloudmin::Libvirt::parse_xml_document($domain->get_xml_description($flags));
-	foreach my $source ($doc->findnodes('/domain/devices/disk/source/@dev')) {
+foreach my $flags ( 0, 2 ) {
+	my $doc =
+		Cloudmin::Libvirt::parse_xml_document(
+			$domain->get_xml_description($flags));
+	foreach my $source (
+		$doc->findnodes('/domain/devices/disk/source/@dev')) {
 		my $path = $source->getValue();
 		$paths{$path} = 1;
-		# Webmin displays /dev/VG/LV while libvirt uses /dev/mapper aliases.
+		# Webmin displays /dev/VG/LV while libvirt uses
+		# /dev/mapper aliases.
 		my $record = eval { Cloudmin::LVM::device($path) };
 		$paths{$record->{'lv_path'}} = 1 if ($record);
 		}
@@ -632,8 +693,9 @@ foreach my $flags (0, 2) {
 return sort keys %paths;
 }
 
-# list_storage_pools([adapter])
-# Returns pool records from libvirt, or an empty list after a lookup failure.
+# list_storage_pools([adapter]) Returns pool records from libvirt, or an empty
+# list after a lookup failure.
+
 sub list_storage_pools
 {
 my ($adapter) = @_;
@@ -648,17 +710,19 @@ $cloudmin_last_error = undef;
 return @$pools;
 }
 
-# get_server_kvm_instance(server, [adapter])
-# Looks up a fresh guest record by id, falling back to name if id is absent.
+# get_server_kvm_instance(server, [adapter]) Looks up a fresh guest record by
+# id, falling back to name if id is absent.
+
 sub get_server_kvm_instance
 {
 my ($server, $adapter) = @_;
 return get_managed_server($server->{'id'} || $server->{'name'}, $adapter);
 }
 
-# check_host_readiness([adapter])
-# Checks the local KVM device and configured libvirt service without changes.
-# Returns check results and any host details, not a full VM-creation preflight.
+# check_host_readiness([adapter]) Checks the local KVM device and configured
+# libvirt service without changes. Returns check results and any host details,
+# not a full VM-creation preflight.
+
 sub check_host_readiness
 {
 my ($adapter) = @_;
@@ -682,15 +746,16 @@ push(@checks, {
 	'id' => 'kvm',
 	'label' => $text{'check_kvm'},
 	'ok' => $has_kvm,
-	'detail' => $has_kvm
-		? $text{'check_kvm_ok'} : $text{'check_kvm_fail'},
+	'detail' => $has_kvm ? $text{'check_kvm_ok'} : $text{'check_kvm_fail'},
 });
 
 # Reuse the binding error rather than connecting without Sys::Virt.
-my $probe = $module_error ? {
-	'ok' => 0,
-	'error' => $module_error,
-} : $adapter->probe();
+my $probe = $module_error
+	? {
+		'ok' => 0,
+		'error' => $module_error,
+	}
+	: $adapter->probe();
 push(@checks, {
 	'id' => 'connection',
 	'label' => $text{'check_connection'},
@@ -720,7 +785,8 @@ push(@checks, {
 	'label' => $text{'check_driver'},
 	'ok' => $is_qemu ? 1 : 0,
 	'detail' => $is_qemu
-		? $text{'check_driver_ok'} : $text{'check_driver_fail'},
+		? $text{'check_driver_ok'}
+		: $text{'check_driver_fail'},
 });
 
 my $pools;
@@ -731,8 +797,7 @@ if ($probe->{'ok'} && $is_qemu) {
 	# Expose discovery errors separately from a valid empty pool list.
 	$storage_error = error_message($@) if (!$pools);
 	}
-my $active_pools = $pools
-	? scalar(grep { $_->{'active'} } @$pools) : 0;
+my $active_pools = $pools ? scalar(grep { $_->{'active'} } @$pools) : 0;
 my $storage_detail = !$probe->{'ok'} || !$is_qemu
 	? $text{'check_storage_wait'}
 	: $storage_error
@@ -749,24 +814,29 @@ push(@checks, {
 	'detail' => $storage_detail,
 });
 
-# An active network may lose its runtime rules after a firewall restart.
-# Use the creation preflight here too, including in compact overview mode.
+# An active network may lose its runtime rules after a firewall restart. Use the
+# creation preflight here too, including in compact overview mode.
 if ($probe->{'ok'} && $is_qemu && $adapter->uri() eq 'qemu:///system') {
 	require "$module_root_directory/lib/Cloudmin/NetworkPreflight.pm";
 	my $networks = eval { Cloudmin::NetworkPreflight::report($adapter) };
 	if ($networks) {
-		# Preserve individual diagnoses so only repairable failures
-		# offer recovery.
-		push(@checks, map { +{ %$_, id => 'network:'.($_->{'id'} || $_->{'name'}),
-			label => text('check_network', $_->{'name'}) } } @$networks);
-	}
+		# Preserve individual diagnoses so only repairable
+		# failures offer recovery.
+		push(@checks,
+		     map { +{ %$_,
+			      id => 'network:'.($_->{'id'} || $_->{'name'}),
+			      label => text('check_network',
+					    $_->{'name'}) } } @$networks);
+		}
 	else {
-		# A failed probe is not evidence of a healthy or empty network
-		# inventory.
-		push(@checks, { id => 'network', label => $text{'check_networks'}, ok => 0,
-			detail => error_message($@) });
+		# A failed probe is not evidence of a healthy or
+		# empty network inventory.
+		push(@checks,
+		     { id => 'network', label => $text{'check_networks'},
+		       ok => 0,
+		       detail => error_message($@) });
+		}
 	}
-}
 
 # Require all checks to pass and retain each result for the UI.
 my $ready = !grep { !$_->{'ok'} } @checks;
@@ -779,14 +849,15 @@ return {
 };
 }
 
-# get_storage_info()
-# Collects storage-pool and volume totals for the host overview and checks.
+# get_storage_info() Collects storage-pool and volume totals for the host
+# overview and checks.
+
 sub get_storage_info
 {
 my $adapter = get_libvirt();
 my $pools = eval { $adapter->list_storage_pools(1) };
 my $error = $pools ? undef : error_message($@);
-$pools ||= [];
+$pools ||= [ ];
 
 # Totals cover active pools because inactive pools have no current capacity.
 my @active = grep { $_->{'active'} } @$pools;
@@ -797,20 +868,21 @@ return {
 		'pools' => scalar(@$pools),
 		'active' => scalar(@active),
 		'volumes' => sum(0,
-			map { $_->{'volume_count'} || 0 } @active),
+				 map { $_->{'volume_count'} || 0 } @active),
 		'capacity' => sum(0, map { $_->{'capacity'} || 0 } @active),
 		'available' => sum(0,
-			map { $_->{'available'} || 0 } @active),
+				   map { $_->{'available'} || 0 } @active),
 	},
 };
 }
 
-# get_active_jobs()
-# Shows host administrators all working imports and unfinished VM jobs.
+# get_active_jobs() Shows host administrators all working imports
+# and unfinished VM jobs.
+
 sub get_active_jobs
 {
 # Skip job stores entirely for delegated users.
-return { jobs => [], errors => [] } if (!can_access('host'));
+return { jobs => [ ], errors => [ ] } if (!can_access('host'));
 my (@jobs, @errors);
 foreach my $type (qw(image vm)) {
 	# Keep the available store visible when the other cannot be read.
@@ -818,50 +890,63 @@ foreach my $type (qw(image vm)) {
 		? get_image_jobs()->list(undef, 1)
 		: get_vm_jobs()->list_pending() };
 	if (!$records) {
-		# Report the failed store and continue collecting the other job
-		# type.
+		# Report the failed store and continue
+		# collecting the other job type.
 		push(@errors, text('jobs_error_'.$type, error_message($@)));
 		next;
 		}
 	foreach my $job (@$records) {
-		# Expose display fields, diagnostics and allowed actions.
-		# Keep tokens and private provisioning inputs out of this view.
+		# Expose display fields, diagnostics and allowed actions. Keep
+		# tokens and private provisioning inputs out of this view.
 		push(@jobs, { type => $type,
-			(map { $_ => $job->{$_} }
-			qw(id state phase created cancel cleanup_pending cleanup_created error cleanup_warning audit_warning source sha256 bytes total transferred
+			      (map { $_ => $job->{$_} }
+			       qw(id state phase created cancel cleanup_pending cleanup_created error cleanup_warning audit_warning source sha256 bytes total transferred
 			   checksum_algorithm checksum_source)),
-			operation => $type eq 'vm' ? ($job->{'request'}->{'operation'} || 'create') : 'import',
-			software => $type eq 'vm' && $job->{'resources'}->{'software'} ? 1 : 0,
-			can_cancel => $type eq 'image' || !$job->{'request'}->{'operation'} ||
-				$job->{'request'}->{'operation'} =~ /\A(?:clone|capture_image|backup|backup_inspect|restore)\z/ ||
-				!$job->{'resources'}->{'started'} ? 1 : 0,
-			name => $type eq 'image' ? $job->{'name'}
-			: $job->{'request'}->{'name'},
-			start => $type eq 'vm' ? $job->{'request'}->{'start'}
-			: undef });
+			      operation => $type eq 'vm'
+				      ? ($job->{'request'}->{'operation'} || 'create')
+				      : 'import',
+			      software => $type eq 'vm' &&
+					  $job->{'resources'}->{'software'}
+						  ? 1
+						  : 0,
+			      can_cancel => $type eq 'image' ||
+					    !$job->{'request'}->{'operation'} ||
+					    $job->{'request'}->{'operation'} =~ /\A(?:clone|capture_image|backup|backup_inspect|restore)\z/ ||
+					    !$job->{'resources'}->{'started'}
+						    ? 1
+						    : 0,
+			      name => $type eq 'image'
+				      ? $job->{'name'}
+				      : $job->{'request'}->{'name'},
+			      start => $type eq 'vm'
+				      ? $job->{'request'}->{'start'}
+				      : undef });
 		}
 	}
 return { jobs => [ sort { $b->{'created'} <=> $a->{'created'} } @jobs ],
-	can_control => !is_readonly_mode(),
-	errors => \@errors };
+	 can_control => !is_readonly_mode(),
+	 errors => \@errors };
 }
 
-# get_dashboard()
-# Collects visible guests and, for host administrators, readiness and job counts.
-# Live status refreshes this initial inventory after the page loads.
+# get_dashboard() Collects visible guests and, for host administrators,
+# readiness and job counts. Live status refreshes this initial inventory
+# after the page loads.
+
 sub get_dashboard
 {
 # Libvirt requires a writable connection even for guest-agent address queries.
 my $adapter = get_libvirt(1);
 # Skip host setup checks for users who can only access assigned VMs.
-my $readiness = can_access('host') ? check_host_readiness($adapter)
-	: { ready => 1, probe => { ok => 1 }, checks => [] };
+my $readiness = can_access('host')
+	? check_host_readiness($adapter)
+	: { ready => 1, probe => { ok => 1 }, checks => [ ] };
 my @servers;
 my $domain_error;
 # Still show inventory when only non-connection readiness checks fail.
 if ($readiness->{'probe'}->{'ok'}) {
 	my $records = eval { $adapter->list_domains(0, 1) };
-	# Filter successful inventory, including an empty result, before rendering it.
+	# Filter successful inventory, including an empty result,
+	# before rendering it.
 	if ($records) {
 		@servers = grep { can_access('view', $_->{'uuid'}) } @$records;
 		}
@@ -894,8 +979,9 @@ return {
 };
 }
 
-# error_html(message) escapes backend text, formats backtick-delimited
-# commands and links known navigation advice.
+# error_html(message) escapes backend text, formats backtick-delimited commands
+# and links known navigation advice.
+
 sub error_html
 {
 my $html = html_escape($_[0]);
@@ -908,8 +994,9 @@ $html =~ s{\bSystem -&gt; Settings -&gt; License Manager\b}
 return $html;
 }
 
-# error_message(error)
-# Normalizes thrown errors before they are shown or returned to a caller.
+# error_message(error) Normalizes thrown errors before they are shown or
+# returned to a caller.
+
 sub error_message
 {
 my ($error) = @_;

@@ -7,16 +7,18 @@ my $webmin_root;
 use warnings;
 use Test::More;
 use File::Temp qw(tempdir);
-BEGIN {
-	$webmin_root = abs_path("$FindBin::Bin/../../..");
-	die "Disposable Linux VM as root only\n" unless $^O eq 'linux' &&
-		$< == 0;
-	$ENV{'WEBMIN_CONFIG'} = '/etc/webmin';
-	$ENV{'WEBMIN_VAR'} = '/var/webmin';
-	$ENV{'REMOTE_USER'} = 'root';
-	chdir("$webmin_root/server-manager") || die $!;
-	$0 = "$webmin_root/server-manager/check-missing-pool.pl";
-	}
+
+BEGIN
+{
+$webmin_root = abs_path("$FindBin::Bin/../../..");
+die "Disposable Linux VM as root only\n" unless $^O eq 'linux' &&
+	$< == 0;
+$ENV{'WEBMIN_CONFIG'} = '/etc/webmin';
+$ENV{'WEBMIN_VAR'} = '/var/webmin';
+$ENV{'REMOTE_USER'} = 'root';
+chdir("$webmin_root/server-manager") || die $!;
+$0 = "$webmin_root/server-manager/check-missing-pool.pl";
+}
 use lib "$FindBin::Bin/../../..";
 require './server-manager-lib.pl';
 require Sys::Virt;
@@ -27,20 +29,22 @@ my $images = get_image_jobs();
 $images->{'directory'} = "$work/jobs";
 make_dir($images->{'directory'}, 0700, 1) || die $!;
 my $conn = Sys::Virt->new(uri => 'qemu:///system');
-my $name = 'cloudmin-pool-check-'.substr(Cloudmin::Images::generate_id(), 0, 12);
+my $name =
+	'cloudmin-pool-check-'.substr(Cloudmin::Images::generate_id(), 0, 12);
 my $pool = $conn->define_storage_pool("<pool type='dir'><name>$name</name>".
-	"<target><path>$work</path></target></pool>");
+				      "<target><path>$work</path></target></pool>");
 my $ok = eval {
 	my $uuid = $pool->get_uuid_string();
 	$pool->create();
 	# Record imports while their destination exists, then remove the pool.
-	my @cases = (['retained', 0], ['link', 0], ['absent', 1]);
+	my @cases = ( [ 'retained', 0 ], [ 'link', 0 ], [ 'absent', 1 ] );
 	for my $case (@cases) {
 		my $job = $images->create('fixture',
-			$images->form_token('fixture'),
-			{ source => 'upload', format => 'qcow2', pool => $uuid,
-			  name => $case->[0] });
-		@$job{qw(state volume_path)} = ('ready', "$work/$case->[0]");
+					  $images->form_token('fixture'),
+					  { source => 'upload',
+					    format => 'qcow2', pool => $uuid,
+					    name => $case->[0] });
+		@$job{qw(state volume_path)} = ( 'ready', "$work/$case->[0]" );
 		$images->save($job->{'id'}, $job);
 		push(@$case, $job->{'id'});
 		}
@@ -54,10 +58,10 @@ my $ok = eval {
 		my ($file, $removed, $id) = @$case;
 		my $result = eval { $images->remove($id); 1 };
 		is($result ? 1 : 0, $removed,
-			"$file uses actual libvirt missing-pool behavior");
+		   "$file uses actual libvirt missing-pool behavior");
 		is($images->get($id)->{'state'},
-			$removed ? 'deleted' : 'ready',
-			"$file retains metadata until the file is absent");
+		   $removed ? 'deleted' : 'ready',
+		   "$file retains metadata until the file is absent");
 		}
 	ok(-f "$work/retained", 'existing image remains untouched');
 	ok(-l "$work/link", 'dangling link remains untouched');

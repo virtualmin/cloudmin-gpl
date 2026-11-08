@@ -12,7 +12,9 @@
     --cloudmin-control-height: 28px;
     min-width: 0;
 }
-.cloudmin-statistics-host { --cloudmin-plot-height: 150px; }
+.cloudmin-statistics-host {
+    --cloudmin-plot-height: 150px;
+}
 
 /* Keep controls visible above scrolling charts. JavaScript accounts for
    sticky headers and the page background. */
@@ -36,11 +38,21 @@
     gap: 8px 12px;
     min-width: 0;
 }
-.cloudmin-statistics-label { font-weight: 600; }
+.cloudmin-statistics-label {
+    font-weight: 600;
+}
 /* Narrow frames fold the segments into two rows instead of overflowing. */
-.cloudmin-statistics-periods { flex-wrap: wrap; }
-.cloudmin-statistics-custom { display: inline-flex; min-width: 0; }
-.cloudmin-statistics-custom > .ui_cluster { align-items: center; gap: 4px 6px; }
+.cloudmin-statistics-periods {
+    flex-wrap: wrap;
+}
+.cloudmin-statistics-custom {
+    display: inline-flex;
+    min-width: 0;
+}
+.cloudmin-statistics-custom > .ui_cluster {
+    align-items: center;
+    gap: 4px 6px;
+}
 /* Every control in the row shares one height, whatever the theme gives
    text boxes and buttons; the fields keep the theme's borders and colors. */
 .cloudmin-statistics-custom input,
@@ -54,9 +66,13 @@
 }
 /* Widths also override the inline width a theme may put on text boxes. */
 /* The native time field keeps its browser-defined width to avoid clipping. */
-.cloudmin-statistics-custom input[name$="_date"] { width: 9.5em !important; }
+.cloudmin-statistics-custom input[name$="_date"] {
+    width: 9.5em !important;
+}
 /* A theme calendar with a clock keeps the time in the date field. */
-.cloudmin-statistics-custom input.cloudmin-statistics-moment { width: 11.5em !important; }
+.cloudmin-statistics-custom input.cloudmin-statistics-moment {
+    width: 11.5em !important;
+}
 /* Fit the date and time without losing the fixed-width browser fallback. */
 @supports (field-sizing: content) {
     .cloudmin-statistics-custom input.cloudmin-statistics-moment {
@@ -88,7 +104,9 @@
     border-radius: 50%;
     background: var(--ui-success);
 }
-.cloudmin-statistics-status[aria-busy="true"] { opacity: .6; }
+.cloudmin-statistics-status[aria-busy="true"] {
+    opacity: .6;
+}
 /* The line below the status counts down to the next refresh. */
 .cloudmin-statistics-freshness {
     display: inline-flex;
@@ -102,7 +120,9 @@
     background: var(--ui-neutral-soft);
     overflow: hidden;
 }
-.cloudmin-statistics-countdown[hidden] { display: none; }
+.cloudmin-statistics-countdown[hidden] {
+    display: none;
+}
 .cloudmin-statistics-countdown-fill {
     display: block;
     width: 0;
@@ -111,7 +131,9 @@
 }
 
 /* One notice for errors, missing measurements and recording state. */
-.cloudmin-statistics-notice:empty { display: none; }
+.cloudmin-statistics-notice:empty {
+    display: none;
+}
 .cloudmin-statistics-notice {
     margin-top: calc(var(--ui-gap) / 2);
     margin-bottom: var(--ui-gap);
@@ -134,7 +156,9 @@
 
 /* Chart cards place titles and legends beside current values and history
    summaries. Only CPU adds a period mean. The plot sits below them. */
-.cloudmin-statistics-chart .ui_card_head { align-items: flex-start; }
+.cloudmin-statistics-chart .ui_card_head {
+    align-items: flex-start;
+}
 .cloudmin-statistics-chart .ui_card_actions {
     flex-shrink: 1;
     flex-wrap: wrap;
@@ -143,7 +167,9 @@
     min-width: 0;
     margin-bottom: 0;
 }
-.cloudmin-statistics-chart .ui_card_desc { margin-top: 5px; }
+.cloudmin-statistics-chart .ui_card_desc {
+    margin-top: 5px;
+}
 .cloudmin-statistics-key {
     display: inline-flex;
     align-items: center;
@@ -159,8 +185,12 @@
     border-radius: 2px;
     background: var(--cloudmin-series-1);
 }
-.cloudmin-statistics-dot-2 { background: var(--cloudmin-series-2); }
-.cloudmin-statistics-dot-3 { background: var(--cloudmin-series-3); }
+.cloudmin-statistics-dot-2 {
+    background: var(--cloudmin-series-2);
+}
+.cloudmin-statistics-dot-3 {
+    background: var(--cloudmin-series-3);
+}
 /* Let the summary and memory bar use the available header width. */
 .cloudmin-statistics-headline {
     width: 100%;
@@ -185,7 +215,9 @@
     font-size: .86em;
 }
 /* Show a dash while summary readings are unavailable. */
-.cloudmin-statistics-detail:empty::before { content: "\2013"; }
+.cloudmin-statistics-detail:empty::before {
+    content: "\2013";
+}
 .cloudmin-statistics-bar {
     height: 4px;
     margin-top: 6px;
@@ -203,8 +235,12 @@
     position: relative;
     min-height: var(--cloudmin-plot-height);
 }
-.cloudmin-statistics-plot-empty .uplot { visibility: hidden; }
-.cloudmin-statistics-plot-loading .uplot { opacity: .35; }
+.cloudmin-statistics-plot-empty .uplot {
+    visibility: hidden;
+}
+.cloudmin-statistics-plot-loading .uplot {
+    opacity: .35;
+}
 .cloudmin-statistics-empty {
     position: absolute;
     inset: 0;
@@ -216,8 +252,12 @@
     font-size: .93em;
     text-align: center;
 }
-.cloudmin-statistics .uplot { font-family: inherit; }
-.cloudmin-statistics .u-legend { display: none; }
+.cloudmin-statistics .uplot {
+    font-family: inherit;
+}
+.cloudmin-statistics .u-legend {
+    display: none;
+}
 /* Hover values must not intercept pointer input or change document flow. */
 .cloudmin-statistics-tooltip {
     position: absolute;
@@ -233,23 +273,33 @@
     box-shadow: 0 4px 14px rgba(16, 24, 40, .22);
     pointer-events: none;
 }
-.cloudmin-statistics-tooltip-time { margin-bottom: 2px; font-weight: 600; }
+.cloudmin-statistics-tooltip-time {
+    margin-bottom: 2px;
+    font-weight: 600;
+}
 .cloudmin-statistics-tooltip-row {
     display: flex;
     align-items: center;
     gap: 6px;
 }
-.cloudmin-statistics-tooltip-row .cloudmin-statistics-dot { width: 8px; height: 8px; }
+.cloudmin-statistics-tooltip-row .cloudmin-statistics-dot {
+    width: 8px;
+    height: 8px;
+}
 .cloudmin-statistics-tooltip-row b {
     margin-left: auto;
     padding-left: 12px;
     font-variant-numeric: tabular-nums;
 }
 /* Only a device filter narrows the grid to the one matching chart. */
-.cloudmin-statistics-vm .cloudmin-statistics-single { --ui-grid-cols: 1; }
+.cloudmin-statistics-vm .cloudmin-statistics-single {
+    --ui-grid-cols: 1;
+}
 
 /* Keep guest titles and values aligned when legends wrap. */
-.cloudmin-statistics-vm .cloudmin-statistics-chart { container-type: inline-size; }
+.cloudmin-statistics-vm .cloudmin-statistics-chart {
+    container-type: inline-size;
+}
 .cloudmin-statistics-vm .cloudmin-statistics-chart > .ui_card_head {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
@@ -260,8 +310,12 @@
 /* Place header contents directly in the shared grid. */
 .cloudmin-statistics-vm .cloudmin-statistics-chart .ui_card_titles,
 .cloudmin-statistics-vm .cloudmin-statistics-chart .ui_card_actions,
-.cloudmin-statistics-vm .cloudmin-statistics-headline { display: contents; }
-.cloudmin-statistics-vm .cloudmin-statistics-chart .ui_card_title { grid-area: title; }
+.cloudmin-statistics-vm .cloudmin-statistics-headline {
+    display: contents;
+}
+.cloudmin-statistics-vm .cloudmin-statistics-chart .ui_card_title {
+    grid-area: title;
+}
 /* Wrap legend keys within their row without widening the card. */
 .cloudmin-statistics-vm .cloudmin-statistics-chart .ui_card_desc {
     grid-area: legend;
@@ -272,10 +326,20 @@
     line-height: 1.4;
 }
 /* Keep readings aligned with the title and legend, with the bar below. */
-.cloudmin-statistics-vm .cloudmin-statistics-key { font-size: inherit; }
-.cloudmin-statistics-vm .cloudmin-statistics-value { grid-area: value; }
-.cloudmin-statistics-vm .cloudmin-statistics-detail { grid-area: detail; margin-top: 0; }
-.cloudmin-statistics-vm .cloudmin-statistics-bar { grid-area: bar; margin-top: 0; }
+.cloudmin-statistics-vm .cloudmin-statistics-key {
+    font-size: inherit;
+}
+.cloudmin-statistics-vm .cloudmin-statistics-value {
+    grid-area: value;
+}
+.cloudmin-statistics-vm .cloudmin-statistics-detail {
+    grid-area: detail;
+    margin-top: 0;
+}
+.cloudmin-statistics-vm .cloudmin-statistics-bar {
+    grid-area: bar;
+    margin-top: 0;
+}
 /* Narrow cards give the legend and summary their own full-width rows. */
 @container (max-width: 36em) {
     .cloudmin-statistics-vm .cloudmin-statistics-chart > .ui_card_head {
@@ -287,8 +351,12 @@
 
 /* Small cards reserve two value lines and three summary lines. */
 @container (max-width: 24em) {
-    .cloudmin-statistics-vm .cloudmin-statistics-value { min-height: 2.3em; }
-    .cloudmin-statistics-vm .cloudmin-statistics-detail { min-height: 4.2em; }
+    .cloudmin-statistics-vm .cloudmin-statistics-value {
+        min-height: 2.3em;
+    }
+    .cloudmin-statistics-vm .cloudmin-statistics-detail {
+        min-height: 4.2em;
+    }
 }
 
 /* Host rows: the readings column beside a wide history plot. */
@@ -314,29 +382,47 @@
     width: 100%;
     text-align: left;
 }
-.cloudmin-statistics-host .cloudmin-statistics-value { font-size: 1.333em; }
+.cloudmin-statistics-host .cloudmin-statistics-value {
+    font-size: 1.333em;
+}
 /* Host allocation details need room for three summary lines. */
-.cloudmin-statistics-host .cloudmin-statistics-detail { min-height: 4.2em; }
-.cloudmin-statistics-host .cloudmin-statistics-chart > .ui_card_body { padding-left: 4px; }
+.cloudmin-statistics-host .cloudmin-statistics-detail {
+    min-height: 4.2em;
+}
+.cloudmin-statistics-host .cloudmin-statistics-chart > .ui_card_body {
+    padding-left: 4px;
+}
 /* Narrow host pages place each reading above its chart. */
 @media (max-width: 900px) {
-    .cloudmin-statistics-host .cloudmin-statistics-chart { grid-template-columns: minmax(0, 1fr); }
-    .cloudmin-statistics-host .cloudmin-statistics-chart > .ui_card_head { border-right: 0; }
+    .cloudmin-statistics-host .cloudmin-statistics-chart {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .cloudmin-statistics-host .cloudmin-statistics-chart > .ui_card_head {
+        border-right: 0;
+    }
 }
 
 /* Storage cards show one bar per guest filesystem or active host pool. */
-.cloudmin-statistics-mounts { position: relative; min-height: 3rem; }
+.cloudmin-statistics-mounts {
+    position: relative;
+    min-height: 3rem;
+}
 .cloudmin-statistics-mount {
     display: grid;
     /* The device column fits a pool path, with the bar never below 8rem. */
-    grid-template-columns: minmax(5rem, 14rem) minmax(4rem, 24rem) minmax(8rem, 1fr) auto;
+    grid-template-columns: minmax(5rem, 14rem) minmax(4rem, 24rem) minmax(
+            8rem,
+            1fr
+        ) auto;
     align-items: center;
     gap: 8px 14px;
     padding: 5px 0;
     border-bottom: 1px solid var(--ui-border-soft);
     font-size: .93em;
 }
-.cloudmin-statistics-mount:last-child { border-bottom: 0; }
+.cloudmin-statistics-mount:last-child {
+    border-bottom: 0;
+}
 .cloudmin-statistics-mount-path {
     font-weight: 600;
     overflow-wrap: anywhere;
@@ -349,8 +435,12 @@
     white-space: nowrap;
     text-overflow: ellipsis;
 }
-.cloudmin-statistics-mount .ui_progress_track { height: 8px; }
-.cloudmin-statistics-mount-bar { background: var(--cloudmin-series-1); }
+.cloudmin-statistics-mount .ui_progress_track {
+    height: 8px;
+}
+.cloudmin-statistics-mount-bar {
+    background: var(--cloudmin-series-1);
+}
 .cloudmin-statistics-mount-usage {
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -359,12 +449,20 @@
     color: var(--ui-fg-muted);
     font-size: .9em;
 }
-.cloudmin-statistics-change-up { color: var(--ui-warning-text); }
+.cloudmin-statistics-change-up {
+    color: var(--ui-warning-text);
+}
 /* Small storage cards put the bar below its label and usage text. */
 @media (max-width: 640px) {
-    .cloudmin-statistics-mount { grid-template-columns: minmax(0, 1fr) auto; }
-    .cloudmin-statistics-mount-device { display: none; }
-    .cloudmin-statistics-mount .ui_progress_track { grid-column: 1 / -1; }
+    .cloudmin-statistics-mount {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .cloudmin-statistics-mount-device {
+        display: none;
+    }
+    .cloudmin-statistics-mount .ui_progress_track {
+        grid-column: 1 / -1;
+    }
 }
 
 /* Reuse the snapshot activity feed, with room for its markers and long text. */
@@ -376,8 +474,12 @@
     list-style: none;
     font-size: .93em;
 }
-.cloudmin-statistics-events .ui_feed_item { padding-bottom: 1em; }
-.cloudmin-statistics-events .ui_feed_item:last-child { padding-bottom: 2px; }
+.cloudmin-statistics-events .ui_feed_item {
+    padding-bottom: 1em;
+}
+.cloudmin-statistics-events .ui_feed_item:last-child {
+    padding-bottom: 2px;
+}
 .cloudmin-statistics-events .ui_feed_when {
     display: block;
     color: var(--ui-fg-muted);

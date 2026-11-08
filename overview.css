@@ -1,6 +1,10 @@
 /* Readiness follows the card width, including when a theme sidebar is open. */
-.cloudmin-readiness-card { container: cloudmin-readiness / inline-size; }
-.cloudmin-readiness .ui_list_desc { overflow-wrap: anywhere; }
+.cloudmin-readiness-card {
+    container: cloudmin-readiness / inline-size;
+}
+.cloudmin-readiness .ui_list_desc {
+    overflow-wrap: anywhere;
+}
 
 /* Keep the standard list on narrow cards and use at most two columns. */
 @container cloudmin-readiness (min-width: 36em) {
@@ -13,5 +17,7 @@
         border-bottom: 0;
         border-top: 1px solid var(--ui-border-soft);
     }
-    .cloudmin-readiness > .ui_list_item:nth-child(-n+2) { border-top: 0; }
+    .cloudmin-readiness > .ui_list_item:nth-child(-n + 2) {
+        border-top: 0;
+    }
 }

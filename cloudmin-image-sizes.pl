@@ -4,8 +4,9 @@ use warnings;
 our ($module_var_directory, $module_root_directory);
 require "$module_root_directory/lib/Cloudmin/ImageSizes.pm";
 
-# get_image_sizes()
-# Supplies Webmin locking and a bounded HTTPS size probe to the cache.
+# get_image_sizes() Supplies Webmin locking and a bounded HTTPS
+# size probe to the cache.
+
 sub get_image_sizes
 {
 return Cloudmin::ImageSizes->new(
@@ -16,8 +17,9 @@ return Cloudmin::ImageSizes->new(
 );
 }
 
-# probe_image_size(url)
-# Keeps response headers and TLS processing outside Webmin's privileged process.
+# probe_image_size(url) Keeps response headers and TLS processing outside
+# Webmin's privileged process.
+
 sub probe_image_size
 {
 my ($url) = @_;

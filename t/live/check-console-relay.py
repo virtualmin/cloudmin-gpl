@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Check console frames under backpressure with a simulated guest socket."""
+
 import base64
 import os
 from pathlib import Path
@@ -48,17 +49,37 @@ with tempfile.TemporaryDirectory(prefix='cloudmin-relay-framing-') as directory:
         port = listener.getsockname()[1]
         # Pass the listener and guest socket as stdin/stdout. Stderr reports
         # readiness and failures; the relay runs as an unprivileged user.
-        process = subprocess.Popen(['setpriv', '--reuid', str(identity.pw_uid),
-            '--regid', str(identity.pw_gid), '--clear-groups', 'perl',
-            '-I' + str(module.parent / 'vendor_perl'), str(module / 'console-relay.pl'),
-            'graphical'], stdin=listener, stdout=channel, stderr=subprocess.PIPE,
-            env={'PATH': '/usr/bin:/bin', 'CREDENTIALS_DIRECTORY': directory})
+        process = subprocess.Popen(
+            [
+                'setpriv',
+                '--reuid',
+                str(identity.pw_uid),
+                '--regid',
+                str(identity.pw_gid),
+                '--clear-groups',
+                'perl',
+                '-I' + str(module.parent / 'vendor_perl'),
+                str(module / 'console-relay.pl'),
+                'graphical',
+            ],
+            stdin=listener,
+            stdout=channel,
+            stderr=subprocess.PIPE,
+            env={'PATH': '/usr/bin:/bin', 'CREDENTIALS_DIRECTORY': directory},
+        )
         channel.close()
         listener.close()
-        assert process.stderr.readline() == b'Cloudmin relay ready\n', 'Relay failed to start'
+        assert process.stderr.readline() == b'Cloudmin relay ready\n', (
+            'Relay failed to start'
+        )
         # Supply the same session-key header that miniserv normally rewrites.
-        client = websocket.create_connection('ws://127.0.0.1:' + str(port), timeout=10,
-            header={'Sec-WebSocket-Key': base64.b64encode(session.encode()).decode()})
+        client = websocket.create_connection(
+            'ws://127.0.0.1:' + str(port),
+            timeout=10,
+            header={
+                'Sec-WebSocket-Key': base64.b64encode(session.encode()).decode()
+            },
+        )
         payload = bytes(range(256)) * 8192
         failures = []
 
@@ -89,7 +110,9 @@ with tempfile.TemporaryDirectory(prefix='cloudmin-relay-framing-') as directory:
                 raise AssertionError('Unexpected console frame')
         # Check the complete output after the writer has stopped.
         writer.join(timeout=5)
-        assert not writer.is_alive() and not failures, 'Guest output did not finish'
+        assert not writer.is_alive() and not failures, (
+            'Guest output did not finish'
+        )
         assert received == payload, 'Keepalive corrupted the guest byte stream'
         # Pong replies must not reach the guest socket.
         guest.settimeout(.3)
@@ -106,11 +129,15 @@ with tempfile.TemporaryDirectory(prefix='cloudmin-relay-framing-') as directory:
             chunk = guest.recv(1024)
             assert chunk, 'Relay closed before forwarding input'
             received_input.extend(chunk)
-        assert received_input == b'echo fixture\r', 'Guest received unexpected input'
+        assert received_input == b'echo fixture\r', (
+            'Guest received unexpected input'
+        )
         # Closing the browser must stop the relay without waiting for its alarm.
         client.close()
         assert process.wait(timeout=5) == 0, 'Relay survived browser disconnect'
-        print('PASS: queued pings preserve partial binary frames; pong replies never reach the guest')
+        print(
+            'PASS: queued pings preserve partial binary frames; pong replies never reach the guest'
+        )
     finally:
         if client:
             # Startup can fail before the client exists.

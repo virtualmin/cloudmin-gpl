@@ -1,64 +1,119 @@
 /* Summary cards match the Storage and Networking overview pages. */
-.cloudmin-snapshots-page { container: cloudmin-snapshots / inline-size; }
+.cloudmin-snapshots-page {
+    container: cloudmin-snapshots / inline-size;
+}
 .cloudmin-snapshots-page .cloudmin-snapshot-intro {
-	margin-bottom: var(--gap-content, var(--ui-gap));
+    margin-bottom: var(--gap-content, var(--ui-gap));
 }
 .cloudmin-snapshot-restart {
-	display: inline-block;
-	margin-inline-start: var(--gap-content, var(--ui-gap));
-	vertical-align: middle;
+    display: inline-block;
+    margin-inline-start: var(--gap-content, var(--ui-gap));
+    vertical-align: middle;
 }
 /* Center trailing choices beside floated submit buttons. */
 .cloudmin-snapshots-page .end_submits:has(> .cloudmin-snapshot-restart) {
-	display: inline-flex;
-	align-items: center;
-	flex-wrap: wrap;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
 }
 /* Use the shared spacing scale for summary tiles. */
 .cloudmin-snapshots-page .cloudmin-snapshot-summary {
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: var(--ui-gap);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--ui-gap);
 }
 .cloudmin-snapshot-summary .ui_stat {
-	padding: 1.2em;
-	gap: .35em;
-	border: 1px solid var(--ui-border);
-	background: var(--ui-surface);
+    padding: 1.2em;
+    gap: .35em;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-surface);
 }
-.cloudmin-snapshot-summary .ui_stat_value { font-variant-numeric: tabular-nums; }
-.cloudmin-snapshot-summary .ui_stat_desc { line-height: 1.4; }
+.cloudmin-snapshot-summary .ui_stat_value {
+    font-variant-numeric: tabular-nums;
+}
+.cloudmin-snapshot-summary .ui_stat_desc {
+    line-height: 1.4;
+}
 
-/* One native activity feed keeps history and actions together at every depth. */
-.cloudmin-snapshot-history .ui_card_head { align-items: center; }
-.cloudmin-snapshot-history .ui_card_body { padding: 1.2em; }
-.cloudmin-snapshot-feed .ui_feed_text { margin: 0; color: var(--ui-fg); font-size: 1em; }
-.cloudmin-snapshot-feed .ui_feed_item { padding-bottom: 1em; padding-left: 1.4em; }
-.cloudmin-snapshot-feed .ui_feed_item::before { top: .4em; }
+/*
+ * One native activity feed keeps history and actions together at every depth.
+ */
+.cloudmin-snapshot-history .ui_card_head {
+    align-items: center;
+}
+.cloudmin-snapshot-history .ui_card_body {
+    padding: 1.2em;
+}
+.cloudmin-snapshot-feed .ui_feed_text {
+    margin: 0;
+    color: var(--ui-fg);
+    font-size: 1em;
+}
+.cloudmin-snapshot-feed .ui_feed_item {
+    padding-bottom: 1em;
+    padding-left: 1.4em;
+}
+.cloudmin-snapshot-feed .ui_feed_item::before {
+    top: .4em;
+}
 .cloudmin-snapshot-feed .ui_feed_item:last-child::before {
-	background: var(--ui-surface);
-	outline: 1px dashed var(--ui-fg-muted);
+    background: var(--ui-surface);
+    outline: 1px dashed var(--ui-fg-muted);
 }
 .cloudmin-snapshot-entry {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 1em;
-	padding-bottom: 1em;
-	border-bottom: 1px solid var(--ui-border-soft);
-	scroll-margin-top: 1em;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid var(--ui-border-soft);
+    scroll-margin-top: 1em;
 }
-.cloudmin-snapshot-details { min-width: 0; overflow-wrap: anywhere; }
+.cloudmin-snapshot-details {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 .cloudmin-snapshot-name,
 .cloudmin-snapshot-meta,
-.cloudmin-snapshot-working { display: flex; flex-wrap: wrap; align-items: center; gap: .5em .8em; }
-.cloudmin-snapshot-meta { margin-top: .5em; color: var(--ui-fg-muted); font-size: .93em; }
-.cloudmin-snapshot-size { display: inline-flex; align-items: center; gap: .4em; }
-.cloudmin-snapshot-entry .cloudmin-snapshot-notes { margin: .5em 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.cloudmin-snapshot-actions { flex-wrap: nowrap; }
-.cloudmin-snapshot-actions a.ui_action { text-decoration: none; }
-.cloudmin-snapshot-working { color: var(--ui-fg-muted); overflow-wrap: anywhere; }
+.cloudmin-snapshot-working {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5em .8em;
+}
+.cloudmin-snapshot-meta {
+    margin-top: .5em;
+    color: var(--ui-fg-muted);
+    font-size: .93em;
+}
+.cloudmin-snapshot-size {
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+}
+.cloudmin-snapshot-entry .cloudmin-snapshot-notes {
+    margin: .5em 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.cloudmin-snapshot-actions {
+    flex-wrap: nowrap;
+}
+.cloudmin-snapshot-actions a.ui_action {
+    text-decoration: none;
+}
+.cloudmin-snapshot-working {
+    color: var(--ui-fg-muted);
+    overflow-wrap: anywhere;
+}
 @container cloudmin-snapshots (max-width: 38em) {
-	.cloudmin-snapshots-page .cloudmin-snapshot-summary { grid-template-columns: minmax(0, 1fr); }
-	.cloudmin-snapshot-entry { grid-template-columns: minmax(0, 1fr); gap: .7em; }
-	.cloudmin-snapshot-entry .cloudmin-snapshot-actions { justify-self: start; }
+    .cloudmin-snapshots-page .cloudmin-snapshot-summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .cloudmin-snapshot-entry {
+        grid-template-columns: minmax(0, 1fr);
+        gap: .7em;
+    }
+    .cloudmin-snapshot-entry .cloudmin-snapshot-actions {
+        justify-self: start;
+    }
 }

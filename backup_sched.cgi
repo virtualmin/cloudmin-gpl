@@ -13,13 +13,15 @@ ReadParse();
 error_setup($text{'backup_delete_schedule_error'}) if ($in{'delete'});
 # Check POST, write permission, licensing and CSRF before changing a schedule.
 my $ok = eval {
- die "Use POST for backup changes\n" if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
- die "Backup changes are disabled in read-only mode\n" if (is_readonly_mode());
- get_image_jobs()->check_token($remote_user,$in{'token'});
- require_access('manage');
- $in{'target'} = parse_backup_target(\%in,'dest0');
- save_backup_schedule({%in, %{parse_backup_time(\%in)}});
- 1;
-};
+	die "Use POST for backup changes\n"
+		if (($ENV{'REQUEST_METHOD'} || '') ne 'POST');
+	die "Backup changes are disabled in read-only mode\n"
+		if (is_readonly_mode());
+	get_image_jobs()->check_token($remote_user, $in{'token'});
+	require_access('manage');
+	$in{'target'} = parse_backup_target(\%in, 'dest0');
+	save_backup_schedule({ %in, %{parse_backup_time(\%in)} });
+	1;
+	};
 error(error_html(error_message($@))) if (!$ok);
 redirect('backups.cgi');

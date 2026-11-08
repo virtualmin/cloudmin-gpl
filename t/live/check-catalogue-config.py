@@ -19,7 +19,9 @@ if platform.system() != 'Linux' or os.geteuid() != 0:
 
 
 class Form(HTMLParser):
-    """Collect one Webmin form's submitted fields, headings and selection keys."""
+    """
+    Collect one Webmin form's submitted fields, headings and selection keys.
+    """
 
     # __init__(self, action)
     # Collect controls and table metadata from the requested form action.
@@ -66,9 +68,15 @@ class Form(HTMLParser):
             if name == 'key':
                 self.keys.append(attrs.get('value'))
             # Disabled controls and buttons are not ordinary submitted fields.
-            if 'disabled' not in attrs and attrs.get('type') not in ('submit', 'button'):
+            if 'disabled' not in attrs and attrs.get('type') not in (
+                'submit',
+                'button',
+            ):
                 # Only checked radio buttons and checkboxes contribute values.
-                if attrs.get('type') not in ('checkbox', 'radio') or 'checked' in attrs:
+                if (
+                    attrs.get('type') not in ('checkbox', 'radio')
+                    or 'checked' in attrs
+                ):
                     self.fields[name] = attrs.get('value', '')
 
     # handle_endtag(self, tag)
@@ -99,58 +107,110 @@ helper = Path(__file__).with_name('webmin-user.pl')
 config = Path('/etc/webmin/server-manager/config')
 original = config.read_bytes()
 password = secrets.token_urlsafe(36)
-subprocess.run(['perl', str(helper), 'create'], input=password + '\n', text=True, check=True)
+subprocess.run(
+    ['perl', str(helper), 'create'],
+    input=password + '\n',
+    text=True,
+    check=True,
+)
 try:
     time.sleep(1)
     base = 'https://127.0.0.1:10000'
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({}),
         urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
-        urllib.request.HTTPSHandler(context=ssl._create_unverified_context()))
+        urllib.request.HTTPSHandler(context=ssl._create_unverified_context()),
+    )
 
-    # request(path, [fields])
-    # Send a GET or form POST with this session's cookies and same-origin referer.
+    # request(path, [fields]) Send a GET or form POST with this session's
+    # cookies and same-origin referer.
     def request(path, fields=None):
-        payload = urllib.parse.urlencode(fields).encode() if fields is not None else None
-        req = urllib.request.Request(base + path, data=payload,
-                                     headers={'Referer': base + '/config.cgi?module=server-manager'})
+        payload = (
+            urllib.parse.urlencode(fields).encode()
+            if fields is not None
+            else None
+        )
+        req = urllib.request.Request(
+            base + path,
+            data=payload,
+            headers={'Referer': base + '/config.cgi?module=server-manager'},
+        )
         with opener.open(req, timeout=30) as response:
             page = response.read().decode('utf-8', errors='replace')
-        assert 'Error - Perl execution failed' not in page, 'CGI execution failed'
+        assert 'Error - Perl execution failed' not in page, (
+            'CGI execution failed'
+        )
         return page
 
     request('/session_login.cgi')
-    request('/session_login.cgi', {'user': 'cloudmin-ui-check', 'pass': password,
-                                  'page': '/server-manager/index.cgi'})
+    request(
+        '/session_login.cgi',
+        {
+            'user': 'cloudmin-ui-check',
+            'pass': password,
+            'page': '/server-manager/index.cgi',
+        },
+    )
     # Catalogue columns belong with image download and import settings.
     editor = Form('config_save.cgi')
     config_page = request('/config.cgi?module=server-manager&section=line6')
     editor.feed(config_page)
     assert 'cataloguecol_size' in editor.inputs, (
-        'Download size configuration is missing; form actions: ' + repr(editor.actions) +
-        '; page text: ' + ' '.join(editor.visible)[-2000:])
-    assert 'disabled' in editor.inputs['cataloguecol_name'], 'Image column can be unchecked'
-    print('PASS: native Module Configuration renders selectable catalogue columns')
+        'Download size configuration is missing; form actions: '
+        + repr(editor.actions)
+        + '; page text: '
+        + ' '.join(editor.visible)[-2000:]
+    )
+    assert 'disabled' in editor.inputs['cataloguecol_name'], (
+        'Image column can be unchecked'
+    )
+    print(
+        'PASS: native Module Configuration renders selectable catalogue columns'
+    )
 
     # Save a subset through the real parser and check the resulting table.
-    fields = {key: value for key, value in editor.fields.items() if not key.startswith('cataloguecol_')}
-    fields.update(cataloguecol_architecture='1', cataloguecol_size='1', save='Save')
+    fields = {
+        key: value
+        for key, value in editor.fields.items()
+        if not key.startswith('cataloguecol_')
+    }
+    fields.update(
+        cataloguecol_architecture='1', cataloguecol_size='1', save='Save'
+    )
     request('/config_save.cgi', fields)
-    assert b'catalogue_columns=name,architecture,size' in config.read_bytes(), 'Column selection was not saved'
+    assert b'catalogue_columns=name,architecture,size' in config.read_bytes(), (
+        'Column selection was not saved'
+    )
     table = Form('catalogue.cgi')
     table.feed(request('/server-manager/images.cgi?mode=catalogue'))
-    assert [label.strip() for label in table.headings] == ['', 'Image', 'Architecture', 'Download size'], table.headings
-    assert table.keys and len(set(table.keys)) == len(table.keys), 'Rows or bulk selection keys changed'
-    assert len(set(table.sizes)) > 1 and all(size > 0 for size in table.sizes), 'Numeric download sizes are missing'
-    print('PASS: saved selection controls the live table and preserves entries, keys and sizes')
+    assert [label.strip() for label in table.headings] == [
+        '',
+        'Image',
+        'Architecture',
+        'Download size',
+    ], table.headings
+    assert table.keys and len(set(table.keys)) == len(table.keys), (
+        'Rows or bulk selection keys changed'
+    )
+    assert len(set(table.sizes)) > 1 and all(
+        size > 0 for size in table.sizes
+    ), 'Numeric download sizes are missing'
+    print(
+        'PASS: saved selection controls the live table and preserves entries, keys and sizes'
+    )
 
     # Reopening the category must preserve both selected and hidden columns.
     reopened = Form('config_save.cgi')
     reopened.feed(request('/config.cgi?module=server-manager&section=line6'))
-    assert 'checked' in reopened.inputs['cataloguecol_size'], 'Saved size selection did not reload'
-    assert 'checked' not in reopened.inputs['cataloguecol_state'], 'Hidden column was re-enabled'
+    assert 'checked' in reopened.inputs['cataloguecol_size'], (
+        'Saved size selection did not reload'
+    )
+    assert 'checked' not in reopened.inputs['cataloguecol_state'], (
+        'Hidden column was re-enabled'
+    )
     print('PASS: configuration reopens with the saved selection')
 finally:
-    # Restore the administrator's exact settings and remove the temporary account.
+    # Restore the administrator's exact settings and remove the
+    # temporary account.
     config.write_bytes(original)
     subprocess.run(['perl', str(helper), 'delete'], check=True)

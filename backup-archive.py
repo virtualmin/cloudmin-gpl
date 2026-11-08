@@ -20,7 +20,9 @@ def space():
 
 
 def digest(path):
-    """digest(path) hashes a file without loading its disk contents into memory."""
+    """
+    digest(path) hashes a file without loading its disk contents into memory.
+    """
     h = hashlib.sha256()
     with open(path, "rb") as src:
         for data in iter(lambda: src.read(SMALL), b""):
@@ -29,13 +31,22 @@ def digest(path):
 
 
 def validate(manifest, limit):
-    """validate(manifest, limit) bounds members before reading or extracting them."""
+    """
+    validate(manifest, limit) bounds members before reading or extracting them.
+    """
     # Reject unknown formats before interpreting any member metadata.
-    if not isinstance(manifest, dict) or manifest.get("format") != "cloudmin-full-1":
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("format") != "cloudmin-full-1"
+    ):
         raise ValueError("This is not a supported Cloudmin full backup")
     files = manifest.get("files")
     # Allow up to 64 disks plus XML, firmware and a managed SSH key.
-    if not isinstance(files, dict) or not 2 <= len(files) <= 67 or "domain.xml" not in files:
+    if (
+        not isinstance(files, dict)
+        or not 2 <= len(files) <= 67
+        or "domain.xml" not in files
+    ):
         raise ValueError("Invalid backup file list")
     total = 0
     for name, entry in files.items():
@@ -52,8 +63,8 @@ def validate(manifest, limit):
         # Firmware has a separate, bounded allowance even for large VM backups.
         if name == "nvram" and size > 64 * SMALL:
             raise ValueError("Backup firmware variables are too large")
-        # Every declared file needs a SHA-256 checksum before its bytes are
-        # read.
+        # Every declared file needs a SHA-256 checksum before its bytes
+        # are read.
         if not re.fullmatch(r"[a-f0-9]{64}", entry.get("sha256", "")):
             raise ValueError("Invalid backup checksum")
         total += size
@@ -64,14 +75,23 @@ def validate(manifest, limit):
 
 
 def pack(request):
-    """pack(request) creates one archive from controller-selected regular files."""
+    """
+    pack(request) creates one archive from controller-selected regular files.
+    """
     manifest = request["manifest"]
     manifest["files"] = {}
     # Hash only the controller-selected regular files copied into this worker.
     for name in request["members"]:
-        if not NAME.fullmatch(name) or not os.path.isfile(name) or os.path.islink(name):
+        if (
+            not NAME.fullmatch(name)
+            or not os.path.isfile(name)
+            or os.path.islink(name)
+        ):
             raise ValueError("Invalid backup input")
-        manifest["files"][name] = {"size": os.path.getsize(name), "sha256": digest(name)}
+        manifest["files"][name] = {
+            "size": os.path.getsize(name),
+            "sha256": digest(name),
+        }
     files = validate(manifest, request["limit"])
     # Check room for an uncompressed archive plus the host's free-space margin.
     if space() < sum(f["size"] for f in files.values()) + RESERVE:
@@ -81,42 +101,67 @@ def pack(request):
     # Use fast compression to limit CPU time on large disk files.
     compression = {"compresslevel": 1} if request.get("compression") else {}
     # GNU headers support disk files larger than USTAR's 8 GiB limit.
-    with tarfile.open("output", "w:gz" if request.get("compression") else "w",
-                      format=tarfile.GNU_FORMAT, **compression) as archive:
+    with tarfile.open(
+        "output",
+        "w:gz" if request.get("compression") else "w",
+        format=tarfile.GNU_FORMAT,
+        **compression,
+    ) as archive:
         for name in ["manifest.json", *files]:
             info = archive.gettarinfo(name, arcname=name)
-            # Archive permissions must not inherit worker IDs or loose input
-            # modes.
+            # Archive permissions must not inherit worker IDs or loose
+            # input modes.
             info.uid = info.gid = 0
             info.uname = info.gname = ""
             info.mode = 0o600
             with open(name, "rb") as src:
                 archive.addfile(info, src)
-    return {"manifest": manifest, "size": os.path.getsize("output"), "sha256": digest("output")}
+    return {
+        "manifest": manifest,
+        "size": os.path.getsize("output"),
+        "sha256": digest("output"),
+    }
 
 
 def unpack(request):
-    """unpack(request) verifies every member; extraction uses only fixed filenames."""
+    """
+    unpack(request) verifies every member; extraction uses only fixed filenames.
+    """
     limit = request["limit"]
     # Stream the manifest first so all later members have declared size limits.
     with tarfile.open("archive", "r|*") as archive:
         members = iter(archive)
         first = next(members, None)
         # A bounded regular manifest is mandatory before any disk data.
-        if not first or first.name != "manifest.json" or not first.isfile() or not 0 < first.size <= SMALL:
+        if (
+            not first
+            or first.name != "manifest.json"
+            or not first.isfile()
+            or not 0 < first.size <= SMALL
+        ):
             raise ValueError("The backup manifest is missing or invalid")
         manifest = json.load(archive.extractfile(first))
         files = validate(manifest, limit)
-        # Inspection hashes in place; extraction additionally needs output
-        # space.
-        if request.get("extract") and space() < sum(f["size"] for f in files.values()) + RESERVE:
+        # Inspection hashes in place; extraction additionally needs
+        # output space.
+        if (
+            request.get("extract")
+            and space() < sum(f["size"] for f in files.values()) + RESERVE
+        ):
             raise ValueError("Not enough space to extract this backup")
         seen = set()
         for member in members:
             name = member.name
             # Refuse links, sparse entries, duplicates and undeclared files.
-            if name not in files or name in seen or not member.isfile() or member.sparse:
-                raise ValueError("Unexpected, linked, sparse or duplicate file in the backup")
+            if (
+                name not in files
+                or name in seen
+                or not member.isfile()
+                or member.sparse
+            ):
+                raise ValueError(
+                    "Unexpected, linked, sparse or duplicate file in the backup"
+                )
             entry = files[name]
             # Tar headers must agree with the size checked in the manifest.
             if member.size != entry["size"]:
@@ -129,13 +174,15 @@ def unpack(request):
                 with archive.extractfile(member) as src:
                     for data in iter(lambda: src.read(SMALL), b""):
                         h.update(data)
-                        # Write only during extraction; inspection just hashes
-                        # bytes.
+                        # Write only during extraction; inspection just
+                        # hashes bytes.
                         if out:
-                            # Other jobs can consume space after the initial
-                            # check.
+                            # Other jobs can consume space after the
+                            # initial check.
                             if space() < RESERVE:
-                                raise ValueError("Backup extraction is running out of space")
+                                raise ValueError(
+                                    "Backup extraction is running out of space"
+                                )
                             out.write(data)
             finally:
                 # Close partial output even after a read or write error.
@@ -162,5 +209,11 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, OSError, tarfile.TarError, KeyError, TypeError) as error:
+    except (
+        ValueError,
+        OSError,
+        tarfile.TarError,
+        KeyError,
+        TypeError,
+    ) as error:
         sys.exit(str(error))

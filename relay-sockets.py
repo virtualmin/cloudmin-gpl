@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Pass prepared sockets directly between the controller and isolated relay."""
+
 import array
 import os
 import socket
@@ -15,19 +16,30 @@ if sys.argv[1:] in (['send', '1'], ['send', '2']):
     channel = socket.socket(fileno=2)
     channel.settimeout(15)
     descriptors = array.array('i', range(count))
-    channel.sendmsg([b'R'], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, descriptors)])
+    channel.sendmsg(
+        [b'R'], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, descriptors)]
+    )
 # receive count interpreter script: systemd has already set the service's UID,
 # namespaces and capabilities. Replace this bootstrap with a fresh Perl relay.
-elif len(sys.argv) >= 5 and sys.argv[1] == 'receive' and sys.argv[2] in ('1', '2'):
+elif (
+    len(sys.argv) >= 5
+    and sys.argv[1] == 'receive'
+    and sys.argv[2] in ('1', '2')
+):
     # Refuse to start the browser-facing relay with root privileges.
     if os.getuid() == 0 or os.geteuid() == 0:
-        raise SystemExit('Relay sockets must be received without root privileges')
+        raise SystemExit(
+            'Relay sockets must be received without root privileges'
+        )
     count = int(sys.argv[2])
     channel = socket.socket(fileno=0)
     channel.settimeout(15)
     descriptors = array.array('i')
-    marker, messages, flags, _ = channel.recvmsg(1, socket.CMSG_SPACE(count * descriptors.itemsize),
-                                                socket.MSG_CMSG_CLOEXEC)
+    marker, messages, flags, _ = channel.recvmsg(
+        1,
+        socket.CMSG_SPACE(count * descriptors.itemsize),
+        socket.MSG_CMSG_CLOEXEC,
+    )
     for level, kind, data in messages:
         # Ignore ancillary records that do not contain passed descriptors.
         if level == socket.SOL_SOCKET and kind == socket.SCM_RIGHTS:

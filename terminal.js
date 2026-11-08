@@ -1,5 +1,5 @@
-// initTerminal() uses Webmin's xterm client in themes without their own
-// renderer.
+// initTerminal() uses Webmin's xterm client in themes without their
+// own renderer.
 (() => {
     const container = document.getElementById('terminal');
     // Ignore unrelated pages and a terminal that already owns its socket.
@@ -7,7 +7,8 @@
     container.dataset.terminalStarted = '1';
     const config = xterm_argv;
     const term = new Terminal({
-        cols: config.cols, rows: config.rows,
+        cols: config.cols,
+        rows: config.rows,
         fontSize: Number(config.conf.fontsize) || 14,
         screenReaderMode: config.conf.screen_reader === 'true',
         ...config.options
@@ -28,8 +29,20 @@
         // A late socket event must not update a replacement page.
         if (disposed || !badge?.isConnected) return;
         badge.lastElementChild.textContent = config.status[state];
-        badge.classList.remove('ui_badge_info', 'ui_badge_success', 'ui_badge_warning', 'ui_badge_danger');
-        badge.classList.add('ui_badge_' + ({ connected: 'success', failed: 'danger', disconnected: 'warning' }[state]));
+        badge.classList.remove(
+            'ui_badge_info',
+            'ui_badge_success',
+            'ui_badge_warning',
+            'ui_badge_danger'
+        );
+        badge.classList.add(
+            'ui_badge_' +
+                {
+                    connected: 'success',
+                    failed: 'danger',
+                    disconnected: 'warning'
+                }[state]
+        );
     }
 
     // onResize(size) sends Webmin's resize control once the socket is open.

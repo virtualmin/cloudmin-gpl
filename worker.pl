@@ -5,14 +5,16 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
-BEGIN {
-	# Reject a direct privileged launch before loading any worker libraries.
-	die "Image workers must run without root privileges\n"
-		if ($< == 0 || $> == 0);
-	$ENV{'LIBROOT'} = "$FindBin::Bin/..";
-	unshift(@INC, $ENV{'LIBROOT'});
-	chdir($ENV{'LIBROOT'}) || die "Cannot load worker libraries\n";
-	}
+
+BEGIN
+{
+# Reject a direct privileged launch before loading any worker libraries.
+die "Image workers must run without root privileges\n"
+	if ($< == 0 || $> == 0);
+$ENV{'LIBROOT'} = "$FindBin::Bin/..";
+unshift(@INC, $ENV{'LIBROOT'});
+chdir($ENV{'LIBROOT'}) || die "Cannot load worker libraries\n";
+}
 use WebminCore qw(convert_to_json convert_from_json);
 require "$Bin/lib/Cloudmin/WorkerTasks.pm";
 $| = 1;
@@ -26,8 +28,9 @@ umask(0077);
 chdir($ENV{'STATE_DIRECTORY'} || '') ||
 	die "Private worker directory is missing\n";
 
-# emit(event)
-# Writes one JSON event; the controller enforces stream and event size limits.
+# emit(event) Writes one JSON event; the controller enforces stream
+# and event size limits.
+
 sub emit
 {
 print(convert_to_json($_[0], 0, 1), "\n") || die "Controller disconnected\n";
@@ -38,8 +41,8 @@ emit({ type => 'identity', uid => 0 + $<, euid => 0 + $> });
 my $ok = eval {
 	open(my $fh, '<', 'request.json') || die "Cannot read worker request\n";
 	read($fh, my $json, 512 * 1024 + 1);
-	# The extra byte distinguishes an oversized request from an exact-size
-	# one.
+	# The extra byte distinguishes an oversized request
+	# from an exact-size one.
 	die "Worker request is too large\n" if (length($json) > 512 * 1024);
 	my $request = convert_from_json($json);
 	# Worker dispatch expects named fields, not an arbitrary JSON value.

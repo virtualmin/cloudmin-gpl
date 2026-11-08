@@ -4,23 +4,27 @@ use warnings;
 use File::Basename ();
 use Cwd ();
 # Load ACL helpers once, even when callers use different paths.
-require(Cwd::abs_path(File::Basename::dirname(__FILE__).'/cloudmin-access-lib.pl'));
+require(
+	Cwd::abs_path(File::Basename::dirname(__FILE__).
+		      '/cloudmin-access-lib.pl'));
 use Digest::SHA qw(sha256_hex);
 our (%text, %config, $remote_user, $module_root_directory,
      $module_var_directory, $module_config_directory, $module_name);
 
 # terminal_port_key(uuid) validates and normalizes the saved port's guest ID.
+
 sub terminal_port_key
 {
 my ($uuid) = @_;
 # Restrict keys to UUIDs before using them in preference files or paths.
 die "Invalid virtual machine ID\n" if (!defined($uuid) || ref($uuid) ||
-	$uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
+				       $uuid !~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/i);
 return lc($uuid);
 }
 
 # get_terminal_port(uuid) returns the port from the last successful SSH login.
 # Defaults to 22. Ports are shared by all users and keyed by guest UUID.
+
 sub get_terminal_port
 {
 my ($uuid) = @_;
@@ -29,11 +33,12 @@ my %ports;
 read_file("$module_var_directory/ssh-ports", \%ports);
 my $port = $ports{$key} || '';
 # Invalid or missing saved values must not become SSH arguments.
-return $port =~ /\A\d{1,5}\z/ && $port > 0 && $port <= 65535 ? 0+$port : 22;
+return $port =~ /\A\d{1,5}\z/ && $port > 0 && $port <= 65535 ? 0 + $port : 22;
 }
 
-# save_terminal_port(uuid, port) remembers a port after SSH authenticates.
-# The supervisor supplies its validated destination, never guest output.
+# save_terminal_port(uuid, port) remembers a port after SSH authenticates. The
+# supervisor supplies its validated destination, never guest output.
+
 sub save_terminal_port
 {
 my ($uuid, $port) = @_;
@@ -43,7 +48,7 @@ require_access('terminal', $uuid);
 my $key = terminal_port_key($uuid);
 # Reject invalid ports even when the caller already parsed the form.
 die "Invalid SSH port\n" if (!defined($port) || ref($port) ||
-	$port !~ /\A\d{1,5}\z/ || $port < 1 || $port > 65535);
+			     $port !~ /\A\d{1,5}\z/ || $port < 1 || $port > 65535);
 my $file = "$module_var_directory/ssh-ports";
 # Catch native file errors so cleanup runs and callers can report the failure.
 local $main::error_must_die = 1;
@@ -55,7 +60,7 @@ my $ok = eval {
 	# Preserve other guests' ports when simultaneous logins finish.
 	my %ports;
 	read_file($file, \%ports);
-	$ports{$key} = 0+$port;
+	$ports{$key} = 0 + $port;
 	write_file($file, \%ports);
 	chmod(0600, $file) || die "Cannot protect saved SSH ports: $!\n";
 	1;
@@ -68,15 +73,17 @@ die $error if (!$ok);
 
 # terminal_login_file(uuid) returns the current Webmin user's attempt file.
 # Escape the username so it cannot add path components.
+
 sub terminal_login_file
 {
 my ($uuid) = @_;
 return "$module_var_directory/ssh-login-".terminal_port_key($uuid).
-	'-'.urlize($remote_user);
+       '-'.urlize($remote_user);
 }
 
 # get_terminal_login(uuid) reads this user's last login settings and outcome.
 # Returns an empty hash reference when no attempt has been saved.
+
 sub get_terminal_login
 {
 my ($uuid) = @_;
@@ -86,10 +93,11 @@ read_file(terminal_login_file($uuid), \%login);
 return \%login;
 }
 
-# save_terminal_login(uuid, attempt, state, [request]) starts or updates a login.
-# Pending and failed attempts pause automatic connection on later visits.
+# save_terminal_login(uuid, attempt, state, [request]) starts or updates a
+# login. Pending and failed attempts pause automatic connection on later visits.
 # request is required for pending and must come from parse_terminal_request.
 # connected and failed update only the matching attempt for this Webmin user.
+
 sub save_terminal_login
 {
 my ($uuid, $attempt, $state, $request) = @_;
@@ -111,15 +119,20 @@ my $ok = eval {
 	my %login;
 	read_file($file, \%login);
 	if ($state eq 'pending') {
-		# Store only connection fields, never keys, passwords or session cookies.
-		%login = (map { $_ => $request->{$_} } qw(username auth address port));
+		# Store only connection fields, never keys,
+		# passwords or session cookies.
+		%login =
+			(map {
+				$_ => $request->{$_} } qw(username auth address port));
 		$login{'attempt'} = $attempt;
 		}
 	if ($login{'attempt'} && $login{'attempt'} eq $attempt) {
-		# Late results from an older terminal cannot change a newer attempt.
+		# Late results from an older terminal cannot
+		# change a newer attempt.
 		$login{'state'} = $state;
 		write_file($file, \%login);
-		chmod(0600, $file) || die "Cannot protect SSH connection settings: $!\n";
+		chmod(0600, $file) ||
+			die "Cannot protect SSH connection settings: $!\n";
 		}
 	1;
 	};
@@ -129,36 +142,38 @@ unlock_file($file) if ($locked);
 die $error if (!$ok);
 }
 
-# list_terminal_addresses(vm)
-# Returns usable guest addresses, excluding loopback and unscoped link-local
-# IPs.
+# list_terminal_addresses(vm) Returns usable guest addresses, excluding loopback
+# and unscoped link-local IPs.
+
 sub list_terminal_addresses
 {
 my ($vm) = @_;
 return unique(grep {
 	(check_ipaddress($_) && $_ !~ /\A(?:0\.|127\.|169\.254\.)/ &&
-		$_ ne '255.255.255.255') ||
-	(/:/ && check_ip6address($_) &&
-	$_ !~ /\A(?:::1|::|fe[89ab][0-9a-f]:.*)\z/i)
-	} map { $_->{'address'} || '' } @{$vm->{'addresses'} || []});
+	 $_ ne '255.255.255.255') ||
+		(/:/ && check_ip6address($_) &&
+		 $_ !~ /\A(?:::1|::|fe[89ab][0-9a-f]:.*)\z/i)
+	} map { $_->{'address'} || '' } @{$vm->{'addresses'} ||
+		[ ]});
 }
 
-# get_terminal_key(vm)
-# Finds only the key belonging to this guest's recorded creation job.
+# get_terminal_key(vm) Finds only the key belonging to this guest's
+# recorded creation job.
+
 sub get_terminal_key
 {
 my ($vm) = @_;
 # A remote libvirt connection must not borrow this host's local VM keys.
 return undef if (($config{'libvirt_uri'} ||
-	'qemu:///system') ne 'qemu:///system');
+		  'qemu:///system') ne 'qemu:///system');
 # Imported or externally created guests may have no managed key record.
 return undef if (!$vm->{'cloudmin'}->{'job'});
 return get_ssh_keys()->find($vm->{'uuid'}, $vm->{'cloudmin'}->{'job'});
 }
 
-# parse_terminal_request(vm, input)
-# Limits SSH to a running guest's current IPs; form values cannot add SSH
-# options.
+# parse_terminal_request(vm, input) Limits SSH to a running guest's current IPs;
+# form values cannot add SSH options.
+
 sub parse_terminal_request
 {
 my ($vm, $input) = @_;
@@ -186,14 +201,15 @@ my $key = get_terminal_key($vm) if ($auth eq 'key');
 # Do not silently fall back to passwords after selecting a missing key.
 die "$text{'terminal_key_missing'}\n" if ($auth eq 'key' && !$key);
 return { uuid => $vm->{'uuid'}, username => $username, auth => $auth,
-	key => $key,
-	address => $address, port => 0 + $port };
+	 key => $key,
+	 address => $address, port => 0 + $port };
 }
 
-# build_terminal_command(request, unit_id, webmin_user, credential_path)
-# Returns a command that runs SSH under a temporary user ID. Each Webmin
-# user/guest pair retains its own known host keys. Command escapes, forwarding
-# and host credentials are unavailable; the login marker runs in this sandbox.
+# build_terminal_command(request, unit_id, webmin_user, credential_path) Returns
+# a command that runs SSH under a temporary user ID. Each Webmin user/guest pair
+# retains its own known host keys. Command escapes, forwarding and host
+# credentials are unavailable; the login marker runs in this sandbox.
+
 sub build_terminal_command
 {
 my ($request, $id, $user, $credential) = @_;
@@ -203,75 +219,84 @@ die "Terminal session credential is required\n" if (!$credential);
 my $identity = substr(sha256_hex($user.':'.$request->{'uuid'}), 0, 24);
 # Retain accepted guest host keys separately for each Webmin user and guest.
 my $home = '/var/lib/cloudmin-ssh/'.$identity;
-my @properties = (
-	'DynamicUser=yes', "User=cmssh-$identity",
-	"StateDirectory=cloudmin-ssh/$identity",
-	'StateDirectoryMode=0700', "WorkingDirectory=$home", 'UMask=0077',
-	'NoNewPrivileges=yes', 'CapabilityBoundingSet=', 'AmbientCapabilities=',
-	'ProtectSystem=strict', 'ProtectHome=yes', 'PrivateTmp=yes',
-	'PrivateDevices=yes',
-	'ProtectProc=invisible', 'ProtectKernelTunables=yes',
-	'ProtectKernelModules=yes',
-	'ProtectKernelLogs=yes', 'ProtectControlGroups=yes',
-	'RestrictNamespaces=yes',
-	'RestrictSUIDSGID=yes', 'RestrictRealtime=yes', 'LockPersonality=yes',
-	'RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX',
-	'KeyringMode=private',
-	'TemporaryFileSystem=/run:ro',
-	# OpenSSH needs the dynamic user's passwd entry, not host control
-	# sockets.
-	'BindReadOnlyPaths=-/run/systemd/userdb',
-	'InaccessiblePaths=-/etc/webmin -/var/webmin -/etc/libvirt -/var/lib/libvirt',
-	'KillMode=control-group', 'TimeoutStopSec=5', 'RuntimeMaxSec=8h',
-	'TasksMax=16', 'MemoryMax=256M', 'LimitCORE=0', 'LimitFSIZE=1048576',
-	'LoadCredential=session:'.$credential,
-);
+my @properties =
+	(
+		'DynamicUser=yes', "User=cmssh-$identity",
+		"StateDirectory=cloudmin-ssh/$identity",
+		'StateDirectoryMode=0700', "WorkingDirectory=$home",
+		'UMask=0077',
+		'NoNewPrivileges=yes', 'CapabilityBoundingSet=',
+		'AmbientCapabilities=',
+		'ProtectSystem=strict', 'ProtectHome=yes', 'PrivateTmp=yes',
+		'PrivateDevices=yes',
+		'ProtectProc=invisible', 'ProtectKernelTunables=yes',
+		'ProtectKernelModules=yes',
+		'ProtectKernelLogs=yes', 'ProtectControlGroups=yes',
+		'RestrictNamespaces=yes',
+		'RestrictSUIDSGID=yes', 'RestrictRealtime=yes',
+		'LockPersonality=yes',
+		'RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX',
+		'KeyringMode=private',
+		'TemporaryFileSystem=/run:ro',
+		# OpenSSH needs the dynamic user's passwd entry, not
+		# host control sockets.
+		'BindReadOnlyPaths=-/run/systemd/userdb',
+		'InaccessiblePaths=-/etc/webmin -/var/webmin -/etc/libvirt -/var/lib/libvirt',
+		'KillMode=control-group', 'TimeoutStopSec=5',
+		'RuntimeMaxSec=8h',
+		'TasksMax=16', 'MemoryMax=256M', 'LimitCORE=0',
+		'LimitFSIZE=1048576',
+		'LoadCredential=session:'.$credential,
+	);
 # systemd exposes only this VM's private key inside the terminal sandbox.
 my $key = ($request->{'auth'} || 'password') eq 'key';
 # Recheck the credential before constructing a service that would lack it.
 die "$text{'terminal_key_missing'}\n" if ($key && !$request->{'key'});
 # systemd copies the selected key into the service's credential directory.
 push(@properties, 'LoadCredential=ssh-key:'.$request->{'key'}) if ($key);
-# Keep key and password authentication separate; neither borrows host identities.
+# Keep key and password authentication separate; neither
+# borrows host identities.
 my @auth = $key
-	? ('-o', 'PubkeyAuthentication=yes', '-o', 'IdentitiesOnly=yes',
-	   '-o', 'PreferredAuthentications=publickey', '-o',
-	'PasswordAuthentication=no',
-	   '-o', 'KbdInteractiveAuthentication=no')
-	: ('-o', 'PubkeyAuthentication=no', '-o',
-	'PreferredAuthentications=keyboard-interactive,password');
-return ('/usr/bin/systemd-run', '--quiet', '--wait', '--collect', '--pipe',
-	'--no-ask-password', '--service-type=exec',
-	"--unit=cloudmin-terminal-$id",
-	(map { ('--property', $_) } @properties),
-	'--setenv=PATH=/usr/bin:/bin', '--setenv=TERM=xterm-256color',
-	"--setenv=HOME=$home",
-	($key ? ('--setenv=CLOUDMIN_TERMINAL_KEY=1') : ()),
-	# Both WebSocket parsing and the SSH PTY live inside the same sandbox.
-	'/usr/bin/python3', "$module_root_directory/relay-sockets.py",
-	'receive', 1, $^X, "$module_root_directory/terminal-relay.pl",
-	'/usr/bin/ssh', '-F', '/dev/null', '-tt', '-o', 'EscapeChar=none',
-	'-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', '-o',
-	'ForwardX11=no',
-	'-o', 'IdentityAgent=none', @auth,
-	'-o', 'StrictHostKeyChecking=ask', '-o',
-	'GlobalKnownHostsFile=/dev/null',
-	'-o', "UserKnownHostsFile=$home/known_hosts", '-o',
-	"HostKeyAlias=cloudmin-$request->{uuid}",
-	'-o', 'ConnectTimeout=15', '-o', 'ServerAliveInterval=30', '-o',
-	'ServerAliveCountMax=3',
-	'-p', $request->{'port'}, '-l', $request->{'username'},
-	$request->{'address'});
+	? ( '-o', 'PubkeyAuthentication=yes', '-o', 'IdentitiesOnly=yes',
+	    '-o', 'PreferredAuthentications=publickey', '-o',
+	    'PasswordAuthentication=no',
+	    '-o', 'KbdInteractiveAuthentication=no' )
+	: ( '-o', 'PubkeyAuthentication=no', '-o',
+	    'PreferredAuthentications=keyboard-interactive,password' );
+return ( '/usr/bin/systemd-run', '--quiet', '--wait', '--collect', '--pipe',
+	 '--no-ask-password', '--service-type=exec',
+	 "--unit=cloudmin-terminal-$id",
+	 (map { ( '--property', $_ ) } @properties),
+	 '--setenv=PATH=/usr/bin:/bin', '--setenv=TERM=xterm-256color',
+	 "--setenv=HOME=$home",
+	 ($key ? ('--setenv=CLOUDMIN_TERMINAL_KEY=1') : ()),
+	 # Both WebSocket parsing and the SSH PTY live inside the same sandbox.
+	 '/usr/bin/python3', "$module_root_directory/relay-sockets.py",
+	 'receive', 1, $^X, "$module_root_directory/terminal-relay.pl",
+	 '/usr/bin/ssh', '-F', '/dev/null', '-tt', '-o', 'EscapeChar=none',
+	 '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', '-o',
+	 'ForwardX11=no',
+	 '-o', 'IdentityAgent=none', @auth,
+	 '-o', 'StrictHostKeyChecking=ask', '-o',
+	 'GlobalKnownHostsFile=/dev/null',
+	 '-o', "UserKnownHostsFile=$home/known_hosts", '-o',
+	 "HostKeyAlias=cloudmin-$request->{uuid}",
+	 '-o', 'ConnectTimeout=15', '-o', 'ServerAliveInterval=30', '-o',
+	 'ServerAliveCountMax=3',
+	 '-p', $request->{'port'}, '-l', $request->{'username'},
+	 $request->{'address'} );
 }
 
-# start_terminal(request)
-# Creates a session-bound route and starts the fixed SSH backend, never logging
-# the session cookie or any password entered later through the WebSocket.
-# Returns the WebSocket URL, allocated port and connection attempt ID.
+# start_terminal(request) Creates a session-bound route and starts the fixed SSH
+# backend, never logging the session cookie or any password entered later
+# through the WebSocket. Returns the WebSocket URL, allocated port and
+# connection attempt ID.
+
 sub start_terminal
 {
 my ($request) = @_;
-# Recheck access before allocating a route, even for a previously parsed request.
+# Recheck access before allocating a route, even for a
+# previously parsed request.
 require_access('terminal', $request->{'uuid'});
 # Mark the attempt before launch so abandoned startup pauses automatic retries.
 my $id = generate_miniserv_websocket_token();
@@ -283,27 +308,32 @@ my $ok = eval {
 	# Detached SSH backends still require a browser session to authenticate.
 	die "Log in to Webmin in a browser before opening a terminal\n"
 		if (!$main::session_id);
-	# Fail before allocating a proxy route when the host cannot run SSH tasks.
+	# Fail before allocating a proxy route when the host
+	# cannot run SSH tasks.
 	die "SSH terminals require systemd, Python 3 and OpenSSH\n"
 		if (!has_command('/usr/bin/systemd-run') ||
-		    !has_command('/usr/bin/python3') || !has_command('/usr/bin/ssh'));
+		    !has_command('/usr/bin/python3') ||
+		    !has_command('/usr/bin/ssh'));
 	eval { require Net::WebSocket::Server; 1 } ||
 		die "The Terminal module needs Net::WebSocket::Server\n";
 	my $wrapper = "$module_config_directory/terminal-server.pl";
 	# The detached process needs Webmin's module-specific environment.
-	create_wrapper($wrapper, $module_name, 'terminal-server.pl') if (!-x $wrapper);
+	create_wrapper($wrapper, $module_name, 'terminal-server.pl')
+		if (!-x $wrapper);
 	$port = allocate_miniserv_websocket($module_name);
-	# Name the log by port, as Webmin's terminal does, so ports reuse log files.
+	# Name the log by port, as Webmin's terminal does, so
+	# ports reuse log files.
 	my $log = "$module_var_directory/terminal-$port.log";
 	write_file_contents($log, '');
 	chmod(0600, $log) || die "Cannot protect the terminal log: $!\n";
-	# The root setup process revalidates this request before starting the service.
+	# The root setup process revalidates this request before
+	# starting the service.
 	local $ENV{'SESSION_ID'} = $main::session_id;
-	my $command = join(' ', map { quote_path($_) } ($wrapper, $port, $id,
-		@{$request}{qw(uuid username address port auth)}));
+	my $command = join(' ', map { quote_path($_) } ( $wrapper, $port, $id,
+							 @{$request}{qw(uuid username address port auth)} ));
 	die "Cannot start the SSH terminal\n"
 		if (system_logged("$command >".quote_path($log).
-		" 2>&1 </dev/null"));
+				  " 2>&1 </dev/null"));
 	1;
 	};
 if (!$ok) {
@@ -313,7 +343,7 @@ if (!$ok) {
 	remove_miniserv_websocket($port, $module_name) if ($port);
 	die $error;
 	}
-return (get_miniserv_websocket_url($port, undef, $module_name), $port, $id);
+return ( get_miniserv_websocket_url($port, undef, $module_name), $port, $id );
 }
 
 1;

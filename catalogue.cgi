@@ -15,7 +15,8 @@ error('Form is too large') if (($ENV{'CONTENT_LENGTH'} || 0) > 65536);
 ReadParse();
 my ($catalogue, $action, @keys, @entries);
 eval {
-	# License admission applies to submitted changes, not catalogue browsing.
+	# License admission applies to submitted changes,
+	# not catalogue browsing.
 	get_image_jobs()->check_token($remote_user, $in{'token'});
 	require_access('manage');
 	my @actions = grep { $in{$_} } qw(enable disable delete);
@@ -32,7 +33,7 @@ eval {
 	# Reject unsuitable mixed selections before asking for confirmation.
 	die "$text{'catalogue_edelete'}\n"
 		if ($action eq 'delete' &&
-		grep { $_->{'catalogue_origin'} ne 'custom' } @entries);
+		    grep { $_->{'catalogue_origin'} ne 'custom' } @entries);
 	};
 error(error_html("$@")) if ($@);
 
@@ -40,18 +41,22 @@ error(error_html("$@")) if ($@);
 if ($action eq 'delete' && !$in{'confirm'}) {
 	ui_print_header(undef, $text{'catalogue_'.$action}, '');
 	print ui_confirmation_form('catalogue.cgi',
-		$text{'catalogue_confirm_'.$action},
-		[ [ 'token', $in{'token'} ], [ 'action', $action ],
-		  map { [ 'key', $_ ] } @keys ],
-		[ [ 'confirm', $text{'catalogue_'.$action.'_button'} ] ],
-		ui_text_color(join(', ', map { '<tt>'.html_escape($_->{'name'}.' (' .
-			describe_architecture($_->{'architecture'}).')').'</tt>' }
-			@entries), 'danger'));
+				   $text{'catalogue_confirm_'.$action},
+				   [ [ 'token', $in{'token'} ], [ 'action',
+								  $action ],
+				     map { [ 'key', $_ ] } @keys ],
+				   [ [ 'confirm',
+				       $text{'catalogue_'.$action.'_button'} ] ],
+				   ui_text_color(join(', ',
+						      map { '<tt>'.html_escape($_->{'name'}.' ('.
+									       describe_architecture($_->{'architecture'}).
+									       ')').'</tt>' }
+						      @entries), 'danger'));
 	ui_print_footer('images.cgi?mode=catalogue', $text{'images_return'});
 	}
 else {
-	# The backend rechecks entries under the lock before applying the
-	# selection.
+	# The backend rechecks entries under the lock before
+	# applying the selection.
 	eval { $catalogue->update_entries($action, \@keys); };
 	error(error_html("$@")) if ($@);
 	redirect('images.cgi?mode=catalogue');

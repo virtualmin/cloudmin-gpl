@@ -1,5 +1,8 @@
 #!/usr/bin/python3
-"""Verify SSH preferences and login outcomes through the real isolated client."""
+"""
+Verify SSH preferences and login outcomes through the real isolated client.
+"""
+
 # Usage: check-terminal-ports.py <test-host-address>
 # The Linux test host needs paramiko, websocket-client and a working terminal.
 import hashlib
@@ -24,7 +27,9 @@ import uuid
 import paramiko
 import websocket
 
-assert sys.platform == 'linux' and os.geteuid() == 0, 'Run on a Linux test host as root'
+assert sys.platform == 'linux' and os.geteuid() == 0, (
+    'Run on a Linux test host as root'
+)
 # Use a unique account and guest identity; keep generated credentials in memory.
 module = Path(__file__).resolve().parents[2]
 helper = module / 't/live/webmin-user.pl'
@@ -38,7 +43,9 @@ address = sys.argv[1]
 store = Path('/var/webmin/modules/server-manager/ssh-ports')
 key = identity
 home = hashlib.sha256((user + ':' + identity).encode()).hexdigest()[:24]
-login_store = store.parent / ('ssh-login-' + identity + '-' + user.replace('-', '%2D'))
+login_store = store.parent / (
+    'ssh-login-' + identity + '-' + user.replace('-', '%2D')
+)
 created = False
 # All ordinary attempts share a host key; one case deliberately changes it.
 host_key = paramiko.RSAKey.generate(2048)
@@ -47,7 +54,11 @@ logging.getLogger('paramiko').setLevel(logging.CRITICAL)
 
 # saved() returns this fixture's saved port, defaulting to 22.
 def saved():
-    values = dict(line.split('=', 1) for line in store.read_text().splitlines()) if store.exists() else {}
+    values = (
+        dict(line.split('=', 1) for line in store.read_text().splitlines())
+        if store.exists()
+        else {}
+    )
     return int(values.get(key, '22'))
 
 
@@ -61,9 +72,14 @@ def wait_saved(port):
 
 # outcome(attempt) reads the same authenticated endpoint as the browser.
 def outcome(attempt):
-    url = base + '/server-manager/terminal-status.cgi?' + urllib.parse.urlencode(
-        {'id': identity, 'attempt': attempt})
-    request = urllib.request.Request(url, headers={'Referer': base + '/server-manager/remote_access.cgi'})
+    url = (
+        base
+        + '/server-manager/terminal-status.cgi?'
+        + urllib.parse.urlencode({'id': identity, 'attempt': attempt})
+    )
+    request = urllib.request.Request(
+        url, headers={'Referer': base + '/server-manager/remote_access.cgi'}
+    )
     with client.open(request, timeout=10) as reply:
         body = reply.read().decode()
         try:
@@ -71,14 +87,21 @@ def outcome(attempt):
         except json.JSONDecodeError:
             # Limit error details to the response type and page title.
             title = re.search(r'<title>([^<]*)</title>', body)
-            raise AssertionError('Status returned ' + reply.headers.get('Content-Type', '') +
-                                 ': ' + (title[1] if title else 'no page title')) from None
+            raise AssertionError(
+                'Status returned '
+                + reply.headers.get('Content-Type', '')
+                + ': '
+                + (title[1] if title else 'no page title')
+            ) from None
     assert 'error' not in result, 'Cannot read login outcome'
-    assert set(result) == {'state'}, 'Status endpoint exposed connection settings'
+    assert set(result) == {'state'}, (
+        'Status endpoint exposed connection settings'
+    )
     return result['state']
 
 
-# wait_outcome(attempt, state) waits for the supervisor to record the SSH result.
+# wait_outcome(attempt, state) waits for the supervisor to record the
+# SSH result.
 def wait_outcome(attempt, state):
     deadline = time.monotonic() + 8
     while time.monotonic() < deadline:
@@ -101,11 +124,19 @@ class Peer(paramiko.ServerInterface):
 
     # check_auth_password(self, username, candidate) validates the test login.
     def check_auth_password(self, username, candidate):
-        return paramiko.AUTH_SUCCESSFUL if username == 'cloudmin' and candidate == password else paramiko.AUTH_FAILED
+        return (
+            paramiko.AUTH_SUCCESSFUL
+            if username == 'cloudmin' and candidate == password
+            else paramiko.AUTH_FAILED
+        )
 
     # check_channel_request(self, kind, channel_id) allows only a shell session.
     def check_channel_request(self, kind, channel_id):
-        return paramiko.OPEN_SUCCEEDED if kind == 'session' else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
+        return (
+            paramiko.OPEN_SUCCEEDED
+            if kind == 'session'
+            else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
+        )
 
     # check_channel_pty_request(self, *args) accepts Paramiko's PTY parameters.
     def check_channel_pty_request(self, *args):
@@ -136,7 +167,9 @@ def attempt(session, cookie, succeed, reject_key=False):
         try:
             connection, _ = listener.accept()
             with paramiko.Transport(connection) as transport:
-                transport.add_server_key(paramiko.RSAKey.generate(2048) if reject_key else host_key)
+                transport.add_server_key(
+                    paramiko.RSAKey.generate(2048) if reject_key else host_key
+                )
                 transport.start_server(server=Peer())
                 while transport.is_active() and not stop.wait(0.1):
                     pass
@@ -153,17 +186,40 @@ def attempt(session, cookie, succeed, reject_key=False):
     previous = saved()
     try:
         # Launch through the real supervisor, keeping session data in memory.
-        payload = dict(user=user, session=session, uuid=identity, address=address,
-                       port=port, startup_diagnostic=True)
-        result = subprocess.run(['perl', str(launcher)], input=json.dumps(payload),
-                                text=True, capture_output=True, timeout=40)
-        assert result.returncode == 0, 'Supervisor launch failed: ' + result.stderr
+        payload = dict(
+            user=user,
+            session=session,
+            uuid=identity,
+            address=address,
+            port=port,
+            startup_diagnostic=True,
+        )
+        result = subprocess.run(
+            ['perl', str(launcher)],
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+            timeout=40,
+        )
+        assert result.returncode == 0, (
+            'Supervisor launch failed: ' + result.stderr
+        )
         route = json.loads(result.stdout)
         # Status belongs to this attempt, not any other browser connection.
-        assert outcome(route['attempt']) == 'pending', 'New login was not pending'
-        assert outcome('0' * 32) == 'gone', 'Another attempt inherited the result'
-        sock = websocket.create_connection(route['socket_url'], cookie=cookie,
-            sslopt={'cert_reqs': ssl.CERT_NONE}, origin=base, subprotocols=['binary'], timeout=2)
+        assert outcome(route['attempt']) == 'pending', (
+            'New login was not pending'
+        )
+        assert outcome('0' * 32) == 'gone', (
+            'Another attempt inherited the result'
+        )
+        sock = websocket.create_connection(
+            route['socket_url'],
+            cookie=cookie,
+            sslopt={'cert_reqs': ssl.CERT_NONE},
+            origin=base,
+            subprotocols=['binary'],
+            timeout=2,
+        )
         pending = ''
         deadline = time.monotonic() + 20
         authenticated = False
@@ -180,7 +236,11 @@ def attempt(session, cookie, succeed, reject_key=False):
             if not data:
                 # An empty receive also marks the end of this connection.
                 break
-            pending += data.decode(errors='replace') if isinstance(data, bytes) else data
+            pending += (
+                data.decode(errors='replace')
+                if isinstance(data, bytes)
+                else data
+            )
             if 'REMOTE HOST IDENTIFICATION HAS CHANGED' in pending:
                 # The changed-key case must stop before accepting a guest login.
                 assert reject_key, 'Unexpected host-key change'
@@ -191,9 +251,16 @@ def attempt(session, cookie, succeed, reject_key=False):
                 pending = ''
             elif 'password:' in pending:
                 # The spoofed banner must not save a port before login succeeds.
-                assert saved() == previous, 'Guest banner was mistaken for successful login'
-                assert outcome(route['attempt']) == 'pending', 'Guest banner cleared automatic login pause'
-                sock.send((password if succeed else 'incorrect-fixture-password') + '\n')
+                assert saved() == previous, (
+                    'Guest banner was mistaken for successful login'
+                )
+                assert outcome(route['attempt']) == 'pending', (
+                    'Guest banner cleared automatic login pause'
+                )
+                sock.send(
+                    (password if succeed else 'incorrect-fixture-password')
+                    + '\n'
+                )
                 pending = ''
             elif 'PORT TEST READY' in pending:
                 # The shell marker confirms that authentication succeeded.
@@ -209,9 +276,20 @@ def attempt(session, cookie, succeed, reject_key=False):
         assert not errors, 'SSH fixture failed: ' + ', '.join(errors)
         # A diagnostic before readiness must not swallow the later login event.
         log = store.parent / ('terminal-' + str(route['port']) + '.log')
-        assert log.read_text().startswith('Cloudmin fixture startup diagnostic\n'), 'Startup diagnostic was not exercised'
-        print('PASS: ' + ('successful login saves port' if succeed else
-                          'changed host key keeps port' if reject_key else 'failed password and guest banner keep port'), flush=True)
+        assert log.read_text().startswith(
+            'Cloudmin fixture startup diagnostic\n'
+        ), 'Startup diagnostic was not exercised'
+        print(
+            'PASS: '
+            + (
+                'successful login saves port'
+                if succeed
+                else 'changed host key keeps port'
+                if reject_key
+                else 'failed password and guest banner keep port'
+            ),
+            flush=True,
+        )
         return port
     finally:
         # A launch failure may leave no browser socket to close.
@@ -227,18 +305,28 @@ def attempt(session, cookie, succeed, reject_key=False):
 try:
     # The temporary Webmin account exercises real browser-session authorization.
     assert saved() == 22
-    result = subprocess.run(['perl', str(helper), 'create', 'authentic-theme', user],
-        input=password + '\n', text=True, capture_output=True, timeout=30)
+    result = subprocess.run(
+        ['perl', str(helper), 'create', 'authentic-theme', user],
+        input=password + '\n',
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
     assert result.returncode == 0, 'Fixture account creation failed'
     created = True
     # Log in over loopback using only the generated test credentials.
     jar = http.cookiejar.CookieJar()
-    client = urllib.request.build_opener(urllib.request.ProxyHandler({}),
+    client = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
         urllib.request.HTTPCookieProcessor(jar),
-        urllib.request.HTTPSHandler(context=ssl._create_unverified_context()))
+        urllib.request.HTTPSHandler(context=ssl._create_unverified_context()),
+    )
     client.open(base + '/session_login.cgi', timeout=30).close()
-    client.open(base + '/session_login.cgi', data=urllib.parse.urlencode(
-        {'user': user, 'pass': password}).encode(), timeout=30).close()
+    client.open(
+        base + '/session_login.cgi',
+        data=urllib.parse.urlencode({'user': user, 'pass': password}).encode(),
+        timeout=30,
+    ).close()
     session = next(item.value for item in jar if item.name == 'sid')
     cookie = '; '.join(item.name + '=' + item.value for item in jar)
     # Failures retain the first successful port; the next success replaces it.
@@ -249,26 +337,54 @@ try:
     assert second != first and saved() == second
     assert store.stat().st_mode & 0o777 == 0o600
     assert login_store.stat().st_mode & 0o777 == 0o600
-    print('PASS: failures pause automatic login; authenticated success clears it; status is private', flush=True)
-    print('PASS: latest successful port replaces the previous value; saved state is private', flush=True)
-    print('PASS: startup diagnostics preserve the authenticated event boundary', flush=True)
+    print(
+        'PASS: failures pause automatic login; authenticated success clears it; status is private',
+        flush=True,
+    )
+    print(
+        'PASS: latest successful port replaces the previous value; saved state is private',
+        flush=True,
+    )
+    print(
+        'PASS: startup diagnostics preserve the authenticated event boundary',
+        flush=True,
+    )
 finally:
     # Remove this fixture's login state and account, even if a test failed.
     login_store.unlink(missing_ok=True)
     if created:
         # Remove the account only after this run successfully created it.
-        subprocess.run(['perl', str(helper), 'delete', '', user], check=True, capture_output=True, timeout=30)
+        subprocess.run(
+            ['perl', str(helper), 'delete', '', user],
+            check=True,
+            capture_output=True,
+            timeout=30,
+        )
     # Use the same lock as production and remove only this test's UUID entry.
     cleanup = '''use WebminCore; our $error_must_die = 1; my $file = shift; my $key = shift;
         lock_file($file); my %ports; read_file($file, \\%ports);
         delete $ports{$key}; write_file($file, \\%ports); unlock_file($file);'''
-    env = {**os.environ, 'WEBMIN_CONFIG': '/etc/webmin', 'WEBMIN_VAR': '/var/webmin'}
+    env = {
+        **os.environ,
+        'WEBMIN_CONFIG': '/etc/webmin',
+        'WEBMIN_VAR': '/var/webmin',
+    }
     if store.exists():
         # Preserve entries written by real users while this test was running.
-        result = subprocess.run(['perl', '-I' + str(module.parent), '-e', cleanup, str(store), key],
-            cwd=module.parent, env=env, capture_output=True, timeout=30)
-        assert result.returncode == 0, 'Fixture port cleanup failed: ' + result.stderr
-    for state in (Path('/var/lib/cloudmin-ssh') / home, Path('/var/lib/private/cloudmin-ssh') / home):
+        result = subprocess.run(
+            ['perl', '-I' + str(module.parent), '-e', cleanup, str(store), key],
+            cwd=module.parent,
+            env=env,
+            capture_output=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            'Fixture port cleanup failed: ' + result.stderr
+        )
+    for state in (
+        Path('/var/lib/cloudmin-ssh') / home,
+        Path('/var/lib/private/cloudmin-ssh') / home,
+    ):
         if state.is_symlink():
             # Unlink the service's public path without following its target.
             state.unlink()
