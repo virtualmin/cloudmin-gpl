@@ -9,7 +9,6 @@ use File::Basename qw(dirname);
 use Time::HiRes ();
 
 # script_fields() names reusable script settings, including inactive sources.
-
 sub script_fields
 {
 return qw(before_script before_script_mode before_script_path
@@ -17,7 +16,6 @@ return qw(before_script before_script_mode before_script_path
 }
 
 # has_scripts() checks both Pro helpers on disk, without caching availability.
-
 sub has_scripts
 {
 my $pro = dirname(__FILE__).'/../../pro';
@@ -25,7 +23,6 @@ return -r "$pro/SetupScripts.pm" && -r "$pro/guest-scripts.pl";
 }
 
 # require_scripts() refuses script work when its Pro implementation is absent.
-
 sub require_scripts
 {
 die "Custom setup scripts require Cloudmin Pro. Set both scripts to None or install Cloudmin Pro.\n"
@@ -36,7 +33,6 @@ require(dirname(__FILE__).'/../../pro/SetupScripts.pm');
 # uses_scripts(settings) detects selected sources, even when their text is
 # empty. Explicit None overrides stale text or paths; older
 # records infer the source.
-
 sub uses_scripts
 {
 my ($settings) = @_;
@@ -52,7 +48,6 @@ return scalar grep {
 # script_settings(input) returns normalized script fields for supplied options.
 # GPL can clear fields; active sources require Pro validation. Omitted fields
 # remain absent so callers can preserve template inheritance.
-
 sub script_settings
 {
 my ($input) = @_;
@@ -75,7 +70,6 @@ return \%values;
 }
 
 # fields() lists reusable software options, excluding license and login secrets.
-
 sub fields
 {
 return qw(packages before_script before_script_mode before_script_path
@@ -84,7 +78,6 @@ return qw(packages before_script before_script_mode before_script_path
 }
 
 # enabled(settings) checks for packages, scripts or a Virtualmin installation.
-
 sub enabled
 {
 my ($settings) = @_;
@@ -97,7 +90,6 @@ return (($settings->{'software'} || 'none') ne 'none' ||
 }
 
 # settings(input) validates supplied options without adding template defaults.
-
 sub settings
 {
 my ($input) = @_;
@@ -139,7 +131,6 @@ return \%values;
 }
 
 # prepare(input, request) validates guest setup before allocation.
-
 sub prepare
 {
 my ($input, $request) = @_;
@@ -182,7 +173,6 @@ die "Virtualmin needs at least $minimum MiB of memory and 20 GiB of disk space\n
 }
 
 # credentials(software, serial, key) validates one creation's license inputs.
-
 sub credentials
 {
 my ($software, $serial, $key) = @_;
@@ -197,7 +187,6 @@ return { virtualmin_serial => $serial, virtualmin_key => $key };
 
 # seed(data, request, uuid) adds guest helpers and configuration to cloud-init.
 # Virtualmin license credentials are delivered later over authenticated SSH.
-
 sub seed
 {
 my ($data, $request, $uuid) = @_;
@@ -225,13 +214,15 @@ push(@{$data->{'write_files'}},
        content => convert_to_json(\%config, 0, 1) },
      { path => '/etc/systemd/system/cloudmin-software.service', owner =>
 									'root:root',
-       permissions => '0644', content =>
-				      "[Unit]\nDescription=Set up guest software\n".
-				      "After=network-online.target cloud-final.service\nWants=network-online.target\n".
-				      "[Service]\nType=oneshot\nUMask=0077\n".
-				      "ExecStart=/usr/bin/perl /usr/local/lib/cloudmin/guest-software.pl run\n".
-				      "ExecStopPost=/bin/rm -f /var/lib/cloudmin-install/request.json /var/lib/cloudmin-install/installer.sh /var/lib/cloudmin-install/before_script.sh /var/lib/cloudmin-install/after_script.sh\n".
-				      "TimeoutStartSec=7200\nTimeoutStopSec=30\nKillMode=control-group\nStandardOutput=null\nStandardError=null\n" });
+       permissions => '0644',
+       content =>
+		"[Unit]\nDescription=Set up guest software\n".
+		"After=network-online.target cloud-final.service\nWants=network-online.target\n".
+		"[Service]\nType=oneshot\nUMask=0077\n".
+		"ExecStart=/usr/bin/perl /usr/local/lib/cloudmin/guest-software.pl run\n".
+		"ExecStopPost=/bin/rm -f /var/lib/cloudmin-install/request.json /var/lib/cloudmin-install/installer.sh /var/lib/cloudmin-install/before_script.sh /var/lib/cloudmin-install/after_script.sh\n".
+		"TimeoutStartSec=7200\nTimeoutStopSec=30\nKillMode=control-group\nStandardOutput=null\nStandardError=null\n"
+     });
 # Include the Pro executor only when this request selects custom scripts.
 if (uses_scripts($request)) {
 	push(@{$data->{'write_files'}}, {
@@ -254,7 +245,6 @@ push(@{$data->{'runcmd'}},
 # addresses(request, vm) combines configured static IPs with discovered
 # addresses. Software setup checks the guest's pinned SSH host key
 # before using an address.
-
 sub addresses
 {
 my ($request, $vm) = @_;
@@ -274,27 +264,28 @@ return grep { !$seen{$_}++ &&
 }
 
 # failure(result) maps the small guest protocol to safe, useful error messages.
-
 sub failure
 {
 my ($result) = @_;
 my %reasons =
 	(
-		identity => 'The guest identity does not match this creation request',
-		perl =>
-			'Guest software setup requires Perl and its modules; check the cloud-init log inside the virtual machine',
-		privilege =>
-			'Guest software setup requires passwordless sudo for the initial user',
-		cloud_init_missing =>
-			'Guest software setup requires cloud-init inside the virtual machine',
-		cloud_init_timeout =>
-			'Initial guest setup did not finish within 15 minutes; check cloud-init status inside the virtual machine',
-		cloud_init_failed =>
-			'Initial guest setup failed; check cloud-init status inside the virtual machine',
-		credentials =>
-			'Virtualmin Pro license credentials are missing from the guest setup request',
-		helper =>
-			'The guest setup helper failed; check its configuration and Perl installation inside the virtual machine' );
+	identity => 
+		'The guest identity does not match this creation request',
+	perl =>
+		'Guest software setup requires Perl and its modules; check the cloud-init log inside the virtual machine',
+	privilege =>
+		'Guest software setup requires passwordless sudo for the initial user',
+	cloud_init_missing =>
+		'Guest software setup requires cloud-init inside the virtual machine',
+	cloud_init_timeout =>
+		'Initial guest setup did not finish within 15 minutes; check cloud-init status inside the virtual machine',
+	cloud_init_failed =>
+		'Initial guest setup failed; check cloud-init status inside the virtual machine',
+	credentials =>
+		'Virtualmin Pro license credentials are missing from the guest setup request',
+	helper =>
+		'The guest setup helper failed; check its configuration and Perl installation inside the virtual machine'
+	);
 # Known prerequisite failures have diagnostics that are safe to publish.
 return $reasons{$result->{'reason'} || ''}."\n"
 	if ($reasons{$result->{'reason'} || ''});
@@ -310,7 +301,6 @@ return "$step failed. See /var/lib/cloudmin-install/install.log inside the virtu
 
 # guest(adapter, job, [skip_addresses]) checks the original guest still runs.
 # skip_addresses defaults to false; progress checks omit address discovery.
-
 sub guest
 {
 my ($adapter, $job, $skip_addresses) = @_;
@@ -326,7 +316,6 @@ return $vm;
 
 # run(service, id) monitors guest installation outside the host disk-work lock.
 # service supplies the job store, libvirt adapter and managed SSH keys.
-
 sub run
 {
 my ($service, $id) = @_;
@@ -506,7 +495,6 @@ return $jobs->lock('worker-'.$id, sub {
 
 # cancel(service, id, adapter, worker) stops setup over pinned SSH, or runs
 # explicitly requested creation cleanup while holding the worker lock.
-
 sub cancel
 {
 my ($service, $id, $adapter, $worker) = @_;
@@ -568,7 +556,6 @@ return $ok;
 # outcome. Ordinary cancellation keeps the guest; explicit creation cleanup
 # removes it. An empty error denotes success unless cancelled; both
 # flags default to false.
-
 sub finish
 {
 my ($service, $id, $error, $cancelled, $guest_deleted) = @_;
