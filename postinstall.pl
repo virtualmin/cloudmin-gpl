@@ -38,7 +38,7 @@ exec $perl cli.pl "\$\@"
 EOF_WRAPPER
 }
 
-# module_install() installs the wrapper using Webmin's atomic file helpers.
+# module_install() installs the CLI wrapper, collector and scheduled callbacks.
 sub module_install
 {
 die "Install the Cloudmin command on its Linux host as root\n"
@@ -60,6 +60,8 @@ setup_cloudmin_license_check();
 # Keep live collection running even when history recording is turned off.
 require "$module_root_directory/cloudmin-statistics-lib.pl";
 install_statistics_service();
+# Notifications run independently of history and browser sessions.
+ensure_notification_schedule();
 }
 
 1;

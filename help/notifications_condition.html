@@ -1,0 +1,14 @@
+<header>Condition</header>
+
+<p>Resource conditions compare usage, free memory or space, host load, or
+network and disk rates with a threshold. They alert after the condition lasts
+for the configured duration. Resource collection is required except for host
+filesystem checks. Saving statistics history is optional.</p>
+
+<p>Status conditions detect stopped guests, unavailable guest agents, inactive
+storage pools or a collector that stops providing fresh readings. Agent checks
+apply to running guests and may retry an hour apart. Collector alerts pause
+when collection is deliberately disabled. Job failures skip the duration wait.
+Planned guest stops and unfinished guest jobs pause guest checks.</p>
+
+<footer>

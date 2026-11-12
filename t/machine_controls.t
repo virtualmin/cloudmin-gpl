@@ -155,6 +155,12 @@ is_deeply($adapter->{'calls'}, [ ], 'rejected requests caused no mutations');
 is_deeply(\@audit, [ ], 'rejected requests have no success audit');
 $readonly = 0;
 
+# Enable isolated notification state to exercise the real power-action hook.
+require "$module_root_directory/cloudmin-notifications-lib.pl";
+my $notifications = get_notifications();
+$notifications->save_target({ name => 'Fixture', type => 'email',
+	address => 'fixture@example.invalid' });
+
 # Every allowed action calls the existing adapter and logs only public identity.
 is_deeply(call_vm_api(1, 'start', { %$input }),
 	  { id => $uuid, name => 'fixture', action => 'start' },
@@ -166,6 +172,13 @@ ok(!eval { call_vm_api(1, 'start', { %$input }); 1 },
 for my $action (qw(shutdown reboot)) {
 	is(call_vm_api(1, $action, { %$input })->{'action'}, $action,
 	   'running guest accepts power request');
+	# Stops wait for an observed restart; reboots use a timed grace period.
+	my $db = $notifications->connect(0);
+	my ($until) = $db->selectrow_array(
+		'SELECT until_time FROM suppressions WHERE owner = ?', undef, $uuid);
+	$db->disconnect();
+	ok($action eq 'shutdown' ? $until < 0 : $until > time(),
+	   'successful power action suppresses its expected downtime');
 	}
 for my $enabled ( 1, 1, 0 ) {
 	call_vm_api(1, 'autostart', { %$input, enabled => $enabled });
@@ -178,11 +191,18 @@ is_deeply([ map { $_->[0] } @{$adapter->{'calls'}} ],
 is(scalar(@audit), 6, 'each accepted change has one audit entry');
 is_deeply($audit[0], [ 'start', 'vm', $uuid, { name => 'fixture' } ],
 	  'audit contains no token');
+# A rejected power action must leave any previous suppression unchanged.
+$notifications->suppress($uuid, 123);
 $adapter->{'fail'} = 1;
 ok(!eval { call_vm_api(1, 'shutdown', { %$input }); 1 },
    'libvirt refusal propagates');
 like($@, qr/Guest refused shutdown/, 'libvirt failure retained');
 is(scalar(@audit), 6, 'refused operation has no success audit');
+my $notification_db = $notifications->connect(0);
+is($notification_db->selectrow_array(
+	'SELECT until_time FROM suppressions WHERE owner = ?', undef, $uuid),
+	123, 'failed shutdown does not suppress an unexpected outage');
+$notification_db->disconnect();
 
 # Emergency control remains available when the guest cannot process ACPI events.
 $adapter->{'fail'} = 0;

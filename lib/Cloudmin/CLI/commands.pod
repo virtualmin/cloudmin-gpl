@@ -28,6 +28,83 @@ Use C<--multiline> to see details including UUID, disk capacity and automatic st
         --id-only
     cloudmin list-systems --plan "Default Plan" --json
 
+=head2 get-notifications
+
+Lists the latest 100 events by default. C<--id> limits results to one guest UUID. Use C<--cursor 0> to start at the oldest retained event, then pass the returned cursor to continue. C<--limit> accepts 1 to 500. Events are kept for 30 days, or longer while delivery is pending.
+
+    cloudmin get-notifications --json
+    cloudmin get-notifications --cursor 0 --limit 100 --json
+
+=head2 get-notification-config
+
+Shows rules, destinations, each destination's last delivery result and the status of background checks. Tokens, private chat webhook URLs and Pushover recipient keys are never returned. Use C<get-notifications> for delivery results for individual events.
+
+    cloudmin get-notification-config --json
+
+=head2 save-notification-target
+
+Reads a complete destination object from C<--file>, or standard input with C<--file ->. Required fields are C<name>, C<type> and C<address>. Type is C<email>, C<webhook>, C<slack>, C<discord>, C<teams>, C<ntfy>, C<telegram>, C<pushover> or C<gotify>. Optional fields are C<enabled>, C<secret> and C<clear_secret>. Destinations are enabled by default.
+
+Tokens and private chat URLs require HTTPS. Protect files containing either with mode C<0600>. Teams uses a Workflows webhook with access set to anyone. ntfy uses a topic URL.
+
+Telegram uses a numeric chat ID or a public supergroup or channel C<@username> in C<address>, and a required bot token in C<secret>. For a private chat, the user must start the bot. For a group or channel, the bot needs permission to send messages. Telegram messages use plain text and are limited to 4096 characters.
+
+Pushover uses a private user or group key in C<address> and an application token in C<secret>. Both must contain exactly 30 letters and digits. Messages use normal priority, with titles limited to 250 characters and message text to 1024 characters.
+
+Gotify uses an HTTPS server URL in C<address> and an application token in C<secret>. Include any reverse-proxy path but omit C</message>, query strings and fragments. Cloudmin appends C</message> and sends plain text at priority 5.
+
+Include an existing C<id> to update a destination. Include optional settings you want to keep. An empty C<secret> removes a saved bearer token, but is rejected for Telegram, Pushover and Gotify. Omitting C<secret> keeps the saved token only when its type and address are unchanged. Setting C<clear_secret> to 1 removes a bearer token even if C<secret> is supplied. Telegram, Pushover and Gotify reject token removal. Email uses Webmin's mail settings.
+
+    cloudmin save-notification-target --file target.json
+
+=head2 save-notification-rule
+
+Reads a complete rule object from C<--file>, or standard input with C<--file ->. Include C<name>, C<metric> and a C<targets> array of one or more destination IDs. Include an existing C<id> to replace a rule. This cancels its queued deliveries and starts a new check period. Include optional settings you want to keep.
+
+Metrics are C<cpu>, C<memory>, C<filesystem>, C<pool>, C<memory_free>, C<filesystem_free>, C<pool_free>, C<load_1>, C<load_5>, C<load_15>, C<network_receive>, C<network_transmit>, C<disk_read>, C<disk_write>, C<guest_down>, C<guest_agent>, C<pool_inactive>, C<collector_stale> and C<job_failed>. Scope defaults to C<host>. It accepts C<host>, C<guests>, a guest UUID or an array of one or more guest UUIDs. An array checks only those guests, with separate incidents for each. C<guests> includes guests added later. Job failures also accept C<all>. Pool, load and collector-health rules monitor only the host. Guest power and agent conditions require guests.
+
+C<threshold> defaults to 90 for usage in percent, 1 for free memory or space in GiB, 1 for host load, and 100 for rates in MiB/s. C<comparison> accepts C<ge> for at or above and C<le> for at or below. Free memory and space rules default to C<le>; other numeric rules default to C<ge>. C<duration> and C<cooldown> default to five minutes. C<reminder> defaults to zero minutes, which disables reminders. Zero duration removes the initial wait but still respects the interval between new alerts.
+
+C<severity> defaults to C<warning>. C<enabled> and C<recovery> default to 1. Recovery messages always use C<notice>. C<device> selects a mount point or pool. A blank host filesystem path selects C</>. A blank guest mount point selects every reported filesystem. A blank pool selects every active pool for usage or free space. Pool inactivity rules include all known pools.
+
+    cloudmin save-notification-rule --file rule.json
+
+=head2 set-notification-target-enabled
+
+Enables or disables the destination selected by C<--id>. Supply C<--enabled yes> or C<--enabled no>. Its other settings and saved token are kept. Disabling cancels its queued deliveries. They are not resent when it is enabled again.
+
+    cloudmin set-notification-target-enabled --id TARGET_ID --enabled no
+
+=head2 set-notification-rule-enabled
+
+Enables or disables the rule selected by C<--id>. Supply C<--enabled yes> or C<--enabled no>. Its other settings are kept. Disabling stops its checks and cancels its queued deliveries. Enabling starts a new check period. Repeating the current state changes nothing.
+
+    cloudmin set-notification-rule-enabled --id RULE_ID --enabled yes
+
+=head2 delete-notification-target
+
+Removes the destination selected by C<--id> and cancels its queued deliveries. Remove it from all rules first. Existing event history is kept.
+
+    cloudmin delete-notification-target --id TARGET_ID
+
+=head2 delete-notification-rule
+
+Removes the rule selected by C<--id>, clears its current alert state and cancels its queued deliveries. Existing event history is kept.
+
+    cloudmin delete-notification-rule --id RULE_ID
+
+=head2 retry-notification
+
+Retries deliveries that have stopped after failure or expiry for the event selected by C<--id>. Successful or cancelled deliveries are left alone. The original event ID is reused. Correct the destination or restore its quota before retrying a permanent Pushover rejection.
+
+    cloudmin retry-notification --id 42
+
+=head2 test-notification-target
+
+Queues a test for the enabled destination selected by C<--id>. Delivery runs at the configured interval, which defaults to 60 seconds. Check the delivery result with C<get-notifications>. Command success means the test was queued, not delivered.
+
+    cloudmin test-notification-target --id TARGET_ID
+
 =head2 get-statistics
 
 Shows the last hour of host history. C<--id> selects a VM by UUID. C<--from> and C<--to> set the range using Unix timestamps in seconds, up to 366 days apart. C<--points> sets the maximum number of points, from 60 to 1200. C<--entity> selects a device ID from a previous query.

@@ -1,0 +1,17 @@
+<header>Chat ID</header>
+
+<p>Enter the numeric Telegram chat ID, including its minus sign for a group
+or channel, or a public supergroup or channel username starting with <tt>@</tt>.
+Usernames accept 4 to 32 letters, digits or underscores. For a private chat,
+the user must first start the bot. For a group, add the bot and allow it to
+send messages. For a channel, give it permission to post.</p>
+
+<p>To find a numeric ID, send a command to your bot and read <tt>message.chat.id</tt>
+in its <a href="https://core.telegram.org/bots/api#getupdates"><tt>getUpdates</tt></a>
+response. In a group, address the command to the bot, such as
+<tt>/start@your_bot</tt>. For a channel, read <tt>channel_post.chat.id</tt> after
+posting a message. If the bot already receives updates through a webhook,
+read those updates instead.
+Cloudmin does not discover IDs automatically.</p>
+
+<footer>

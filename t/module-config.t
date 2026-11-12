@@ -105,6 +105,40 @@ require "$Bin/../cloudmin-statistics-lib.pl";
 	   'failed service action does not request a successful return');
 	}
 
+# Saving the notification interval must not touch collection or navigation.
+{
+	no warnings qw(redefine once);
+	my @intervals;
+	# ensure_notification_schedule(interval) records
+	# the applied timer value.
+	local *main::ensure_notification_schedule = sub { push @intervals, $_[0] };
+	local %in = ( notifications_interval => 10 );
+	local $config{'notifications_interval'} = 60;
+	config_post_save({ notifications_interval => 10 },
+		{ notifications_interval => 60 });
+	is_deeply(\@intervals, [ 10 ], 'save applies the new notification interval');
+	is_deeply(\%in, { notifications_interval => 10 },
+		'notification save leaves navigation unchanged');
+	# A save without the interval field must not reschedule the checks.
+	%in = ( host_details => 'always' );
+	config_post_save({ notifications_interval => 10 }, { });
+	is_deeply(\@intervals, [ 10 ], 'other categories do not reschedule checks');
+	# Saving the same interval again still updates the timer, so a failed
+	# update must be reported.
+	# error(message) converts save failures into catchable exceptions.
+	local *main::error = sub { die $_[0] };
+	# error_message(error) preserves the fixture exception for assertions.
+	local *main::error_message = sub { $_[0] };
+	# error_html(error) escapes the message without rendering a live page.
+	local *main::error_html = sub { html_escape($_[0]) };
+	# ensure_notification_schedule(interval) simulates an update failure.
+	local *main::ensure_notification_schedule = sub { die "Timer failed\n" };
+	%in = ( notifications_interval => 10 );
+	eval { config_post_save({ notifications_interval => 10 },
+		{ notifications_interval => 10 }); };
+	like($@, qr/Timer failed/, 'repeated save reports a timer update failure');
+	}
+
 # Each configured table keeps headings, sort types and object IDs aligned.
 foreach my $key (qw(machine_columns image_columns network_columns
 	storage_pool_columns storage_volume_columns backup_columns
@@ -211,6 +245,12 @@ foreach my $key (qw(machine_columns image_columns network_columns
 	       'read-only templates cannot acquire controls through configuration');
 	}
 
+# The notification interval widget must preserve and enforce the hourly limit.
+my $interval_field = show_cloudmin_number(3600, '', 15, '',
+	'notifications_interval');
+like($interval_field, qr/value="3600"/, 'hourly check interval stays visible');
+like($interval_field, qr/\bmax="3600"/, 'check interval has an hourly maximum');
+
 # Creation and detail sections stay collapsed without an explicit selection.
 is_deeply([ map { $_->[0] } view_selection('machine_create_sections', undef) ],
 	  [ ], 'optional creation sections default to collapsed');
@@ -241,7 +281,7 @@ is(parse_cloudmin_fields('', '', 15, 'cloudmin_fields',
 	# error(message) turns Webmin validation failures into
 	# catchable assertions.
 	local *main::error = sub { die $_[0] };
-	foreach my $key (qw(bridge_confirm_timeout)) {
+	foreach my $key (qw(bridge_confirm_timeout notifications_interval)) {
 		my ($default, $min, $max) = number_setting($key);
 		my $parser = \&parse_cloudmin_number;
 		# Form validation rejects bad input; runtime
@@ -259,7 +299,9 @@ is(parse_cloudmin_fields('', '', 15, 'cloudmin_fields',
 		foreach my $value ( $min, $default, $max ) {
 			%in = ( $key => $value );
 			is($parser->('', $key, 15, '', $key),
-			   $value, "$key accepts its valid limits");
+			   $value, "$key accepts valid values");
+			is(config_number($key, $value), $value,
+			   "$key uses the saved interval at runtime");
 			}
 		}
 	}

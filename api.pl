@@ -45,7 +45,7 @@ my $ok = eval {
 	# Local root reviews and mutations retain the browser token contract.
 	$input->{'token'} ||= get_image_jobs()->form_token('root')
 		if (
-			$action !~ /\A(?:options|machines|statistics|statistics_export|settings|status|list|snapshots|clone_options|image_options|backups|bridges|bridge_status|storage|license|ssh_keys|guest_ssh_keys)\z/);
+			$action !~ /\A(?:notifications|notification_config|options|machines|statistics|statistics_export|settings|status|list|snapshots|clone_options|image_options|backups|bridges|bridge_status|storage|license|ssh_keys|guest_ssh_keys)\z/);
 	my $result = call_vm_api(1, $action, $input);
 	# Options give clients a token for their subsequent creation request.
 	$result->{'token'} = get_image_jobs()->form_token('root')

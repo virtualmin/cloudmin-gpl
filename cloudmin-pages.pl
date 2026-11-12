@@ -1375,13 +1375,16 @@ if ($vm) {
 		     (defined(&can_vm_webmin) &&
 		      can_vm_webmin($vm->{'uuid'}))));
 	# Log searches can reveal host activity beyond assigned guests.
-	push(@items, { type => 'item', desc => $text{'log_vm_title'},
+	push(@items, { type => 'item', desc => $text{'left_log'},
 		       link => get_action_log_url($vm) })
 		if ($log && can_access('host'));
 	# Hide guest history in the menu when collection is disabled.
-	push(@items, { type => 'item', desc => $text{'statistics_guest_title'},
+	push(@items, { type => 'item', desc => $text{'left_statistics'},
 		       link => "$base/statistics.cgi?id=$id" })
 		if (statistics_enabled());
+	# Notification history remains available when statistics are disabled.
+	push(@items, { type => 'item', desc => $text{'left_notifications'},
+		link => "$base/notifications.cgi?id=$id" });
 	}
 # Separate guest actions from host tools; an empty host already has a divider.
 push(@items, { type => 'hr' }) if ($vm);
@@ -1389,7 +1392,8 @@ foreach my $entry ( [ index => 'left_overview' ], [ images => 'left_images' ],
 		    [ storage => 'left_storage' ], [ networks => 'net_title' ],
 		    [ snapshots => 'snapshots_all' ],
 		    [ backups => 'backups_title' ],
-		    [ jobs => 'index_jobs' ] ) {
+		    [ jobs => 'index_jobs' ],
+		    [ notifications => 'left_notifications_all' ] ) {
 	# Delegated users get an overview of assigned VMs without
 	# links to host tools.
 	next if ($entry->[0] ne 'index' && !can_access('host'));

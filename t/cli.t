@@ -237,8 +237,34 @@ return ( $code, $out, $err, \@calls );
 		}
 	}
 
+# Exercise the CLI's JSON-file mapping without a real destination or rule.
+open(my $notification, '>', "$tmp/notification.json") || die $!;
+print {$notification} '{"name":"Fixture"}';
+close($notification);
 # Each entry supplies the expected API action, CLI arguments and request body.
 my %cases = (
+	'retry-notification' => [ 'retry_notification', [ '--id', '42' ],
+		{ object => 42 } ],
+	'get-notifications' => [ 'notifications', [ '--cursor', '0' ], { cursor => 0 } ],
+	'get-notification-config' => [ 'notification_config', [ ], { } ],
+	'save-notification-target' => [ 'save_notification_target',
+		[ '--file', "$tmp/notification.json" ], { target => { name => 'Fixture' } } ],
+	'save-notification-rule' => [ 'save_notification_rule',
+		[ '--file', "$tmp/notification.json" ], { rule => { name => 'Fixture' } } ],
+	'delete-notification-target' => [ 'delete_notification_target',
+		[ '--id', 'target-id' ], { object => 'target-id' } ],
+	'delete-notification-rule' => [ 'delete_notification_rule',
+		[ '--id', 'rule-id' ], { object => 'rule-id' } ],
+	'test-notification-target' => [ 'test_notification_target',
+		[ '--id', 'target-id' ], { object => 'target-id' } ],
+	'set-notification-target-enabled' => [
+		'set_notification_target_enabled',
+		[ '--id', 'target-id', '--enabled', 'no' ],
+		{ object => 'target-id', enabled => 0 } ],
+	'set-notification-rule-enabled' => [
+		'set_notification_rule_enabled',
+		[ '--id', 'rule-id', '--enabled', 'yes' ],
+		{ object => 'rule-id', enabled => 1 } ],
 	'list-systems' => [ 'machines', [ ], { } ],
 	'get-system' => [ 'settings', [ ], { id => $uuid } ],
 	# Statistics reads pass their bounds and device selection
@@ -526,7 +552,7 @@ foreach my $command (@{Cloudmin::CLI::commands()}) {
 
 # The API action set comes from its public contract, not the CLI definitions.
 my @actions =
-	qw(download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines statistics statistics_export review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
+	qw(retry_notification notifications notification_config save_notification_target save_notification_rule set_notification_target_enabled set_notification_rule_enabled delete_notification_target delete_notification_rule test_notification_target download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines statistics statistics_export review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
 my %mapped;
 foreach my $c (@{Cloudmin::CLI::commands()}) {
 	$mapped{$_} =
@@ -914,6 +940,23 @@ for my $command ( 'delete-volume', 'unregister-pool' ) {
 		     'incomplete or conflicting NFS options rejected');
 		ok(!@$requests,
 		   'invalid NFS CLI does not call the API');
+		}
+	}
+
+# API names are characters; both human and JSON output must be valid UTF-8.
+{
+	my $name = "Gr\x{f6}\x{df}e \x{41c} \x{c3}\x{a9}";
+	for my $flags ([ ], [ '--json' ]) {
+		# override(action, input, calls) supplies
+		# decoded names without a host.
+		my ($code, $out, $err) = run_cli(
+			[ 'get-notification-config', @$flags ], sub {
+			return { rules => [ { name => $name } ], targets => [ ] };
+			});
+		is($code, 0, 'Unicode notification listing succeeds');
+		is($err, '', 'Unicode listing produces no warnings');
+		like(Encode::decode('UTF-8', $out), qr/\Q$name\E/,
+			'Unicode name survives CLI output');
 		}
 	}
 

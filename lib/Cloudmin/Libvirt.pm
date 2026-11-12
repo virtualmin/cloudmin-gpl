@@ -1777,7 +1777,12 @@ sub get_storage_pool_record
 {
 my ($self, $pool, $include_volumes) = @_;
 my $storage_error = $self->{'storage_errors'}->{$pool->get_uuid_string()};
-my $active = !$storage_error && eval { $pool->is_active() } ? 1 : 0;
+# Keep an unreadable active flag distinct from a confirmed inactive pool.
+my $active_status = !$storage_error ? eval { $pool->is_active() ? 1 : 0 } : undef;
+# LVM reports this error when its inventory confirms the volume group is absent.
+# Other inventory errors still leave its status unknown.
+$active_status = 0 if ($storage_error || '') eq 'LVM volume group is missing';
+my $active = $active_status ? 1 : 0;
 my $persistent = eval { $pool->is_persistent() } ? 1 : 0;
 my $autostart = $persistent && eval { $pool->get_autostart() } ? 1 : 0;
 my $info = $active ? (eval { $pool->get_info() } || { }) : { };
@@ -1825,6 +1830,7 @@ return {
 	'active' => $active,
 	'persistent' => $persistent,
 	'autostart' => $autostart,
+	'active_known' => defined($active_status) ? 1 : 0,
 	'capacity' => $info->{'capacity'} || 0,
 	'allocation' => $info->{'allocation'} || 0,
 	'available' => $info->{'available'} || 0,

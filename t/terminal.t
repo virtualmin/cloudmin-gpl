@@ -227,11 +227,12 @@ is_deeply(
 					  'snapshots.cgi?id='.$uuid,
 					  'remote_access.cgi?id='.$uuid,
 					  'statistics.cgi?id='.$uuid,
+					  'notifications.cgi?id='.$uuid,
 					  'index.cgi',
 					  'images.cgi', 'storage.cgi',
 					  'networks.cgi',
 					  'snapshots.cgi', 'backups.cgi',
-					  'jobs.cgi',
+					  'jobs.cgi', 'notifications.cgi',
 					  'statistics.cgi' ) ],
 	'guest links precede global tools, each group ending with its history');
 # Module configuration and presets share Virtualmin's settings category.
@@ -291,7 +292,7 @@ for my $grant ( 'terminal', 'console' ) {
 @menu = get_menu_items([ ], undef, 0, 1);
 ok(!grep({ ($_->{'type'} || '') eq 'menu' } @menu),
    'empty inventory has no selector');
-is(scalar(grep { ($_->{'type'} || '') eq 'item' } @menu), 9,
+is(scalar(grep { ($_->{'type'} || '') eq 'item' } @menu), 10,
    'empty menu keeps creation and global links');
 @menu = get_menu_items([ $vm, $stopped ], 'removed', 0, 1);
 ($selector) = grep { ($_->{'type'} || '') eq 'menu' } @menu;

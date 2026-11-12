@@ -21,7 +21,7 @@ my ($tick) =
 die 'Statistics collection sections not found' unless $functions && $tick;
 our ($adapter, $connection, $sampler, $settings, %vms, %guests, %due,
      %failures,
-     %generation, %dirty, $next_inventory, $pools, $next_pools, $clock,
+     %generation, %dirty, $next_inventory, $pools, $pool_states, $pool_checked_at, $next_pools, $clock,
      $wall_clock);
 
 # time(), clock_gettime(kind) and CLOCK_MONOTONIC() supply a controlled tick.
@@ -151,15 +151,15 @@ eval $functions.'; 1' or die $@;
 	return [
 		{ uuid => 'p1', name => 'default', type => 'dir', target =>
 									  '/var/lib/libvirt/images',
-		  active => 1, capacity => 100, allocation => 40,
+		  active => 1, active_known => 1, capacity => 100, allocation => 40,
 		  available => 60, fsid => 'f1' },
 		{ uuid => 'p2', name => 'iso', type => 'dir', target =>
 								      '/var/lib/libvirt/iso',
-		  active => 1, capacity => 100, allocation => 40,
+		  active => 1, active_known => 1, capacity => 100, allocation => 40,
 		  available => 60, fsid => 'f1' },
-		{ uuid => 'p3', name => 'vg0', type => 'logical', active => 1,
+		{ uuid => 'p3', name => 'vg0', type => 'logical', active => 1, active_known => 1,
 		  capacity => 50, allocation => 10, available => 40 },
-		{ uuid => 'p4', name => 'old', type => 'dir', active => 0,
+		{ uuid => 'p4', name => 'old', type => 'dir', active => 0, active_known => 1,
 		  capacity => 7, allocation => 7, available => 0 },
 	];
 	}
@@ -175,7 +175,7 @@ sub fixture
 %due = ();
 %failures = ();
 %generation = ();
-$pools = undef;
+$pools = $pool_states = $pool_checked_at = undef;
 $next_pools = 0;
 $clock = 100;
 $wall_clock = 1700000000;
@@ -393,6 +393,10 @@ for my $failure ( 'inventory', 'bulk' ) {
 	my ($bad, $saved_adapter) = fixture();
 	is_deeply([ map { $_->{name} } @$pools ], [ qw(default iso vg0) ],
 		  'active storage pools are listed with the inventory');
+	is_deeply([ map { [ $_->{name}, $_->{active} ] } @$pool_states ],
+		[ [ 'default', 1 ], [ 'iso', 1 ], [ 'vg0', 1 ], [ 'old', 0 ] ],
+		'health inventory retains inactive pools separately from usage');
+	is($pool_checked_at, $wall_clock, 'health inventory records its own freshness');
 	advance();
 	run_tick(0);
 	is($saved_adapter->{pool_reads}, 1,

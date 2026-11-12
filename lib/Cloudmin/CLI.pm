@@ -187,6 +187,51 @@ $add->('export-statistics', 'statistics_export',
 		       option('s', help =>
 					   'Cursor returned by the previous export batch'),
        });
+# Notification commands share the API's authorization and validation.
+$add->('get-notifications', 'notifications', 'Lists notification events.',
+	group => 'Notifications', options => {
+		id => option('s', help => 'Limit to one virtual machine UUID'),
+		cursor => option('i', help =>
+			'Read after this event ID. Use 0 to start at the oldest'),
+		limit => option('i', help => 'Maximum events, from 1 to 500'),
+	});
+$add->('get-notification-config', 'notification_config',
+	'Shows notification rules, destinations and worker status.',
+	group => 'Notifications');
+# Keep credentials in JSON input, not command-line options or audit output.
+for my $kind (qw(target rule)) {
+	$add->('save-notification-'.$kind, 'save_notification_'.$kind,
+		'Saves a notification '.$kind.' from a JSON object.',
+		group => 'Notifications', options => {
+			file => option('file', field => $kind, json => 'HASH', required => 1,
+				secret => 1, help => 'JSON file, or - for stdin'),
+		});
+	$add->('delete-notification-'.$kind, 'delete_notification_'.$kind,
+		'Deletes a notification '.$kind.'.', group => 'Notifications',
+		options => { id => option('s', field => 'object', required => 1,
+			help => 'Saved notification '.$kind.' ID') });
+	# Switch only the saved state, keeping every other setting.
+	$add->('set-notification-'.$kind.'-enabled',
+		'set_notification_'.$kind.'_enabled',
+		'Enables or disables a notification '.$kind.'.',
+		group => 'Notifications', options => {
+			id => option('s', field => 'object', required => 1,
+				help => 'Saved notification '.$kind.' ID'),
+			enabled => option('s', required => 1, boolean => 1,
+				values => [ qw(yes no) ],
+				help => 'Whether the '.$kind.' is enabled'),
+		});
+	}
+# Queue delivery work for the worker rather than waiting on a transport.
+$add->('retry-notification', 'retry_notification',
+	'Retries failed deliveries for one event.', group => 'Notifications',
+	options => { id => option('i', field => 'object', required => 1,
+		help => 'Notification event ID') });
+$add->('test-notification-target', 'test_notification_target',
+	'Queues a test notification for the next delivery run.',
+	group => 'Notifications', options => {
+		id => option('s', field => 'object', required => 1, help => 'Destination ID'),
+	});
 # Power actions differ in confirmation and waiting: full restart is a job,
 # simple state changes are polled, and reboot/reset return on acceptance.
 foreach my $item (
@@ -867,7 +912,7 @@ return bless { out => \*STDOUT, err => \*STDERR, in => \*STDIN,
 # read_actions() identifies requests that do not need a form token.
 sub read_actions
 {
-return qw(options machines statistics statistics_export settings status list snapshots clone_options image_options backups bridges bridge_status storage license ssh_keys guest_ssh_keys);
+return qw(notifications notification_config options machines statistics statistics_export settings status list snapshots clone_options image_options backups bridges bridge_status storage license ssh_keys guest_ssh_keys);
 }
 
 # command(self, name) finds a command definition without contacting the host.
@@ -1612,6 +1657,8 @@ else {
 	$text = sprintf($command->{done},
 			scalar_text('', $self->{done_name}))."\n";
 	}
+# JSON returns bytes; decoded names in human output need encoding too.
+$text = Encode::encode('UTF-8', $text) if Encode::is_utf8($text);
 print { $self->{out} } $text;
 # Human bridge output explains the next step without committing the change.
 if (!$global->{json} && ref($result) eq 'HASH' &&

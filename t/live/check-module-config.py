@@ -475,7 +475,7 @@ try:
     )
     # Re-enabling must restore both guest and host navigation links.
     menu = request(menu_path)
-    assert 'Guest Statistics' in menu and 'Host Statistics' in menu, (
+    assert 'statistics.cgi?id=' in menu and 'Host Statistics' in menu, (
         'Statistics menu links did not return'
     )
     # The process can start before its first sample is available.

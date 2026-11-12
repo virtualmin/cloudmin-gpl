@@ -51,3 +51,5 @@ statistics_five_days=Keep five-minute history in days,15,cloudmin_number,statist
 statistics_hour_days=Keep hourly history in days,15,cloudmin_number,statistics_hour_days
 statistics_budget=History disk budget in MiB,15,cloudmin_number,statistics_budget
 statistics_uplinks=Host network uplinks,0
+line10=Notifications,11
+notifications_interval=Notification check interval in seconds,15,cloudmin_number,notifications_interval

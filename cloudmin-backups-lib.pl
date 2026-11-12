@@ -244,9 +244,28 @@ return get_vm_jobs()->lock('backup-schedules', sub {
 	});
 }
 
-# run_backup_schedule(id) backs up selected machines serially,
-# then applies retention.
+# run_backup_schedule(id) runs a saved backup schedule and reports failures.
+# id identifies the schedule. Keep its original error if notification fails.
 sub run_backup_schedule
+{
+my ($id) = @_;
+my $result;
+# Preserve the original failure even if notification recording also fails.
+my $ok = eval { $result = run_backup_schedule_work($id); 1 };
+my $error = $@;
+if (!$ok) {
+	# Preparation and retention failures may never produce a controller job.
+	require "$module_root_directory/cloudmin-notifications-lib.pl";
+	eval { notification_schedule_failed($id) };
+	warn "Cannot record scheduled backup notification: $@" if $@;
+	die $error;
+	}
+return $result;
+}
+
+# run_backup_schedule_work(id) runs the saved schedule under its owner's grants.
+# Back up selected guests serially, then apply this schedule's retention.
+sub run_backup_schedule_work
 {
 my ($id) = @_;
 require './server-manager-lib.pl' if (!defined(&get_vm_jobs));

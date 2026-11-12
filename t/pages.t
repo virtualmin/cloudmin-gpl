@@ -1857,7 +1857,7 @@ unlike($pending_row->[1], qr/<a[^>]*\shidden(?:\s|>)/,
 			   '') eq '/server-manager/statistics.cgi' &&
 			$_->{'desc'} eq 'Host Statistics' } @menu),
 		   'host statistics remain available without guests, including read-only mode');
-		ok(!grep({ ($_->{'desc'} || '') eq 'Guest Statistics' } @menu),
+		ok(!grep({ ($_->{'desc'} || '') eq 'Statistics' } @menu),
 		   'empty inventory has no guest statistics link');
 		}
 	}

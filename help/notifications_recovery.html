@@ -1,0 +1,13 @@
+<header>Send recovery notifications</header>
+
+<p>Enabling recovery notifications sends a message when fresh readings confirm
+that a condition has cleared after an alert. This is enabled by default.
+Missing readings do not count as recovery.</p>
+
+<p>Numeric conditions must pass the threshold by two percentage points for usage,
+or 2% of the threshold for other measurements. A zero threshold clears when
+its comparison stops matching. Status conditions recover when the guest,
+agent, pool or collector returns to its expected state. Disabling recovery
+messages keeps alerts and reminders. Job failures have no recovery message.</p>
+
+<footer>

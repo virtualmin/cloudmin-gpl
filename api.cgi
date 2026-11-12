@@ -30,7 +30,7 @@ my $ok = eval {
 	# POST and a signed token.
 	die "Use POST for virtual machine changes\n"
 		if (
-			$action !~ /\A(?:options|machines|statistics|statistics_export|settings|status|list|snapshots|clone_options|image_options|backups|bridges|bridge_status|storage|license|ssh_keys|guest_ssh_keys)\z/ &&
+			$action !~ /\A(?:notifications|notification_config|options|machines|statistics|statistics_export|settings|status|list|snapshots|clone_options|image_options|backups|bridges|bridge_status|storage|license|ssh_keys|guest_ssh_keys)\z/ &&
 			($ENV{'REQUEST_METHOD'} || '') ne 'POST');
 	$result = call_vm_api($in{'version'} || '1', $action, \%in);
 	# Administrators and users with action grants get

@@ -125,6 +125,10 @@ my %gauges =
 	( vcpus => $live->{vcpus}, memory_allocated => $live->{memory_bytes},
 	  memory_used => $live->{memory_used_bytes}, disk_capacity =>
 							     $live->{disk_capacity_bytes} );
+# Expose probe availability separately so notifications need no raw error text.
+my $agent_checked = $guest ? $guest->{checked_at} : undef;
+my $agent_available = $guest && $agent_checked
+	? ($guest->{error} ? 0 : 1) : undef;
 # Filesystem gauges expire independently of CPU and disk counter readings.
 if ($guest && !$guest->{error} &&
     $wall - ($guest->{checked_at} || 0) <= max(300,
@@ -259,7 +263,9 @@ for my $key (keys %mapping) {
 	}
 unshift @rows, $row;
 return ( \@rows,
-	 { resources => $live, guest => $guest, state => $vm->{state}, active =>
+	 { resources => $live, guest => $guest, name => $vm->{name},
+	   agent_available => $agent_available, agent_checked_at => $agent_checked,
+	   state => $vm->{state}, active =>
 									       $vm->{active}
 										       ? 1
 										       : 0,

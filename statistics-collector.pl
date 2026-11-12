@@ -43,7 +43,7 @@ my $sampler = Cloudmin::StatsCollector->new(interval => 10);
 # separate from history.
 my (%vms, %dirty, %generation, %guests, %due, %failures);
 my ($adapter, $connection, @subscriptions, $store, $settings, $pending,
-    $pools);
+    $pools, $pool_states, $pool_checked_at);
 my ($next_sample, $next_inventory, $next_database, $next_cleanup,
     $next_pools) =
 	( 0, 0, 0, 0, 0 );
@@ -361,9 +361,16 @@ while (!$stop) {
 		# only drops the pools.
 		if ($adapter && $mono >= $next_pools) {
 			my $listed = eval {
-				my @active =
-					grep { $_->{active} } @{
-						$adapter->list_storage_pools()};
+				my $inventory = $adapter->list_storage_pools();
+				# Status alerts need inactive pools too. Keep
+				# them separate from usage totals, which
+				# count only active pools.
+				$pool_states = [ map { my $pool = $_;
+					+{ uuid => $pool->{uuid}, name => $pool->{name},
+					   active => $pool->{active_known} ? $pool->{active} : undef }
+					} @$inventory ];
+				$pool_checked_at = time();
+				my @active = grep { $_->{active} } @$inventory;
 				$pools = [ ];
 				for my $pool (@active) {
 					push @$pools,
@@ -377,13 +384,13 @@ while (!$stop) {
 				push @errors,
 					'Storage pool collection failed: '.
 					error_message($@);
-				$pools = undef;
+				$pools = $pool_states = $pool_checked_at = undef;
 				}
 			$next_pools = $mono + 60;
 			}
 		# A lost libvirt connection also makes the cached
 		# pool list unavailable.
-		$pools = undef unless $adapter;
+		$pools = $pool_states = $pool_checked_at = undef unless $adapter;
 		my $host_ok = eval {
 			$mono = clock_gettime(CLOCK_MONOTONIC);
 			$wall = time();
@@ -398,6 +405,10 @@ while (!$stop) {
 						 pools => $pools });
 			push @$rows, @$samples;
 			$host = $value;
+			# Publish pool states and their read time
+			# for status alerts.
+			$host->{pool_states} = $pool_states;
+			$host->{pool_checked_at} = $pool_checked_at;
 			push @errors, $value->{error} if $value->{error};
 			1;
 			};

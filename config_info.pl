@@ -3,11 +3,22 @@ use warnings;
 our (%in, %text, $module_root_directory);
 require 'server-manager-lib.pl';
 
-# config_post_save(new, old) applies collection settings after Webmin saves.
-# Both arguments are configuration hashes. Old is unused.
+# config_post_save(new, old) applies service and schedule settings after saving.
+# Both arguments are configuration hashrefs; old is unused. Only settings
+# submitted in %in trigger service or timer changes.
 sub config_post_save
 {
 my ($new, $old) = @_;
+# Use the saved interval even while this request has the old configuration.
+if (exists($in{'notifications_interval'})) {
+	my $ok = eval {
+		ensure_notification_schedule(config_number('notifications_interval',
+			$new->{'notifications_interval'}));
+		1;
+		};
+	# Report a failed reschedule so saving again can retry it.
+	error(error_html(error_message($@))) unless $ok;
+	}
 # Saving other categories must not change the collector's service state.
 return unless exists($in{'statistics_enabled'});
 require "$module_root_directory/cloudmin-statistics-lib.pl";

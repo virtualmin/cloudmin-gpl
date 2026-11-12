@@ -1,0 +1,104 @@
+/* Match the compact Create Snapshot header action. */
+.ui_page .notification-add.ui_action {
+	height: 26px;
+	font-size: 13px !important;
+}
+
+/* Rule and destination rows share the native widget palette. */
+.notification-records {
+	border: 1px solid var(--ui-border);
+	background: var(--ui-surface);
+	container-type: inline-size;
+}
+.notification-records .notification-row {
+	display: grid;
+	align-items: center;
+	gap: 16px;
+	padding: 12px 16px;
+	border-top: 1px solid var(--ui-border-soft);
+}
+/* Share column widths between headings and rows, reserving action space. */
+.notification-destinations .notification-row {
+	grid-template-columns: minmax(0, 2.5fr) minmax(80px, .8fr) minmax(0, 1.9fr) 90px 180px;
+}
+.notification-rules .notification-row {
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 2fr) 90px 80px;
+}
+.notification-records .notification-head {
+	border-top: 0;
+	padding-block: 8px;
+	font-size: .85em;
+	font-weight: 600;
+	color: var(--ui-fg-muted);
+}
+/* Let long names wrap without pushing adjacent columns out of the list. */
+.notification-cell { min-width: 0; }
+.notification-destination, .notification-name { display: flex; align-items: center; gap: 14px; }
+.notification-destination-icon { flex: none; color: var(--ui-fg-muted); font-size: 20px; }
+.notification-destination-text { min-width: 0; }
+.notification-destination-name, .notification-rule-name { font-weight: 600; overflow-wrap: anywhere; }
+.ui_page .notification-destination-name a.text-link,
+.ui_page .notification-rule-name a.text-link { color: var(--ui-fg); }
+.notification-destination-type, .notification-rule-severity,
+.notification-delivery-error, .notification-muted { color: var(--ui-fg-muted); }
+.notification-destination-type, .notification-rule-severity,
+.notification-delivery-error { font-size: .9em; margin-top: 4px; overflow-wrap: anywhere; }
+/* Remove form spacing and keep each row's actions together. */
+.notification-records .notification-cell form { margin: 0; }
+.notification-records .notification-row-actions { flex-wrap: nowrap; justify-content: flex-end; }
+.notification-destination-type { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Line the first heading up with names that follow a row icon. */
+.notification-head [role=columnheader]:first-child { padding-inline-start: 34px; }
+/* Keep the native status dot without the chip border or filled background. */
+.notification-last_delivery .notification-delivery-status {
+	white-space: normal;
+	background: none;
+	border: 0;
+	padding: 0;
+	font-size: inherit;
+	color: var(--ui-fg);
+}
+.notification-last_delivery .ui_chip_dot { flex: none; }
+/* The actions column keeps its width but shows no heading. */
+.notification-head [role=columnheader]:last-child { visibility: hidden; }
+
+/* Use the actual content width, including an open navigation sidebar. */
+@container (max-width: 640px) {
+	.notification-records .notification-head { display: none; }
+	.notification-records .notification-row:not(.notification-head) {
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 14px;
+	}
+	/* Replace shared headings with labels beside the stacked row values. */
+	.notification-records [role=rowgroup] > .notification-row:first-child { border-top: 0; }
+	.notification-destination, .notification-name { grid-column: 1 / -1; }
+	.notification-used_by { grid-column: 1; }
+	.notification-enabled { grid-column: 2; grid-row: 2; display: flex; align-items: center; gap: 10px; }
+	.notification-enabled::before { content: attr(data-label); color: var(--ui-fg-muted); font-size: .9em; }
+	.notification-last_delivery { grid-column: 1; }
+	.notification-actions { grid-column: 2; }
+	.notification-condition, .notification-scope { grid-column: 1; }
+	.notification-condition::before, .notification-scope::before {
+		content: attr(data-label); display: block; color: var(--ui-fg-muted);
+		font-size: .85em; margin-bottom: 3px;
+	}
+}
+
+/* Narrow phones give long delivery errors their own line. */
+@container (max-width: 350px) {
+	.notification-last_delivery, .notification-scope, .notification-actions { grid-column: 1 / -1; }
+}
+
+/* Rule actions stay at the end while long guest selections can wrap. */
+.notification-rules .notification-actions { text-align: right; }
+.notification-scope { overflow-wrap: anywhere; }
+
+/* Let the option count set the height within these limits. */
+#notification-editor select[multiple] {
+	height: auto;
+	min-height: 50px;
+	max-height: 215px;
+	width: 100%;
+	max-width: 100%;
+}
+#notification-selected-guests { margin-top: 6px; }

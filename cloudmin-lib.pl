@@ -155,6 +155,11 @@ if ($action eq 'statistics' || $action eq 'statistics_export') {
 	require "$module_root_directory/cloudmin-statistics-lib.pl";
 	return call_statistics_api($action, $input);
 	}
+# Notification dispatch checks read scope and mutation grants before storage.
+if ($action =~ /\A(?:notifications|notification_config|set_notification_target_enabled|set_notification_rule_enabled|retry_notification|save_notification_target|save_notification_rule|delete_notification_target|delete_notification_rule|test_notification_target)\z/) {
+	require "$module_root_directory/cloudmin-notifications-lib.pl";
+	return call_notification_api($action, $input);
+	}
 # Delegate only the listed power actions; a token never substitutes for a grant.
 my $power =
 	$action =~ /\A(?:start|shutdown|reboot|suspend|resume|reset|force_off|autostart)\z/;
@@ -392,6 +397,11 @@ if (
 			my $method = $methods{$action};
 			$adapter->$method($id);
 			}
+		# Failure to save suppression must not hide a
+		# successful power action.
+		require "$module_root_directory/cloudmin-notifications-lib.pl";
+		eval { notification_planned_power($id, $action) };
+		warn "Cannot suppress planned guest downtime: $@" if $@;
 		webmin_log($action, 'vm', $vm->{'uuid'}, {
 			name => $vm->{'name'},
 			($action eq 'autostart'

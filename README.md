@@ -42,6 +42,7 @@ See [How to create a virtual machine](https://www.cloudmin.com/docs/getting-star
 - [Machine templates and resource plans](https://www.cloudmin.com/docs/virtual-machines/templates-and-plans/).
 - [Live hardware changes and virtual machine management](https://www.cloudmin.com/docs/virtual-machines/managing-virtual-machines/).
 - [Host and virtual machine statistics with local history](docs/statistics.md).
+- [Email, chat, push and webhook notifications with rules and delivery history](docs/notifications.md).
 - [Disk snapshots with restore and history](https://www.cloudmin.com/docs/virtual-machines/snapshots/).
 - [Full virtual machine clones](https://www.cloudmin.com/docs/virtual-machines/cloning/).
 - [Full backups, restore, schedules and retention](https://www.cloudmin.com/docs/backup-and-migration/backups-and-restore/).

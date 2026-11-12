@@ -1619,15 +1619,20 @@ def browser(cookies, theme, guest):
                 link = menu_link(path)
                 wait(link)
                 title = (
-                    'Host Statistics' if owner == 'host' else 'Guest Statistics'
+                    'Host Statistics' if owner == 'host' else 'Statistics'
                 )
                 assert evaluate(
                     '('
                     + link
-                    + ').textContent.includes('
+                    + ').textContent.trim().endsWith('
                     + json.dumps(title)
                     + ')'
                 )
+                if owner != 'host':
+                    # The guest link carries no host prefix.
+                    assert not evaluate(
+                        '(' + link + ').textContent.includes("Host Statistics")'
+                    )
                 # Check the shared chart icon supplied by this theme.
                 if theme == 'authentic-theme':
                     assert evaluate(

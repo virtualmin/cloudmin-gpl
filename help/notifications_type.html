@@ -1,0 +1,14 @@
+<header>Delivery method</header>
+
+<p>Email uses Webmin's mail settings. Generic webhooks send Cloudmin's event
+details as JSON. Slack, Discord, Teams Workflows, ntfy, Telegram, Pushover and
+Gotify receive readable messages in their own format.</p>
+
+<p>Slack and Discord need incoming webhook URLs. Teams needs a workflow using
+the Teams webhook trigger with access set to anyone. ntfy needs a topic URL
+and, if required, a bearer token. Telegram needs a chat ID and bot token.
+Pushover needs a user or group key and an application token. Gotify needs an
+HTTPS server URL and an application token.
+All methods support test messages and delivery history.</p>
+
+<footer>

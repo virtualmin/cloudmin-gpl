@@ -41,3 +41,4 @@ statistics_five_days=30
 statistics_hour_days=365
 statistics_budget=1024
 statistics_uplinks=
+notifications_interval=60

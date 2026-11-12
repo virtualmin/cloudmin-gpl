@@ -480,4 +480,62 @@ for my $block ( 0, 1 ) {
 		}
 	}
 
+# Check that only a confirmed missing volume group alerts.
+subtest 'Missing LVM storage alerts and recovers' => sub {
+	require "$Bin/../lib/Cloudmin/Notifications.pm";
+	require "$Bin/../lib/Cloudmin/NotificationSignals.pm";
+	my $mode = 'present';
+	# runner(command, [args...]) returns a chosen
+	# inventory or a read failure.
+	my $lvm = Cloudmin::LVM->new(runner => sub {
+		my ($command) = @_;
+		die "LVM vgs failed: fixture error\n" if $mode eq 'error';
+		return convert_to_json({ report => [ { vg =>
+			$mode eq 'missing' ? [ ] : $groups } ] }) if $command eq 'vgs';
+		return convert_to_json({ report => [ { lv => [ ] } ] });
+		});
+	{
+		package NotificationPoolConnection;
+		# list_all_storage_pools(self, [flags])
+		# returns the registered VG.
+		sub list_all_storage_pools { return bless { }, 'LVMPool'; }
+		}
+	# connection_factory(uri, readonly) supplies the fake pool connection.
+	my $adapter = Cloudmin::Libvirt->new(uri => 'qemu:///system',
+		connection_factory => sub { bless { }, 'NotificationPoolConnection' });
+	$adapter->{lvm} = $lvm;
+	# Evaluate one host-pool rule against each inventory result.
+	my $store = Cloudmin::Notifications->new(directory => tempdir(CLEANUP => 1));
+	my $target = $store->save_target({ name => 'Sink', type => 'email',
+		address => 'sink@example.invalid' })->{id};
+	$store->save_rule({ name => 'Pool', metric => 'pool_inactive', scope => 'host',
+		device => $native_id, targets => [ $target ], duration => 0,
+		cooldown => 0 }, 1000);
+	# Read failures must neither fire nor resolve an inactivity alert.
+	my $now = 1000;
+	for my $case ([ 'present', 1, 0 ], [ 'error', undef, 0 ],
+		[ 'missing', 0, 1 ], [ 'error', undef, 1 ], [ 'present', 1, 2 ]) {
+		# Each case gives the inventory result, the known state it must
+		# produce and the number of events so far.
+		$mode = $case->[0];
+		delete($lvm->{inventory});
+		my $record = $adapter->list_storage_pools()->[0];
+		my $active = $record->{active_known} ? $record->{active} : undef;
+		is($active, $case->[1], "$mode produces the correct known state");
+		# Publish the state as a snapshot, then run one check.
+		my $snapshot = { checked_at => $now, interval => 10, host => {
+			pool_checked_at => $now, pool_states => [ {
+				uuid => $native_id, name => 'storage', active => $active } ] } };
+		my $obs = Cloudmin::NotificationSignals::observations(
+			$store->configuration()->{rules}, $snapshot, $now, { });
+		$store->evaluate($obs, $now, { });
+		is(scalar(@{$store->history()->{events}}), $case->[2],
+			"$mode produces no false alert or recovery");
+		$now += 60;
+		}
+	# The whole sequence gives one alert and one recovery.
+	is_deeply([ map { $_->{phase} } @{$store->history()->{events}} ],
+		[ 'firing', 'resolved' ], 'missing VG alerts once and return recovers');
+	};
+
 done_testing();

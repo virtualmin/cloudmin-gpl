@@ -1,0 +1,12 @@
+<header>Duration in minutes</header>
+
+<p>A condition must persist for this many minutes before an alert is recorded.
+The default is 5 minutes. Enter zero or more minutes. Zero allows an alert at
+the next check, once the minimum time between new alerts has also passed.
+Checks run at the notification check interval from the module configuration.</p>
+
+<p>Missing readings or paused checks restart the waiting period and do not
+count as recovery. A condition that clears before its first alert leaves no
+alert or recovery event in history. Job failures ignore this setting.</p>
+
+<footer>

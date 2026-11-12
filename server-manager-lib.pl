@@ -33,5 +33,7 @@ require "$module_root_directory/cloudmin-tab-lib.pl";
 
 1;
 
-# Load backup callbacks for native cron as well as interactive API requests.
+# Webmin's scheduler loads this file before calling registered functions.
+# Load backup and notification callbacks for it and interactive requests.
 require "$module_root_directory/cloudmin-backups-lib.pl";
+require "$module_root_directory/cloudmin-notifications-lib.pl";

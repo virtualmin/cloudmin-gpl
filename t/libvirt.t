@@ -442,6 +442,16 @@ is($pools->[0]->{'volumes'}->[0]->{'allocation'}, 4 * 1024 * 1024,
 		is($adapter->get_storage_pool_record($pool)->{'capacity'},
 		   0,
 		   'inactive pools are not measured');
+		ok($adapter->get_storage_pool_record($pool)->{'active_known'},
+			'inactive status is positively known');
+		}
+	{
+		# A failed status read must not become an inactivity alert.
+		# is_active(self) simulates libvirt failing
+		# to read a pool's status.
+		local *TestStoragePool::is_active = sub { die "Fixture status failure\n" };
+		ok(!$adapter->get_storage_pool_record($pool)->{'active_known'},
+			'failed active-status lookup stays unknown');
 		}
 	{
 		local $pool->{'xml'} =

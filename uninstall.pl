@@ -1,9 +1,9 @@
-# Remove the command and license check when Webmin uninstalls this module.
+# Remove the CLI, collector and cron callbacks when uninstalling this module.
 use strict;
 use warnings;
 require 'server-manager-lib.pl';
 
-# module_uninstall() stops statistics and removes the CLI and license check.
+# module_uninstall() stops statistics and removes the CLI and cron callbacks.
 sub module_uninstall
 {
 # Stop the collector before deleting its executable or module state.
@@ -14,7 +14,7 @@ foreign_require('webmincron');
 foreach my $cron (webmincron::list_webmin_crons()) {
 	webmincron::delete_webmin_cron($cron)
 		if ($cron->{'module'} eq 'server-manager' &&
-		    $cron->{'func'} eq 'check_cloudmin_license');
+		    $cron->{'func'} =~ /\A(?:check_cloudmin_license|run_cloudmin_notifications)\z/);
 	}
 my $path = '/usr/sbin/cloudmin';
 # Leave absent commands, nonregular files and administrator-created links alone.

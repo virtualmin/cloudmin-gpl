@@ -178,6 +178,8 @@ my %settings = (
 	# Leave time for bridge application, whose service allows up to
 	# 90 seconds.
 	bridge_confirm_timeout => [ 180, 120, 900 ],
+	# Notification check interval in seconds: default 60, from 10 to 3600.
+	notifications_interval => [ 60, 10, 3600 ],
 	# Statistics defaults bound sampling cost, retention and disk use.
 	statistics_interval => [ 10, 5, 60 ],
 	statistics_guest_interval => [ 60, 60, 300 ],
