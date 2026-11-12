@@ -5,7 +5,6 @@ use Test::More;
 use lib "$Bin/lib";
 use CloudminTest;
 no warnings 'once';
-use JSON::PP;
 require "$Bin/../lib/Cloudmin/Status.pm";
 use Cwd ();
 require(Cwd::abs_path("$Bin/../cloudmin-access-lib.pl"));

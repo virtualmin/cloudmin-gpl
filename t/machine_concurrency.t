@@ -6,7 +6,6 @@ use CloudminTest;
 use Test::More;
 use File::Temp qw(tempdir);
 use Fcntl qw(:flock);
-use JSON::PP qw(encode_json decode_json);
 use POSIX ();
 require "$Bin/../lib/Cloudmin/Libvirt.pm";
 require "$Bin/../lib/Cloudmin/Jobs.pm";
@@ -68,7 +67,7 @@ while (!-e $_[0]) {
 		# Only a defined guest can be seen by the real
 		# prepare() conflict checks.
 		open(my $fh, '<', "$self->{directory}/domain") || die $!;
-		$options->{'domains'} = [ JSON::PP::decode_json(do { local $/;
+		$options->{'domains'} = [ WebminCore::convert_from_json(do { local $/;
 			<$fh> }) ];
 		close($fh);
 		}
@@ -132,8 +131,8 @@ while (!-e $_[0]) {
 	{
 	my ($self) = @_;
 	main::save("$self->{directory}/domain",
-		   JSON::PP::encode_json({ name => $self->{'name'},
-					   macs => [ '52:54:00:aa:bb:cc' ] }));
+		   WebminCore::convert_to_json({ name => $self->{'name'},
+					   macs => [ '52:54:00:aa:bb:cc' ] }, 0, 1));
 	}
 
 	# set_domain_autostart(self, uuid, enabled) - Makes no host changes.

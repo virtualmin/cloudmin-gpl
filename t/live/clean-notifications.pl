@@ -3,7 +3,6 @@
 # supplied fixture test event.
 use strict;
 use warnings;
-use JSON::PP ();
 # Run only as root from a shell.
 die "Run from a root Linux test shell\n" unless $^O eq 'linux' && $< == 0 &&
 	!$ENV{GATEWAY_INTERFACE};
@@ -18,7 +17,7 @@ $0 = "$module/notification-fixture.pl";
 require './server-manager-lib.pl';
 # Read only the event and target supplied by this fixture run.
 local $/;
-my $data = JSON::PP::decode_json(<STDIN>);
+my $data = WebminCore::convert_from_json(<STDIN>);
 die "Invalid fixture event\n" unless ($data->{event} || '') =~ /^\d+$/ &&
 	($data->{target} || '') =~ /^[a-f0-9]{32}$/;
 # cleanup(db) verifies event ownership before deleting it and its receipts.

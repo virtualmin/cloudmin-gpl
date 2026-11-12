@@ -5,7 +5,6 @@ use strict;
 use warnings;
 use FindBin qw($Bin);
 use Cwd qw(abs_path);
-use JSON::PP qw(decode_json encode_json);
 use POSIX ();
 
 BEGIN
@@ -35,9 +34,9 @@ require './lib/Cloudmin/Clones.pm';
 		if ($self->{'fixture_interrupt'}) {
 			# Exit without unwinding the worker, as
 			# after a controller crash.
-			print JSON::PP::encode_json(
+			print WebminCore::convert_to_json(
 				main::get_public_vm_job($self->{'jobs'}->get(
-					$id))),
+					$id)), 0, 1),
 				"\n";
 			STDOUT->flush();
 			POSIX::_exit(0);
@@ -62,7 +61,7 @@ my $action = shift(@ARGV);
 # Keep fixture inputs bounded before decoding controller-side settings.
 my $body = do { local $/; <STDIN> };
 die "Fixture input too large\n" if length($body) > 131072;
-my $input = decode_json($body);
+my $input = WebminCore::convert_from_json($body);
 my $jobs = get_vm_jobs();
 if ($action eq 'cleanup') {
 	# Delete only finished fixture journals after their
@@ -117,4 +116,4 @@ bless($service, 'CloneFixtureFailure');
 $service->{'fixture_cancel'} = $action eq 'cancel';
 $service->{'fixture_interrupt'} = $action eq 'interrupt';
 $service->run($id);
-print encode_json(get_public_vm_job($jobs->get($id))), "\n";
+print WebminCore::convert_to_json(get_public_vm_job($jobs->get($id)), 0, 1), "\n";

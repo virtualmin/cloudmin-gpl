@@ -5,7 +5,6 @@ use strict;
 use warnings;
 use FindBin qw($Bin);
 use Cwd qw(abs_path);
-use JSON::PP qw(decode_json);
 
 # snapshot_jobs(database, uuid) includes terminal jobs outside recent history.
 sub snapshot_jobs
@@ -14,7 +13,7 @@ my ($db, $uuid) = @_;
 # A host with no job database has no fixture records to inspect.
 return [ ] if (!$db);
 return [ grep { ($_->{'request'}->{'uuid'} || '') eq $uuid }
-	 map { decode_json($_->[0]) } @{$db->selectall_arrayref(
+	 map { WebminCore::convert_from_json($_->[0]) } @{$db->selectall_arrayref(
 		 'SELECT record FROM jobs')} ];
 }
 

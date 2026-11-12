@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use Test::More;
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use CloudminTest;
 use File::Temp qw(tempdir);
 require "$Bin/../lib/Cloudmin/Worker.pm";
 
@@ -22,17 +24,17 @@ open(my $script, '>', "$tmp/worker.pl") or die $!;
 print { $script } <<'PERL';
 use strict;
 use warnings;
-use JSON::PP qw(encode_json);
+use WebminCore;
 my ($work, $mode) = @ARGV;
 open(my $events, '>>', "$work/events") or die $!;
-print {$events} encode_json({ type => 'identity', uid => 1001, euid => 1001 }), "\n";
+print {$events} convert_to_json({ type => 'identity', uid => 1001, euid => 1001 }, 0, 1), "\n";
 # An explicit worker error must survive even after the time limit.
 if ($mode eq 'error') {
-	print {$events} encode_json({ type => 'error', message => 'Fixture task error' }), "\n";
+	print {$events} convert_to_json({ type => 'error', message => 'Fixture task error' }, 0, 1), "\n";
 }
 # A successful protocol result must not be mistaken for a timeout.
 elsif ($mode eq 'success') {
-	print {$events} encode_json({ type => 'result', data => { done => 1 } }), "\n";
+	print {$events} convert_to_json({ type => 'result', data => { done => 1 } }, 0, 1), "\n";
 }
 # Launcher stderr must remain available when no worker result was written.
 elsif ($mode eq 'diagnostic') {
@@ -50,7 +52,7 @@ for my $case ( [ 'silent', 2 ], [ 'silent', 181 ], [ 'error', 181 ],
 	my $work = "$tmp/$mode-$elapsed";
 	mkdir($work) or die $!;
 	my $runner = LaunchFixture->new();
-	$runner->{'command'} = [ $^X, "$tmp/worker.pl", $work, $mode ];
+	$runner->{'command'} = [ $^X, '-I'.$CloudminTest::webmin_root, "$tmp/worker.pl", $work, $mode ];
 	my $clock_reads = 0;
 	no warnings qw(redefine once);
 	local *Cloudmin::Worker::path = sub { $work };

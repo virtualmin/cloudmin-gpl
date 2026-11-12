@@ -4,7 +4,6 @@
 package virtual_server;
 use strict;
 use warnings;
-use JSON::PP qw(encode_json);
 use Cwd qw(abs_path);
 my $fixture_path = abs_path($0);
 # Restrict application setup and probes to the nested fixture's hostnames.
@@ -73,10 +72,10 @@ my $marker = read_file_contents("$hosted->{home}/public_html/clone-marker.txt");
 die "Hosted data changed\n" unless $marker eq "preserved website\n";
 my %miniserv;
 get_miniserv_config(\%miniserv);
-print encode_json({ domain => $domain->{'dom'}, certificate =>
+print WebminCore::convert_to_json({ domain => $domain->{'dom'}, certificate =>
 							$domain->{'ssl_cert'},
 		    hosted_certificate => $hosted->{'ssl_cert'},
 		    webmin_certificate => $miniserv{'certfile'} ||
 					  $miniserv{'keyfile'},
 		    renewal => scalar(grep { /^letsencrypt/ &&
-		$domain->{$_} } keys %$domain) }), "\n";
+		$domain->{$_} } keys %$domain) }, 0, 1), "\n";

@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use DBI;
 use DBD::SQLite ();
-use JSON::PP ();
+use WebminCore qw(convert_from_json);
 use Fcntl qw(:DEFAULT :flock O_NOFOLLOW);
 use File::Path qw(make_path);
 use List::Util qw(min max);
@@ -121,7 +121,7 @@ my $path = "$directory/statistics-latest.json";
 return { } unless -f $path && !-l $path && -s $path < 32 * 1024 * 1024;
 sysopen(my $fh, $path, O_RDONLY | O_NOFOLLOW) or return { };
 local $/;
-my $data = eval { JSON::PP->new->utf8->decode(<$fh>) };
+my $data = eval { convert_from_json(<$fh>) };
 close($fh);
 # Unknown cache versions cannot safely supply live readings.
 return { } unless ref($data) eq 'HASH' && ($data->{version} || 0) == 1;

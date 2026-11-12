@@ -4,7 +4,9 @@ package Cloudmin::SoftwareWorker;
 # Monitor guest setup from the existing unprivileged worker sandbox.
 use strict;
 use warnings;
-use JSON::PP qw(encode_json decode_json);
+use FindBin qw($Bin);
+use lib "$Bin/..";
+use WebminCore qw(convert_to_json convert_from_json);
 use IPC::Open3;
 use IO::Select;
 use IO::Handle;
@@ -32,8 +34,8 @@ return "'$value'";
 # failure(reason) emits a fixed JSON error before private stdin is consumed.
 sub failure
 {
-return "printf '%s\\n' ".quote(encode_json({ stage => 'failed', reason =>
-									$_[0] }))."; exit 1";
+return "printf '%s\\n' ".quote(convert_to_json({ stage => 'failed', reason =>
+									$_[0] }, 0, 1))."; exit 1";
 }
 
 # remote_command(username, [wait_boot]) checks guest dependencies before launch.
@@ -75,7 +77,7 @@ return $command;
 # emit(value) uses the controller's existing bounded worker protocol.
 sub emit
 {
-print encode_json($_[0]), "\n" or die "Controller disconnected\n";
+print convert_to_json($_[0], 0, 1), "\n" or die "Controller disconnected\n";
 STDOUT->flush;
 }
 
@@ -140,7 +142,7 @@ my ($result, $reaped);
 my $ok = eval {
 	# Deliver credentials once; keep reading if a prerequisite closes stdin.
 	local $SIG{'PIPE'} = 'IGNORE';
-	my $data = encode_json($payload);
+	my $data = convert_to_json($payload, 0, 1);
 	while (length($data)) {
 		my $n = syswrite($input, $data);
 		if (!defined($n)) {
@@ -195,7 +197,7 @@ my $ok = eval {
 		die "Invalid guest response\n" if (length($buffer) > 8192);
 		while ($buffer =~ s/\A([^\n]*)\n//) {
 			# Forward known states without exposing guest text.
-			my $value = decode_json($1);
+			my $value = convert_from_json($1);
 			$stage = $value->{'stage'};
 			die "Invalid guest stage\n" if (!$STAGES{$stage || ''});
 			$step = $STEPS{$value->{'failed_step'} || ''}
@@ -247,7 +249,7 @@ my $ok = eval {
 	my $n = read($fh, my $json, 512 * 1024 + 1);
 	die "Invalid worker request\n" if (!defined($n) || $n > 512 * 1024);
 	close($fh);
-	emit({ type => 'result', data => run(decode_json($json)) });
+	emit({ type => 'result', data => run(convert_from_json($json)) });
 	1;
 	};
 if (!$ok) {

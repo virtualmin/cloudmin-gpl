@@ -6,7 +6,6 @@ use CloudminTest;
 use Cloudmin::Libvirt;
 use Cloudmin::StatsCollector;
 use File::Temp qw(tempdir);
-use JSON::PP;
 use Test::More;
 use subs qw(time);
 
@@ -434,7 +433,7 @@ for my $failure ( 'inventory', 'bulk' ) {
 			$rows->[0]->{values}}{qw(load_1 load_5 load_15 vcpus memory_used)} ],
 		[ 0.42, 0.38, 0.35, 2, 2048000000 ],
 		'host load averages are read beside CPU and memory');
-	is(JSON::PP->new->encode([ $live->{values}->{load_1} ]), '[0.42]',
+	is(WebminCore::convert_to_json([ $live->{values}->{load_1} ], 0, 1), '[0.42]',
 	   'live host values carry the one-minute load as a number');
 	# A missing kernel reading must remain unknown on the next tick.
 	unlink "$root/proc/loadavg";

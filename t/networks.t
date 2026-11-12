@@ -4,7 +4,6 @@ use FindBin qw($Bin);
 use lib "$Bin/lib", "$Bin/../lib";
 use CloudminTest;
 use Test::More;
-use JSON::PP ();
 use Cloudmin::Networks;
 use Cloudmin::HostNetwork;
 use File::Temp qw(tempdir);
@@ -191,7 +190,7 @@ for my $mask ( '255.0.255.0', '255.255.255.1', '255.255.256.0',
 		  'inventory remains quiet and safe for read-only users');
 	is($links->[0]->{'mtu'}, 1500,
 	   'Webmin decoder preserves numeric fields');
-	is(JSON::PP->new->canonical->encode($links),
+	is(WebminCore::convert_to_json($links, 0, 1, 1),
 	   '[{"dynamic":true,"ifname":"eth0","mtu":1500}]',
 	   'decoded booleans remain compatible with canonical JSON encoding');
 	$output = 'invalid JSON';
@@ -343,7 +342,7 @@ my $record =
 						       { private => 'do not expose' } };
 $bridge->write_state($record);
 is(WebminCore::read_file_contents("$dir/state/bridge.json"),
-   JSON::PP->new->canonical->encode($record),
+   WebminCore::convert_to_json($record, 0, 0, 1),
    'bridge journal preserves the existing compact byte encoding');
 is((stat("$dir/state/bridge.json"))[2] & 0777, 0600,
    'journal with network backups stays private');
@@ -661,7 +660,7 @@ like($@, qr/expired/, 'expired confirmation explains recovery');
 			}
 		# Status returns JSON; the other networkctl
 		# calls have no output.
-		return JSON::PP->new->encode($status)
+		return WebminCore::convert_to_json($status, 0, 1)
 			if ($argv->[1] eq '--json=short');
 		return '';
 		};
@@ -869,9 +868,9 @@ like($@, qr/expired/, 'expired confirmation explains recovery');
 	# command(self, argv, [quiet], [safe]) returns static
 	# and leased addresses.
 	local *Cloudmin::HostNetwork::command = sub {
-		return JSON::PP->new->encode({ DHCPv4Client =>
+		return WebminCore::convert_to_json({ DHCPv4Client =>
 						       { ClientIdentifier => $client },
-					       Addresses => $addresses });
+					       Addresses => $addresses }, 0, 1);
 		};
 	my $identity =
 		$bridge->netplan_dhcp4_identity('eth0', '58:47:ca:78:5a:7d');

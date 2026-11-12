@@ -15,9 +15,8 @@ $0 = abs_path("$Bin/../../api.pl");
 chdir("$Bin/../..") or die $!;
 }
 require './server-manager-lib.pl';
-use JSON::PP qw(decode_json);
 use Digest::SHA;
-my $input = decode_json(read_file_contents($ARGV[0]));
+my $input = WebminCore::convert_from_json(read_file_contents($ARGV[0]));
 my ($target, $file, $dir) = @$input{qw(target file directory)};
 # Browser fixtures need the real trust path without creating an approval.
 if (($input->{'operation'} || '') eq 'trust_path') {

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
-use lib "$Bin/../vendor_perl";
+use lib "$Bin/..", "$Bin/../vendor_perl";
 use Net::WebSocket::Server;
 use Protocol::WebSocket::Frame;
 use IO::Socket::INET;
@@ -11,7 +11,7 @@ use IPC::Open3 qw(open3);
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Errno qw(EAGAIN EWOULDBLOCK EINTR);
 use Socket qw(AF_UNIX SOCK_STREAM PF_UNSPEC);
-use JSON::PP qw(encode_json);
+use WebminCore qw(convert_to_json);
 use MIME::Base64 ();
 use POSIX qw(WNOHANG);
 use lib "$Bin/lib";
@@ -201,7 +201,7 @@ $server = Net::WebSocket::Server->new(
 				# path; all input stays in memory and private
 				# sockets, never in logs or command arguments.
 				my $watch = !length($queued);
-				$queued .= encode_json($event)."\n";
+				$queued .= convert_to_json($event, 0, 1)."\n";
 				exit(1) if (length($queued) > 4 * 1024 * 1024);
 				# input_writable(handle) drains events without
 				# blocking output reads. Register only when

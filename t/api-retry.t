@@ -4,10 +4,10 @@ use FindBin qw($Bin);
 use lib "$Bin/lib";
 use CloudminTest;
 use Test::More;
-use JSON::PP ();
+use Cwd qw(abs_path);
 use Digest::SHA qw(sha256_hex);
 use File::Temp qw(tempdir);
-our $module_root_directory = "$Bin/..";
+our $module_root_directory = abs_path("$Bin/..");
 our $module_var_directory = tempdir(CLEANUP => 1);
 our $remote_user = 'fixture';
 require "$module_root_directory/cloudmin-lib.pl";
@@ -229,7 +229,7 @@ is(get_vm_password_hash(undef,
 		       description => "Caf\x{e9} \x{65e5}\x{672c} \x{1f642}",
 		       memory_mib => 950 };
 	my $fingerprint =
-		sha256_hex(JSON::PP->new->canonical->utf8->encode($fields));
+		sha256_hex(WebminCore::convert_to_json($fields, 0, 1, 1));
 	my $jobs =
 		bless({ saved =>
 				{ id => 'saved-job', state => 'complete',

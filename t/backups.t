@@ -5,7 +5,6 @@ use lib "$Bin/lib";
 use CloudminTest;
 use Test::More;
 use File::Temp qw(tempdir);
-use JSON::PP qw(encode_json decode_json);
 require "$Bin/../lib/Cloudmin/Backups.pm";
 require "$Bin/../lib/Cloudmin/Jobs.pm";
 require "$Bin/../lib/Cloudmin/BackupTransport.pm";

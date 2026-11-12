@@ -7,7 +7,7 @@ use File::Basename qw(dirname);
 use File::Path qw(make_path remove_tree);
 use File::Temp qw(tempfile);
 use Digest::SHA qw(sha256_hex);
-use JSON::PP qw(encode_json decode_json);
+use WebminCore qw(convert_to_json convert_from_json);
 use POSIX qw(strftime);
 use Fcntl qw(:DEFAULT O_NOFOLLOW);
 require(dirname(__FILE__).'/Clones.pm');
@@ -38,7 +38,7 @@ if ($value) {
 		tempfile('.record-XXXXXXXX', DIR => $self->directory(),
 			 UNLINK =>
 				 1);
-	print($fh encode_json($value)) && close($fh) or
+	print($fh convert_to_json($value, 0, 1)) && close($fh) or
 		die "Cannot write backup record\n";
 	rename($temp, $path) or die "Cannot save backup record\n";
 	return $value;
@@ -47,7 +47,7 @@ if ($value) {
 return undef if (!-f $path);
 open(my $fh, '<', $path) or die "Cannot read backup record\n";
 local $/;
-return decode_json(<$fh>);
+return convert_from_json(<$fh>);
 }
 
 # inventory(self) lists completed backups without transport credentials or XML.

@@ -108,7 +108,7 @@ subtest 'Build provider requests without interpreting message text' => sub {
 		$target, $event, $message);
 	is($request->{url}, 'https://api.pushover.net/1/messages.json',
 		'Pushover uses the fixed HTTPS API');
-	my $payload = JSON::PP->new->utf8->decode($request->{content});
+	my $payload = WebminCore::convert_from_json($request->{content});
 	is($payload->{token}, $target->{secret}, 'application token in JSON');
 	is($payload->{user}, $target->{address}, 'recipient key in JSON');
 	is($payload->{title}, substr($message->{subject}, 0, 250),
@@ -132,7 +132,7 @@ subtest 'Build provider requests without interpreting message text' => sub {
 			'https://push.example.invalid'.$base.'/message',
 			'reverse-proxy path is preserved');
 		}
-	$payload = JSON::PP->new->utf8->decode($request->{content});
+	$payload = WebminCore::convert_from_json($request->{content});
 	is_deeply($payload, { title => $message->{subject},
 		message => $message->{body}, priority => 5 },
 		'Gotify receives readable JSON without formatting extras');

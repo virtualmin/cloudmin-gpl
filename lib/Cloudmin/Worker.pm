@@ -5,7 +5,7 @@ package Cloudmin::Worker;
 # inherited credentials.
 use strict;
 use warnings;
-use JSON::PP qw(encode_json decode_json);
+use WebminCore qw(convert_to_json convert_from_json);
 use File::Path qw(make_path remove_tree);
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
@@ -293,7 +293,7 @@ my $work = path($id);
 mkdir($work, 0700) || die "Cannot create image worker: $!\n";
 my ($result, $error);
 my $ok = eval {
-	write_data("$ROOT/$id.lease", encode_json({ created => time() }));
+	write_data("$ROOT/$id.lease", convert_to_json({ created => time() }, 0, 1));
 	my $limit = $SMALL_FILE;
 	# Bound disk work by workspace free space, even without a configured
 	# cap. Leave the host's reserved free space available.
@@ -346,7 +346,7 @@ my $ok = eval {
 	stage_kernel($work)
 		if ($task eq 'clone_prepare' || $task eq 'inspect' &&
 		    ($request->{'guest'} || $request->{'appliance'}));
-	my $json = encode_json({ %$request, task => $task });
+	my $json = convert_to_json({ %$request, task => $task }, 0, 1);
 	# Bound the request that the isolated process will decode into memory.
 	die "Image worker request is too large\n"
 		if (length($json) > 512 * 1024);
@@ -472,7 +472,7 @@ my $ok = eval {
 			die "Image worker response is too large\n"
 				if (length($buffer) > 65536);
 			while ($buffer =~ s/\A([^\n]*)\n//) {
-				my $event = eval { decode_json($1) };
+				my $event = eval { convert_from_json($1) };
 				# Only JSON objects participate in the
 				# worker event protocol.
 				die "Invalid image worker response\n"

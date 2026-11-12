@@ -4,9 +4,11 @@
 # name exercises an already configured directory, filesystem or NFS pool.
 use strict;
 use warnings;
+use FindBin qw($Bin);
+use lib "$Bin/../../..";
+use WebminCore ();
 use Test::More;
 use File::Temp qw(tempdir);
-use JSON::PP qw(decode_json);
 use Sys::Virt;
 
 die "Run on an authorized Linux test host as root\n" unless $^O eq 'linux' &&
@@ -30,7 +32,7 @@ open(my $fh, '-|', 'qemu-img', 'info', '--output=json', $_[0]) or die $!;
 local $/;
 my $data = <$fh>;
 close($fh) or die "Cannot inspect fixture\n";
-return decode_json($data);
+return WebminCore::convert_from_json($data);
 }
 
 my $ok = eval {

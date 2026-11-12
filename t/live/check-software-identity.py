@@ -87,10 +87,9 @@ def main():
         # public-key boundary.
         seed_code = r'''
             use WebminCore;
-            use JSON::PP;
             require "$ARGV[0]/lib/Cloudmin/VMs.pm";
-            my $request = decode_json(do { local $/; <STDIN> });
-            print encode_json(Cloudmin::VMs::seed_data($request, $ARGV[1]));
+            my $request = convert_from_json(do { local $/; <STDIN> });
+            print convert_to_json(Cloudmin::VMs::seed_data($request, $ARGV[1]), 0, 1);
         '''
         data = json.loads(
             run(
@@ -167,10 +166,9 @@ def main():
         # prepares identity.
         probe = r'''
             use WebminCore;
-            use JSON::PP;
             $WebminCore::null_file = '/dev/null';
             require "$ARGV[0]/lib/Cloudmin/Libvirt.pm";
-            print encode_json(Cloudmin::Libvirt->new(readonly => 0)->get_setup_host_key($ARGV[1]));
+            print substr(convert_to_json([ Cloudmin::Libvirt->new(readonly => 0)->get_setup_host_key($ARGV[1]) ], 0, 1), 1, -1);
         '''
         deadline = time.monotonic() + 300
         public = None

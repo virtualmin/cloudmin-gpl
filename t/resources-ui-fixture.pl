@@ -7,7 +7,6 @@ use FindBin qw($Bin);
 # development checkout.
 use lib ($ENV{'WEBMIN_ROOT'} || "$Bin/../../webmin");
 use WebminCore;
-use JSON::PP ();
 our (%config, %text, $root_directory, $module_root_directory);
 $root_directory = $ENV{'WEBMIN_ROOT'} || "$Bin/../../webmin";
 $module_root_directory = "$Bin/..";
@@ -62,6 +61,6 @@ foreach my $columns ( 'name,state', 'name,state,os,memory,autostart,controls',
 						   status_config =>
 							   get_overview_status_config('fixture-token') });
 	}
-print JSON::PP->new->encode({ %compact, overview => $overview, empty => $empty,
+print WebminCore::convert_to_json({ %compact, overview => $overview, empty => $empty,
 			      details => $details,
-			      terminal => show_status_summary($vm) });
+			      terminal => show_status_summary($vm) }, 0, 1);

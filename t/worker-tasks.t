@@ -7,7 +7,6 @@ use CloudminTest;
 use File::Temp qw(tempdir);
 use Cwd qw(getcwd);
 use Digest::SHA qw(sha256_hex sha512_hex);
-use JSON::PP qw(encode_json);
 use POSIX ();
 require "$Bin/../lib/Cloudmin/WorkerTasks.pm";
 
@@ -73,7 +72,7 @@ my $request = { format => 'qcow2', limit => 1024, sha256 => sha256_hex($data) };
 			  [ '/usr/bin/qemu-img', 'info', '--output=json', '-f',
 			    'qcow2', 'image' ],
 			  'disk tool gets fixed arguments and an explicit format');
-		return encode_json({ 'virtual-size' => 32768 });
+		return WebminCore::convert_to_json({ 'virtual-size' => 32768 }, 0, 1);
 		};
 	Cloudmin::WorkerTasks::write_file('image', $data);
 	my $r = Cloudmin::WorkerTasks::image($request, $emit);
@@ -222,7 +221,7 @@ for my $info (
 	{ 'virtual-size' => 0 }, { 'virtual-size' => 17 * 1024**4 },
 ) {
 	no warnings 'redefine';
-	local *Cloudmin::WorkerTasks::command = sub { encode_json($info) };
+	local *Cloudmin::WorkerTasks::command = sub { WebminCore::convert_to_json($info, 0, 1) };
 	ok(!eval { Cloudmin::WorkerTasks::disk_info('qcow2'); 1 },
 	   'unsafe disk metadata is rejected');
 	like($@, $info->{'virtual-size'} &&
@@ -239,7 +238,7 @@ ok(!eval { Cloudmin::WorkerTasks::disk_info('auto'); 1 },
 	my @commands;
 	local *Cloudmin::WorkerTasks::command = sub {
 		push(@commands, [ @_ ]);
-		return encode_json({ 'virtual-size' => 4096 })
+		return WebminCore::convert_to_json({ 'virtual-size' => 4096 }, 0, 1)
 			if ($_[1] eq 'info');
 		return '';
 		};

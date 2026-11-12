@@ -7,11 +7,12 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
+use lib "$Bin/../../..";
+use WebminCore ();
 use Cwd qw(abs_path);
-use JSON::PP qw(decode_json encode_json);
 
 die "Run on a Linux test host as root\n" if ($^O ne 'linux' || $< != 0);
-my $input = decode_json(do { local $/; <STDIN> });
+my $input = WebminCore::convert_from_json(do { local $/; <STDIN> });
 die "Invalid fixture identity\n" if (
 	($input->{'user'} || '') !~ /\Acloudmin-terminal-check-[a-f0-9]{8}\z/ ||
 	($input->{'uuid'} ||
@@ -93,11 +94,11 @@ if (!$input->{'probe'}) {
 	# Return route data privately before redirecting
 	# detached supervisor output.
 	$| = 1;
-	print encode_json({ port => $port, attempt => $id,
+	print WebminCore::convert_to_json({ port => $port, attempt => $id,
 			    socket_url =>
 				    get_miniserv_websocket_url($port,
 							       '127.0.0.1:10000',
-							       'server-manager') })."\n";
+							       'server-manager') }, 0, 1)."\n";
 	my $log = "/var/webmin/modules/server-manager/terminal-$port.log";
 	open(STDOUT, '>', $log) or die $!;
 	chmod(0600, $log) or die $!;

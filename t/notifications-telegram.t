@@ -86,20 +86,20 @@ subtest 'Build plain-text Bot API requests' => sub {
 	like($request->{content}, qr/"chat_id":-1001234567890[,}]/,
 		'large negative chat ID is an exact JSON number');
 	# Names and message text must remain literal, with markup disabled.
-	my $payload = JSON::PP->new->utf8->decode($request->{content});
+	my $payload = WebminCore::convert_from_json($request->{content});
 	is($payload->{text}, "Guest <b>name</b>\n\n*plain* & _text_", 'text remains literal');
 	ok(!exists($payload->{parse_mode}), 'markup parsing stays disabled');
 	ok($payload->{link_preview_options}{is_disabled}, 'link previews disabled');
 	unlike($request->{content}, qr/fixture_Token/, 'body contains no token');
 	$request = Cloudmin::NotificationMessages::request(
 		{ %$target, address => '@Cloudmin_ops' }, $event, $message);
-	is(JSON::PP->new->utf8->decode($request->{content})->{chat_id}, '@Cloudmin_ops',
+	is(WebminCore::convert_from_json($request->{content})->{chat_id}, '@Cloudmin_ops',
 		'public chat username remains a string');
 	# Mixed Unicode includes supplementary characters
 	# as well as UTF-8 letters.
 	$message = { subject => 'Alert', body => "я😀" x 3000 };
 	$request = Cloudmin::NotificationMessages::request($target, $event, $message);
-	$payload = JSON::PP->new->utf8->decode($request->{content});
+	$payload = WebminCore::convert_from_json($request->{content});
 	is(length($payload->{text}), 4096, 'limit counts characters, not UTF-8 bytes');
 	is($payload->{text}, substr("Alert\n\n".$message->{body}, 0, 4096),
 		'truncation preserves Unicode characters');
@@ -157,8 +157,7 @@ subtest 'Acceptance, retry and safe transport failures' => sub {
 		'positive Bot API acknowledgment records success');
 	is_deeply($requests[0], $requests[1], 'retry preserves request and event identity');
 	# A successful response can echo all 4096 characters as Unicode escapes.
-	my $echo = JSON::PP->new->ascii->encode({ ok => JSON::PP::true(),
-		result => { text => "😀" x 4096 } });
+	my $echo = '{"ok":true,"result":{"text":"'.('\ud83d\ude00' x 4096).'"}}';
 	cmp_ok($http_options{max_size}, '>=', length($echo),
 		'response limit allows a full Unicode message');
 	# post(self, url, options) throws an error containing the private URL.

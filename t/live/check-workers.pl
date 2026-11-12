@@ -5,8 +5,9 @@ use warnings;
 use Test::More;
 use File::Temp qw(tempdir);
 use FindBin qw($Bin);
+use lib "$Bin/../../..";
+use WebminCore ();
 use Fcntl qw(F_SETFD);
-use JSON::PP qw(encode_json decode_json);
 use Digest::SHA qw(sha256_hex);
 use MIME::Base64 qw(encode_base64);
 die 'Disposable Linux VM as root only' if ($^O ne 'linux' || $< != 0);
@@ -310,6 +311,17 @@ ok($runner->run('seed',
 		output => "$tmp/seed.iso", started => $started),
    'real cloud-init disk is generated unprivileged');
 ok(-s "$tmp/seed.iso", 'cloud-init disk is handed back to the controller');
+
+# Fresh workers must preserve Unicode and JSON types in both directions.
+my $json = { name => "caf\x{e9} \x{6771}\x{4eac} \x{1f600}",
+	     flags => WebminCore::convert_from_json('[true,false,null,0,""]') };
+is_deeply($probe->run('keys', { mode => 'json', data => $json },
+		     started => $started), $json,
+	  'sandbox protocol preserves UTF-8, booleans, null and zero');
+# The separate installer executable must load Webmin and return a JSON error.
+eval { $runner->run('software', { address => 'invalid' }, started => $started); };
+like($@, qr/Cannot communicate with the guest installer/,
+     'fresh software worker returns its safe protocol error');
 
 # Every success, failure, timeout and cancellation must
 # remove its private state.

@@ -6,7 +6,6 @@ use warnings;
 no warnings 'once';
 use Test::More;
 use File::Path qw(make_path);
-use JSON::PP ();
 # Run only as root from a shell, with a fixture directory under /tmp.
 die "Run from a root Linux test shell\n" unless $^O eq 'linux' && $< == 0 &&
 	!$ENV{GATEWAY_INTERFACE};

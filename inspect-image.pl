@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
-use JSON::PP qw(encode_json);
+use lib "$Bin/..";
+use WebminCore qw(convert_to_json);
 require "$Bin/lib/Cloudmin/Worker.pm";
 
 # This helper needs the Linux hypervisor's systemd sandbox.
@@ -22,4 +23,4 @@ if (!$result) {
 	print STDERR $error;
 	exit(1);
 	}
-print encode_json($result), "\n";
+print convert_to_json($result, 0, 1), "\n";

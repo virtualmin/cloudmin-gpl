@@ -2,19 +2,21 @@
 # Deliberately attempts forbidden operations inside the production sandbox.
 use strict;
 use warnings;
-use JSON::PP qw(encode_json decode_json);
+use FindBin qw($Bin);
+use lib "$Bin/../../..";
+use WebminCore ();
 use POSIX ();
 use IO::Socket::UNIX;
 use Socket qw(SOCK_STREAM);
 $| = 1;
 die 'Probe must not run as root' if ($< == 0 || $> == 0);
 open(my $input, '<', 'request.json') || die $!;
-my $r = decode_json(do { local $/; <$input> });
+my $r = WebminCore::convert_from_json(do { local $/; <$input> });
 
 # emit(event) Uses the production worker protocol to expose test observations.
 sub emit
 {
-print encode_json($_[0]), "\n";
+print WebminCore::convert_to_json($_[0], 0, 1), "\n";
 }
 emit({ type => 'identity', uid => 0 + $<, euid => 0 + $> });
 my $mode = $r->{'mode'} || 'access';
@@ -47,6 +49,10 @@ if ($mode eq 'access') {
 			 environment_leaked => exists(
 				 $ENV{'CLOUDMIN_FIXTURE_SECRET'}) ? 1 : 0,
 			 fds => \@fds } });
+	}
+# Echo decoded data through a fresh sandbox process to check the JSON protocol.
+elsif ($mode eq 'json') {
+	emit({ type => 'result', data => $r->{'data'} });
 	}
 # Make unsafe output objects that the controller must refuse to claim.
 elsif ($mode eq 'symlink' || $mode eq 'hardlink' || $mode eq 'fifo') {

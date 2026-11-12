@@ -4,7 +4,7 @@ package Cloudmin::NotificationMessages;
 use strict;
 use warnings;
 use Encode qw(encode decode is_utf8);
-use JSON::PP ();
+use WebminCore qw(convert_to_json);
 use URI ();
 use File::Basename qw(dirname);
 require(dirname(__FILE__).'/NotificationTypes.pm');
@@ -94,9 +94,11 @@ my ($target, $event, $message) = @_;
 my $type = $target->{type};
 my $url = URI->new($target->{address});
 # Give receivers a stable key to recognize retries of the same event.
+# Format a copy so XS still sees the event's ID as a number in the payload.
+my $event_id = $event->{id};
 my %headers = (
 	'Content-Type' => 'application/json',
-	'Idempotency-Key' => 'cloudmin-'.$event->{instance}.'-'.$event->{id} );
+	'Idempotency-Key' => 'cloudmin-'.$event->{instance}.'-'.$event_id );
 # Only webhook methods use the shared bearer token header.
 $headers{Authorization} = 'Bearer '.$target->{secret}
 	if $type !~ /\A(?:telegram|pushover|gotify)\z/ &&
@@ -104,6 +106,7 @@ $headers{Authorization} = 'Bearer '.$target->{secret}
 # Generic webhooks receive the event; chat services receive readable text.
 my $body = $type eq 'webhook' ? ''
 	: $message->{subject}."\n\n".$message->{body};
+# Scalar references encode as booleans with either Webmin JSON backend.
 my $payload;
 if ($type eq 'webhook') {
 	# Stored event strings are already characters; JSON encodes them once.
@@ -112,9 +115,9 @@ if ($type eq 'webhook') {
 elsif ($type eq 'slack') {
 	# Plain text blocks prevent names from becoming mentions or markup.
 	$body = substr($body, 0, 3000);
-	$payload = { text => $message->{subject}, mrkdwn => JSON::PP::false,
-		parse => 'none', unfurl_links => JSON::PP::false,
-		unfurl_media => JSON::PP::false,
+	$payload = { text => $message->{subject}, mrkdwn => \0,
+		parse => 'none', unfurl_links => \0,
+		unfurl_media => \0,
 		blocks => [ { type => 'section', text => {
 			type => 'plain_text', text => $body } } ] };
 	}
@@ -138,7 +141,7 @@ elsif ($type eq 'teams') {
 			'$schema' => 'http://adaptivecards.io/schemas/adaptive-card.json',
 			type => 'AdaptiveCard', version => '1.2',
 			body => [ { type => 'TextBlock', text => $body,
-				wrap => JSON::PP::true } ] } } ] };
+				wrap => \1 } ] } } ] };
 	}
 elsif ($type eq 'telegram') {
 	# Send plain text and authenticate through the Bot API URL path.
@@ -150,7 +153,7 @@ elsif ($type eq 'telegram') {
 		chat_id => $target->{address} =~ /\A-?[0-9]+\z/
 			? 0 + $target->{address} : $target->{address},
 		text => substr($body, 0, 4096),
-		link_preview_options => { is_disabled => JSON::PP::true } };
+		link_preview_options => { is_disabled => \1 } };
 	}
 elsif ($type eq 'pushover') {
 	# Pushover accepts credentials in JSON and counts limits in characters.
@@ -185,7 +188,7 @@ else {
 	}
 # Every other method sends its payload as JSON.
 return { url => "$url", headers => \%headers,
-	content => JSON::PP->new->canonical->utf8->encode($payload) };
+	content => convert_to_json($payload, 0, 1, 1) };
 }
 
 1;

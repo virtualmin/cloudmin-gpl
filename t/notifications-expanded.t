@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use utf8;
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use CloudminTest;
 use lib "$Bin/../lib";
 use Cloudmin::Notifications;
 use Cloudmin::NotificationSignals;
@@ -291,7 +293,7 @@ subtest 'Provider requests' => sub {
 			is($request->{headers}{Priority}, 4, 'warning sets ntfy priority');
 			next;
 			}
-		my $payload = JSON::PP->new->utf8->decode($request->{content});
+		my $payload = WebminCore::convert_from_json($request->{content});
 		if ($type eq 'webhook') {
 			# Generic webhooks retain every event field.
 			is_deeply($payload, $event, 'generic webhook retains complete structured payload');
@@ -330,7 +332,7 @@ subtest 'Provider requests' => sub {
 		else {
 			# Slack and Discord limit characters
 			# in their text fields.
-			my $payload = JSON::PP->new->utf8->decode($request->{content});
+			my $payload = WebminCore::convert_from_json($request->{content});
 			my $body = $type eq 'slack' ? $payload->{blocks}[0]{text}{text}
 				: $payload->{content};
 			cmp_ok(length($body), '<=', $type eq 'slack' ? 3000 : 2000,
@@ -380,7 +382,7 @@ subtest 'Names from forms and the API' => sub {
 		my $request = Cloudmin::NotificationMessages::request(
 			{ type => 'webhook', address => 'https://receiver.invalid/hook' },
 			$saved, { });
-		my $payload = JSON::PP->new->utf8->decode($request->{content});
+		my $payload = WebminCore::convert_from_json($request->{content});
 		is($payload->{name}, $names{$origin},
 			"$origin name is valid UTF-8 in webhook JSON");
 		is($payload->{threshold}, 90, 'webhook numbers stay numbers');

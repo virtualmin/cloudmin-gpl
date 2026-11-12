@@ -5,7 +5,6 @@ use lib "$Bin/lib";
 use CloudminTest;
 use Test::More;
 use File::Temp qw(tempdir);
-use JSON::PP qw(decode_json);
 use MIME::Base64 qw(encode_base64);
 require "$Bin/../lib/Cloudmin/SSHKeys.pm";
 require "$Bin/../lib/Cloudmin/VMs.pm";
@@ -72,7 +71,7 @@ for my $auth (qw(password keys both)) {
 					      address_mode => 'dhcp' }, $uuid);
 	my $data = $seed->{'user-data'};
 	$data =~ s/^#cloud-config\n//;
-	my $user = decode_json($data);
+	my $user = WebminCore::convert_from_json($data);
 	is(scalar(@{$user->{'users'}->[0]->{'ssh_authorized_keys'}}),
 	   $auth eq 'password' ? 1 : 2,
 	   "$auth keeps the host key alongside the user's selected authentication");

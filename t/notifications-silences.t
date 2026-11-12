@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use CloudminTest;
 use lib "$Bin/../lib";
 use Cloudmin::Notifications;
 use Test::More;

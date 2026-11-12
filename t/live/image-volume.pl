@@ -3,7 +3,9 @@
 # Checks or removes only the volume and private records owned by one test job.
 use strict;
 use warnings;
-use JSON::PP qw(decode_json encode_json);
+use FindBin qw($Bin);
+use lib "$Bin/../../..";
+use WebminCore ();
 use Digest::SHA;
 use Sys::Virt;
 die "Run on an authorized Linux test host as root\n" unless $^O eq 'linux' &&
@@ -12,7 +14,7 @@ my ($action, $id, $expected) = @ARGV;
 die "Invalid test job" if (($id || '') !~ /\A[a-f0-9]{32}\z/);
 my $root = '/var/webmin/modules/server-manager/image-jobs';
 open(my $fh, '<', "$root/$id.json") || die $!;
-my $job = do { local $/; decode_json(<$fh>) };
+my $job = do { local $/; WebminCore::convert_from_json(<$fh>) };
 close($fh);
 die "Not a fixture job" if ($job->{'owner'} ne 'cloudmin-ui-check');
 my $conn = Sys::Virt->new(uri => 'qemu:///system');
@@ -32,8 +34,8 @@ if ($action eq 'verify') {
 	die "Staging file remains" if (-e "$root/$id.part");
 	die "Webmin staging file remains"
 		if (glob("$root/$id.part.webmintmp.*"));
-	print encode_json({ volume => $volume->get_name(), path => $path,
-			    bytes => -s $path, sha256 => $digest }), "\n";
+	print WebminCore::convert_to_json({ volume => $volume->get_name(), path => $path,
+			    bytes => -s $path, sha256 => $digest }, 0, 1), "\n";
 	}
 # Failed imports must leave neither a volume nor staging files.
 elsif ($action eq 'absent') {

@@ -5,7 +5,6 @@ package Cloudmin::CloneGuest;
 use strict;
 use warnings;
 use File::Basename qw(dirname);
-use JSON::PP qw(encode_json);
 require(dirname(__FILE__).'/ImageInspector.pm');
 
 # read_small(guestfs, path) bounds guest-controlled text before parsing it.

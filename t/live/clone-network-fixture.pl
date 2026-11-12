@@ -5,7 +5,6 @@ use strict;
 use warnings;
 use FindBin qw($Bin);
 use Cwd qw(abs_path);
-use JSON::PP qw(decode_json encode_json);
 
 BEGIN
 {
@@ -20,7 +19,7 @@ $0 = abs_path('./api.pl');
 require './server-manager-lib.pl';
 require './cloudmin-network-lib.pl';
 my $action = shift(@ARGV);
-my $in = decode_json(do { local $/; <STDIN> });
+my $in = WebminCore::convert_from_json(do { local $/; <STDIN> });
 die "Invalid fixture prefix\n"
 	unless ($in->{'prefix'} || '') =~ /\Acm-clone-net-[a-f0-9]{8}\z/;
 if ($action eq 'create') {
@@ -30,8 +29,8 @@ if ($action eq 'create') {
 			    -6).'-'.substr($in->{'network'}->{'mode'}, 0, 1);
 	die "Unrelated network\n"
 		unless $in->{'network'}->{'name'} eq $expected;
-	print encode_json({ name =>
-				    get_network_service(1)->create($in->{'network'}) }), "\n";
+	print WebminCore::convert_to_json({ name =>
+				    get_network_service(1)->create($in->{'network'}) }, 0, 1), "\n";
 	}
 elsif ($action eq 'cleanup') {
 	# Do not remove history until workers, guests and

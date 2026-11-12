@@ -4,7 +4,7 @@ package Cloudmin::Notifications;
 use strict;
 use warnings;
 
-use JSON::PP ();
+use WebminCore qw(convert_to_json convert_from_json);
 use Fcntl qw(:DEFAULT :flock O_NOFOLLOW);
 use File::Path qw(make_path);
 use Sys::Hostname qw(hostname);
@@ -23,13 +23,20 @@ return bless \%args, $class;
 # encode(value) returns stable JSON for stored records and rule comparison.
 sub encode
 {
-return JSON::PP->new->canonical->utf8->encode($_[0]);
+# Wrap scalar values so Webmin's empty-input default cannot replace 0 or null.
+return substr(convert_to_json([ $_[0] ], 0, 1, 1), 1, -1);
 }
 
 # decode(json) decodes a stored UTF-8 JSON record.
 sub decode
 {
-return JSON::PP->new->utf8->decode($_[0]);
+return convert_from_json($_[0]);
+}
+
+# is_boolean(value) recognizes booleans from either Webmin JSON backend.
+sub is_boolean
+{
+return ref($_[0]) =~ /\A(?:JSON::(?:PP|XS)|Types::Serialiser)::Boolean\z/;
 }
 
 # id() creates an opaque identifier without relying on process or clock values.
@@ -71,7 +78,7 @@ sub flag
 {
 my ($v, $default) = @_;
 return $default unless defined($v);
-return $v ? 1 : 0 if JSON::PP::is_bool($v);
+return $v ? 1 : 0 if is_boolean($v);
 die "Invalid enabled value\n" if ref($v) || $v !~ /\A[01]\z/;
 return 0 + $v;
 }

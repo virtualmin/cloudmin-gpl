@@ -617,7 +617,7 @@ my ($m, $a, $jobs, $d, $images) = fixture();
 my $settings = $m->settings($uuid);
 is($settings->{'memory_mib'}, 512, 'saved memory uses explicit XML units');
 is($settings->{'max_cpus'}, 8, 'editor receives the host CPU limit');
-unlike(JSON::PP->new()->encode($settings), qr/fixture-private|<domain/,
+unlike(WebminCore::convert_to_json($settings, 0, 1), qr/fixture-private|<domain/,
        'public settings omit XML and console password');
 # Snapshot overlays retain the system role, and restored
 # seeds remain setup media.
@@ -705,7 +705,7 @@ is(scalar(@$details), 1, 'settings completion has one definition call');
 like($details->[0], qr/^libvirt API: Sys::Virt::define_domain\n/,
      'completion records the real API method');
 my (undef, $json_details) = split(/\n/, $details->[0], 2);
-my $logged = JSON::PP->new()->decode($json_details);
+my $logged = WebminCore::convert_from_json($json_details);
 is_deeply($logged->{'changes'}->{'cpus'}, { before => 1, after => 2 },
 	  'CPU values are recorded before and after');
 is_deeply($logged->{'changes'}->{'memory_mib'}, { before => 512,

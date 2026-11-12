@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use Test::More;
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use CloudminTest;
 our (@shows, @commands, $stop_status);
 
 # Replace process calls before loading Worker; no host systemctl is executed.

@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use Test::More;
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use CloudminTest;
 use File::Temp qw(tempdir);
 require "$Bin/../lib/Cloudmin/Worker.pm";
 

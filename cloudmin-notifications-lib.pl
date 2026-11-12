@@ -267,16 +267,17 @@ else {
 		# error descriptions private because they may
 		# echo request credentials.
 		my $reply = eval {
-			JSON::PP->new->utf8->decode($result->{content})
+			convert_from_json($result->{content})
 			};
 		die "Telegram delivery was not accepted\n" unless
-			ref($reply) eq 'HASH' && JSON::PP::is_bool($reply->{ok}) &&
+			ref($reply) eq 'HASH' &&
+			Cloudmin::Notifications::is_boolean($reply->{ok}) &&
 			$reply->{ok};
 		}
 	elsif ($target->{type} eq 'pushover') {
 		# HTTP success alone does not confirm that Pushover accepted it.
 		my $reply = eval {
-			JSON::PP->new->utf8->decode($result->{content})
+			convert_from_json($result->{content})
 			};
 		my $status = ref($reply) eq 'HASH' ? $reply->{status} : undef;
 		my $valid = defined($status) && !ref($status) &&
@@ -291,7 +292,7 @@ else {
 	elsif ($target->{type} eq 'gotify') {
 		# Require a saved message ID, not a proxy or login page.
 		my $reply = eval {
-			JSON::PP->new->utf8->decode($result->{content})
+			convert_from_json($result->{content})
 			};
 		die "Gotify delivery was not accepted\n" unless
 			ref($reply) eq 'HASH' && !ref($reply->{id}) &&

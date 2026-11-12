@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use CloudminTest;
 use lib "$Bin/../lib";
 use Test::More;
 use File::Temp qw(tempdir);
@@ -470,12 +472,12 @@ like($@, qr/Unknown/, 'unknown configured uplink is not silently ignored');
 # Cache staleness affects readings, not their host identity
 # or error diagnostics.
 Cloudmin::Statistics::atomic_write("$dir/statistics-latest.json",
-				   JSON::PP->new->encode({ version => 1,
+				   WebminCore::convert_to_json({ version => 1,
 							   checked_at => 1000,
 							   interval => 10,
 							   host_id => $host,
 							   vms => { $vm => { resources => { cpu_percent => 90 } } },
-							   host => { } }));
+							   host => { } }, 0, 1));
 ok(Cloudmin::Statistics::latest($dir, 1010)->{vms}->{$vm},
    'fresh cache readable');
 is_deeply(Cloudmin::Statistics::latest($dir, 1040)->{vms}, { },
@@ -484,11 +486,11 @@ is_deeply(Cloudmin::Statistics::latest($dir, 900)->{vms}, { },
 	  'clock reversal hides future readings');
 # Live-cache UTF-8 decoding must agree with the history reader.
 Cloudmin::Statistics::atomic_write("$dir/statistics-latest.json",
-				   JSON::PP->new->utf8->encode({
+				   WebminCore::convert_to_json({
 					   version => 1, checked_at => 1000,
 					   interval => 10,
 					   host => { label => $unicode },
-					   vms => { } }));
+					   vms => { } }, 0, 1));
 is(Cloudmin::Statistics::latest($dir, 1010)->{host}->{label}, $unicode,
    'UTF-8 live cache decodes once');
 

@@ -3,7 +3,7 @@ package Cloudmin::StatsCollector;
 # Sampling state is independent of SQLite and of Webmin request lifetimes.
 use strict;
 use warnings;
-use JSON::PP ();
+use WebminCore qw(convert_to_json);
 use List::Util qw(min max sum);
 use File::Basename qw(dirname);
 require(dirname(__FILE__).'/Metrics.pm');
@@ -81,11 +81,12 @@ sub vm
 {
 my ($self, $vm, $stats, $guest, $mono, $wall) = @_;
 my $id = $vm->{uuid};
-my $signature = JSON::PP->new->canonical->encode([ $vm->{active}, $vm->{state},
-						   $vm->{runtime_id},
-						   [ map { [ @{$_}{qw(target path pool volume)} ] } @{$vm->{disks} ||
-		[ ]} ],
-						   [ map { [ @{$_}{qw(mac target)} ] } @{$vm->{interfaces} || [ ]} ] ]);
+my $signature = convert_to_json([
+	$vm->{active}, $vm->{state}, $vm->{runtime_id},
+	[ map { [ @{$_}{qw(target path pool volume)} ] }
+	  @{$vm->{disks} || [ ]} ],
+	[ map { [ @{$_}{qw(mac target)} ] } @{$vm->{interfaces} || [ ]} ]
+], 0, 1, 1);
 # Power or device changes invalidate all rates for this guest.
 if (defined($self->{signatures}->{$id}) &&
     $self->{signatures}->{$id} ne $signature) {
