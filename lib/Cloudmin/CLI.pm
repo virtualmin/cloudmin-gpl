@@ -194,6 +194,12 @@ $add->('get-notifications', 'notifications', 'Lists notification events.',
 		cursor => option('i', help =>
 			'Read after this event ID. Use 0 to start at the oldest'),
 		limit => option('i', help => 'Maximum events, from 1 to 500'),
+		# The API filters events before cursor or page selection.
+		page => option('i', help =>
+			'Page number, with 1 for the newest events. '.
+			'Cannot be combined with --cursor'),
+		search => option('s', help =>
+			'Find a phrase in event details, ignoring letter case'),
 	});
 $add->('get-notification-config', 'notification_config',
 	'Shows notification rules, destinations and worker status.',

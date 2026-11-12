@@ -1374,6 +1374,9 @@ if ($vm) {
 		     can_access('console', $vm->{'uuid'}) ||
 		     (defined(&can_vm_webmin) &&
 		      can_vm_webmin($vm->{'uuid'}))));
+	# Notification history remains available when statistics are disabled.
+	push(@items, { type => 'item', desc => $text{'left_notifications'},
+		       link => "$base/notifications.cgi?id=$id" });
 	# Log searches can reveal host activity beyond assigned guests.
 	push(@items, { type => 'item', desc => $text{'left_log'},
 		       link => get_action_log_url($vm) })
@@ -1382,9 +1385,6 @@ if ($vm) {
 	push(@items, { type => 'item', desc => $text{'left_statistics'},
 		       link => "$base/statistics.cgi?id=$id" })
 		if (statistics_enabled());
-	# Notification history remains available when statistics are disabled.
-	push(@items, { type => 'item', desc => $text{'left_notifications'},
-		link => "$base/notifications.cgi?id=$id" });
 	}
 # Separate guest actions from host tools; an empty host already has a divider.
 push(@items, { type => 'hr' }) if ($vm);

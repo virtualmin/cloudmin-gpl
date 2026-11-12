@@ -1012,15 +1012,33 @@ if ($work) {
 return $result;
 }
 
-# history(self, [owner], [after], [limit]) reads events and current incidents.
+# history(self, [owner], [after], [limit], [filter]) reads events and incidents.
 # owner is a guest UUID; omit it only for authorized host viewers. Without
 # after, return the latest events; zero starts at the oldest.
 # limit defaults to 100 and allows 1 to 500. muted is 1 when the owner's own
 # mute is active, or the global mute when owner is omitted. all_muted is 1
 # when the global mute is active.
+# filter is an optional hash. search is a single-line, case-insensitive literal
+# phrase of up to 200 characters; surrounding whitespace is trimmed. page
+# starts at 1 for the newest events and cannot be combined with after.
+# Page results include total, page, pages, limit and the trimmed search text.
+# Events within each batch remain in ascending ID order for existing callers.
+# A page past the end returns the last page. No matches return one empty page.
+# Search never filters current incidents or includes delivery details.
+# Internal callers may supply filter->{labels}, mapping stored codes to
+# translated names so searches can also match their display text.
 sub history
 {
-my ($self, $owner, $after, $limit) = @_;
+my ($self, $owner, $after, $limit, $filter) = @_;
+# Check the character limit before trimming. A blank search adds no filter.
+$filter ||= { };
+my $search = text($filter->{search}, 'notification search', 200, 1);
+$search =~ s/^\s+|\s+$//g;
+# Pages and cursors select different orders and cannot be used together.
+my $paged = defined($filter->{page});
+my $page = number($filter->{page}, 'notification page', 1, 1);
+die "Use a whole page number\n" if int($page) != $page;
+die "Use either a page or a cursor\n" if $paged && defined($after);
 # A missing cursor selects the newest events. The cursor and limit must be
 # whole numbers.
 my $recent = !defined($after);
@@ -1030,8 +1048,15 @@ die "Use whole cursor and limit values\n" if int($after) != $after ||
 	int($limit) != $limit;
 # A store that was never written has no history.
 my $db = $self->connect(0);
-return { events => [ ], cursor => $after, states => [ ],
-	muted => 0, all_muted => 0 } unless $db;
+return {
+	events => [ ], cursor => $after, states => [ ],
+	muted => 0, all_muted => 0,
+	$paged ? ( total => 0, page => 1, pages => 1, limit => $limit,
+		   search => $search ) : ()
+	} unless $db;
+# Keep the count and selected rows in one read snapshot. A deferred transaction
+# avoids requesting the write lock used by store updates.
+$db->do('BEGIN');
 my @args = ( $after );
 my $scope = '';
 if (defined($owner)) {
@@ -1040,10 +1065,52 @@ if (defined($owner)) {
 	$scope = ' AND owner = ?';
 	push @args, $owner;
 	}
+# Search decoded public event fields so Unicode and literal punctuation work
+# without requiring SQLite's optional JSON extension or exposing receipts.
+if (length($search)) {
+	# Perl otherwise applies ASCII casing to unflagged Latin-1 strings.
+	utf8::upgrade($search);
+	my $needle = lc($search);
+	my $labels = $filter->{labels} || { };
+	# notification_matches(record) returns 1 if a saved JSON event matches
+	# the phrase, otherwise 0. It uses the trusted labels captured above.
+	$db->sqlite_create_function('notification_matches', 1, sub {
+		# Add display labels without replacing the stored codes.
+		my $event = decode($_[0]);
+		my @codes = grep { defined($_) }
+			@{$event}{qw(metric phase severity comparison)};
+		# Include the muted label when the flag is set.
+		push @codes, 'muted' if $event->{silenced};
+		# Search public fields, excluding addresses and delivery errors.
+		my $words = join(
+			' ', map { defined($_) ? $_ : '' }
+			@{$event}{qw(name label metric phase severity value
+				threshold unit comparison)},
+			@{$labels}{@codes},
+			$event->{silenced} ? 'muted' : '');
+		# Match Unicode text literally, without wildcards or regexes.
+		utf8::upgrade($words);
+		return index(lc($words), $needle) >= 0 ? 1 : 0;
+		});
+	# Use the same search filter when counting and selecting events.
+	$scope .= ' AND notification_matches(record) = 1';
+	}
+# Cursor reads need no total or offset.
+my ($total, $pages, $offset) = ( 0, 1, 0 );
+if ($paged) {
+	# Count matches in the allowed scope and limit the page number.
+	($total) = $db->selectrow_array(
+		'SELECT COUNT(*) FROM events WHERE id > ?'.$scope,
+		undef, @args);
+	$pages = $total ? int(($total + $limit - 1) / $limit) : 1;
+	# Deletions or a narrower search can make the requested page disappear.
+	$page = $pages if $page > $pages;
+	$offset = ($page - 1) * $limit;
+	}
 # Cursor pages move forward; recent pages are reversed into ascending ID order.
 my $rows = $db->selectall_arrayref('SELECT id, record FROM events
 	WHERE id > ?'.$scope.' ORDER BY id '.($recent ? 'DESC' : 'ASC').
-	' LIMIT ?', undef, @args, $limit);
+	' LIMIT ? OFFSET ?', undef, @args, $limit, $offset);
 @$rows = reverse @$rows if $recent;
 my @events;
 for my $row (@$rows) {
@@ -1056,21 +1123,29 @@ for my $row (@$rows) {
 	}
 # Read current mutes, so badges change without waiting for the next reading.
 my $silences = silence_context($db, time());
-# Current incidents use the same guest restriction as historical events.
+# Current incidents use the same guest restriction, without search or paging.
 my @states;
 for my $row (@{$db->selectall_arrayref(
 	'SELECT rule, subject, record FROM states')}) {
 	my $state = decode($row->[2]);
+	# Do not expose another guest's active condition in a scoped response.
 	next if defined($owner) && $state->{owner} ne $owner;
 	$state->{muted} = silence($db, $state->{owner}, time(), $silences);
 	push @states, { %$state, rule => $row->[0], subject => $row->[1] };
 	}
 # A guest reports its own mute; combined history reports the global mute.
 my $muted = $silences->{defined($owner) ? $owner : 'all'} ? 1 : 0;
+# Release the read snapshot after collecting events, incidents and mute status.
+$db->commit();
 $db->disconnect();
-return { events => \@events, states => \@states,
+# Keep cursor responses compatible; numbered pages also return filter metadata.
+return {
+	events => \@events, states => \@states,
 	muted => $muted, all_muted => $silences->{all} ? 1 : 0,
-	cursor => @events ? $events[-1]->{id} : $after };
+	cursor => @events ? $events[-1]->{id} : $after,
+	$paged ? ( total => $total, page => $page, pages => $pages,
+		   limit => $limit, search => $search ) : ()
+	};
 }
 
 # deliver(self, send, now) attempts up to 20 due deliveries.

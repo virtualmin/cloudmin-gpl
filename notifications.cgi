@@ -35,7 +35,11 @@ ui_print_header(html_escape($vm ? $vm->{name} : get_system_hostname()),
 select_theme_server($vm) if $vm;
 # Print the signed form in the body. Its noscript button works without JS.
 print $mute_form;
-my $html = eval { show_notifications($tab, $in{id}, $in{target}) };
+# Pass history filters through the API's scope and input checks.
+my $html = eval {
+	show_notifications($tab, $in{id}, $in{target},
+			   { page => $in{page}, search => $in{search} })
+	};
 error(html_escape(error_message($@))) unless defined($html);
 print $html;
 # Guest pages return to the machine. Host pages return to the overview.

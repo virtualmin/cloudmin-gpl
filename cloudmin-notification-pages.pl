@@ -24,15 +24,94 @@ return ui_form_start('notification_save.cgi', 'post').
 	}).ui_form_end();
 }
 
-# show_notification_history(data, config, token, guest) renders scoped events.
+# notification_event_readings(event) returns escaped reading and threshold
+# cells. event is a saved history record. Missing values return an em dash.
+# Use saved values, not the current rule, so edits cannot rewrite history.
+sub notification_event_readings
+{
+my ($event) = @_;
+# Tests and unknown metrics have no reading or threshold to display.
+my $definition = Cloudmin::NotificationTypes::metric($event->{metric});
+return ( '&mdash;', '&mdash;' ) unless $definition;
+# Status checks show the saved problem or recovery without a threshold.
+if ($definition->{boolean}) {
+	return (defined($event->{value}) ? html_escape($text{
+		'notifications_'.($event->{value} ? 'bad_' : 'clear_').
+		$event->{metric}}) : '&mdash;', '&mdash;');
+	}
+# Job failures have no numeric reading or threshold.
+return ( '&mdash;', '&mdash;' ) unless $definition->{numeric};
+# Prefer saved units; older records fall back to the metric's unit.
+my $unit = defined($event->{unit}) ? $event->{unit} : $definition->{unit};
+my $suffix = $unit eq '%' ? '%' : length($unit) ? ' '.$unit : '';
+my @values;
+for my $key (qw(value threshold)) {
+	my $value = $event->{$key};
+	if (!defined($value)) {
+		# Missing readings must not appear as a measured zero.
+		push @values, '&mdash;';
+		next;
+		}
+	# Keep zero, trim fractional zeros and label the threshold direction.
+	my $number = sprintf('%.3f', $value);
+	$number =~ s/\.?0+$//;
+	my $prefix = $key eq 'threshold'
+		? $text{'notifications_'.($event->{comparison} || 'ge')}.' '
+		: '';
+	push @values, html_escape($prefix.$number.notification_bytes($suffix));
+	}
+return @values;
+}
+
+# notification_history_controls(data, [owner]) renders search and page links.
+# data contains validated page, pages, total, limit, search and events fields.
+# owner is a guest UUID; host or an omitted owner selects combined history.
+# Return search-form HTML and a separate event-count and pager row.
+sub notification_history_controls
+{
+my ($data, $owner) = @_;
+# Reuse this scope when clearing the search or following page links.
+my $base = 'notifications.cgi?tab=history'.
+	(defined($owner) ? '&id='.urlize($owner) : '');
+my $search = notification_bytes($data->{search});
+# A new search starts at the first page and keeps the authorized scope.
+my $form = ui_form_start('notifications.cgi', 'get').
+	ui_hidden('tab', 'history').
+	(defined($owner) ? ui_hidden('id', $owner) : '').
+	ui_search({ name => 'search', width => '14em',
+		    value => html_escape($search),
+		    placeholder => $text{notifications_search},
+		    clear_href => length($search) ? $base : undef,
+		    clear_label => $text{notifications_search_clear},
+		    attrs => {
+			    maxlength => 200,
+			    'aria-label' => $text{notifications_search}
+		    } }).ui_form_end();
+# Calculate the visible range from the actual rows, including a short last page.
+my $first = $data->{total} ? ($data->{page} - 1) * $data->{limit} + 1 : 0;
+my $last = $first ? $first + @{$data->{events}} - 1 : 0;
+my $summary = html_escape(text('notifications_showing',
+			       $first, $last, $data->{total}));
+# Use Webmin's numbered pager, keeping search text in every page URL.
+my $pager = ui_pager({ page => $data->{page}, pages => $data->{pages},
+		       href => $base.'&search='.urlize($search).'&page=' });
+return ( $form, ui_cluster([ $summary, $pager ],
+			  { align => 'between', gap => '12px' }) );
+}
+
+# show_notification_history(data, config, token, guest, [owner]) renders events.
 # data contains events and states; config supplies saved rule and target names.
-# An empty token hides retry controls; guest views omit delivery destinations.
+# An empty token hides retry controls. A true guest flag hides delivery details.
+# owner is the guest UUID for search and page URLs; omit it or use host for
+# combined history. Access must already have been checked by the caller.
 sub show_notification_history
 {
-my ($data, $cfg, $token, $guest) = @_;
+my ($data, $cfg, $token, $guest, $owner) = @_;
 # Encode saved names once for Webmin's byte-based page output.
-my %targets = map { $_->{id} => notification_bytes($_->{name}) } @{$cfg->{targets} || [ ]};
-my %rules = map { $_->{id} => notification_bytes($_->{name}) } @{$cfg->{rules} || [ ]};
+my %targets = map { $_->{id} => notification_bytes($_->{name}) }
+	@{$cfg->{targets} || [ ]};
+my %rules = map { $_->{id} => notification_bytes($_->{name}) }
+	@{$cfg->{rules} || [ ]};
 my @attention = map {
 	# A paused record without a saved reason uses the generic label.
 	# Muted owners add a Muted suffix to the status.
@@ -67,6 +146,8 @@ for my $event (reverse @{$data->{events}}) {
 	# Mark muted events.
 	$row[4] .= ' '.ui_badge($text{notifications_muted}, 'neutral',
 		{ small => 1 }) if $event->{silenced};
+	# Readings come from the event even if its rule was changed or deleted.
+	push @row, notification_event_readings($event);
 	if (!$guest) {
 		# Keep each receipt and any retry beside its event.
 		my @receipts = map {
@@ -86,17 +167,44 @@ for my $event (reverse @{$data->{events}}) {
 	}
 # Host history includes receipts; guest history exposes only event details.
 my @heads = map { $text{'notifications_'.$_} }
-	qw(time name subject severity state);
+	qw(time name subject severity state reading threshold);
 push @heads, $text{notifications_delivery} unless $guest;
-# Show the retention note above events, or an empty state without them.
-push @cards, ui_card({ id => 'notification-history',
-	desc => @rows ? $text{notifications_retention} : undef,
-	body => @rows
-		? ui_columns_table(\@heads, 100, \@rows, undef, 0,
-				   undef, undef, 1)
-		: ui_empty_state({ icon => 'clock',
-			title => $text{notifications_empty},
-			desc => $text{notifications_empty_desc} }),
+# Page metadata enables controls. Keep search when a filter needs clearing,
+# even if it matched no events.
+my $filtered = length($data->{search} // '');
+my ($search, $pager) = exists($data->{page}) && (@rows || $filtered)
+	? notification_history_controls($data, $owner) : ( '', '' );
+# Keep the retention note and search together, aligned with the table.
+my $toolbar = ui_cluster([
+	@rows || $filtered ? html_escape($text{notifications_retention}) : '',
+	$search ], { align => 'between', gap => '12px' });
+my $body;
+if (@rows) {
+	# Event rows retain their headings and sorting controls.
+	$body = ui_tag('div', ui_columns_table(\@heads, 100, \@rows,
+					       undef, 0, undef, undef, 1),
+		       { class => 'ui_table_scroll' });
+	}
+elsif ($filtered) {
+	# Show a centered message in a plain box when nothing matches.
+	$body = ui_tag(
+		'div', html_escape($text{notifications_no_matches}),
+		{ class => 'notification-no-matches',
+		  style =>
+			'border: 1px solid var(--ui-border); padding: 6px; '.
+			'text-align: center; margin-top: 4px;' });
+	}
+else {
+	# History with no recorded events needs no table or search controls.
+	$body = ui_empty_state({ icon => 'clock',
+				 title => $text{notifications_empty},
+				 desc => $text{notifications_empty_desc} });
+	}
+# Empty history and searches with no matches have no event count or pager.
+push @cards, ui_card({
+	id => 'notification-history',
+	body => ui_stack([ $toolbar, $body, @rows ? $pager : '' ],
+			 { class => 'ui_table_layout' }),
 });
 return ui_stack(\@cards);
 }
@@ -378,19 +486,23 @@ my $form = ui_form_start('notification_save.cgi', 'post', undef,
 return ($link, $form);
 }
 
-# show_notifications(tab, [owner], [target]) renders history and settings.
+# show_notifications(tab, [owner], [target], [filter]) renders notifications.
 # tab is history, rules or targets. A guest UUID in owner restricts history;
 # host or an omitted owner includes host and guest events. An optional
-# destination ID in target filters the rule list only.
+# destination ID in target filters the rule list only. filter contains page
+# and search for history; omitted filters show the latest 25 events.
 sub show_notifications
 {
-my ($tab, $owner, $target) = @_;
+my ($tab, $owner, $target, $filter) = @_;
+# Requests without filters start with the newest page in the requested scope.
+$filter ||= { };
 my $guest = defined($owner) && $owner ne 'host';
 # Read history first. The API checks access to the requested scope.
 my $data = call_notification_api('notifications',
-	defined($owner) ? { id => $owner } : { });
+	{ id => $owner, page => $filter->{page} // 1, limit => 25,
+	  search => $filter->{search} });
 # Guest views never read host rules, targets or another guest's history.
-return ui_page_start().show_notification_history($data, { }, '', 1).
+return ui_page_start().show_notification_history($data, { }, '', 1, $owner).
 	ui_page_end() if $guest;
 my $cfg = call_notification_api('notification_config', { });
 # A usage link filters only Rules, leaving destination counts unchanged.
@@ -442,7 +554,7 @@ for my $section (qw(history rules targets)) {
 		}
 	# History lists events. The other tabs list rules or destinations.
 	$html .= $section eq 'history'
-		? show_notification_history($data, $cfg, $token, 0)
+		? show_notification_history($data, $cfg, $token, 0, $owner)
 		: show_notification_list(
 			$section eq 'rules' ? 'rule' : 'target',
 			$section_cfg, $token, \%scopes);

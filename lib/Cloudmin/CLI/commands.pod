@@ -32,8 +32,13 @@ Use C<--multiline> to see details including UUID, disk capacity and automatic st
 
 Lists the latest 100 events by default. C<--id> limits results to one guest UUID. Use C<--cursor 0> to start at the oldest retained event, then pass the returned cursor to continue. C<--limit> accepts 1 to 500. Events are kept for 30 days, or longer while delivery is pending.
 
+C<--page 1> returns the newest page. Increase it to read older pages. It cannot be combined with C<--cursor>. Requesting a page past the end returns the last page. Results include the number of matching events and pages. Events within each batch are ordered by increasing ID.
+
+C<--search> finds a single-line phrase of up to 200 characters in event details. It ignores letter case, treats punctuation as ordinary text and trims spaces at both ends. It searches all retained events you can access before counting them and selecting a page. It does not search delivery addresses or errors, or filter current condition states.
+
     cloudmin get-notifications --json
     cloudmin get-notifications --cursor 0 --limit 100 --json
+    cloudmin get-notifications --page 2 --limit 25 --search memory --json
 
 =head2 get-notification-config
 

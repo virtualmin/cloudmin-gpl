@@ -46,8 +46,34 @@ else {
 	}
 my $store = get_notifications();
 # History reads need no management grant or mutation token.
-return $store->history($owner, $in->{cursor}, $in->{limit})
-	if $action eq 'notifications';
+if ($action eq 'notifications') {
+	# Form input is bytes; JSON input may already be decoded.
+	my $search = $in->{search};
+	if (defined($search) && !ref($search) && !Encode::is_utf8($search)) {
+		# Reject invalid UTF-8 before checking the character limit.
+		$search = Encode::decode('UTF-8', $search,
+					 Encode::FB_CROAK | Encode::LEAVE_SRC);
+		}
+	# Use local translations, not labels supplied in the request.
+	my %labels;
+	if (defined($search) && !ref($search) && length($search)) {
+		# Build display labels only when a phrase needs matching.
+		for my $code (
+			Cloudmin::NotificationTypes::metrics(),
+			qw(firing resolved failed reminder test notice warning error
+				muted ge le)) {
+			my $label = $text{'notifications_'.$code};
+			# Missing translations leave the stored code searchable.
+			next unless defined($label);
+			$labels{$code} = Encode::is_utf8($label)
+				? $label
+				: Encode::decode('UTF-8', $label);
+			}
+		}
+	# Validate filters after checking access to the requested guest or host.
+	return $store->history($owner, $in->{cursor}, $in->{limit},
+		{ page => $in->{page}, search => $search, labels => \%labels });
+	}
 if ($action eq 'notification_config') {
 	# Report worker health alongside the redacted saved settings.
 	my $result = $store->configuration();

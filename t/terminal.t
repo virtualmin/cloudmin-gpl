@@ -226,15 +226,15 @@ is_deeply(
 					  'edit_machine.cgi?id='.$uuid,
 					  'snapshots.cgi?id='.$uuid,
 					  'remote_access.cgi?id='.$uuid,
-					  'statistics.cgi?id='.$uuid,
 					  'notifications.cgi?id='.$uuid,
+					  'statistics.cgi?id='.$uuid,
 					  'index.cgi',
 					  'images.cgi', 'storage.cgi',
 					  'networks.cgi',
 					  'snapshots.cgi', 'backups.cgi',
 					  'jobs.cgi', 'notifications.cgi',
 					  'statistics.cgi' ) ],
-	'guest links precede global tools, each group ending with its history');
+	'guest links precede global tools, with notifications before statistics');
 # Module configuration and presets share Virtualmin's settings category.
 my ($settings) = grep { ($_->{'type'} || '') eq 'cat' } @menu;
 is($settings->{'id'}, 'global_setting', 'settings use Virtualmin category ID');

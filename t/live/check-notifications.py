@@ -8,8 +8,12 @@ guests. Pass an existing screenshot directory to save review images. Add
 --setup-only to run only the form and row-action checks, or --forms-only
 to check the editors and mute controls. Full runs expect the notification
 interval to remain at its default of 60 seconds for the scheduled-delivery deadline.
+Use --history-only=GUEST_UUID with at least 125 events created by
+notification-history-fixture.pl. This mode sends no messages and changes no
+rules. Its temporary account is removed, but the generated history is kept.
 """
 import base64
+import csv
 import http.cookiejar
 import http.server
 import json
@@ -98,11 +102,12 @@ def api(opener, values, write=False):
 
 
 def browser(jar, target, guest, theme, rule_name):
-    """browser(jar, target, guest, theme, rule_name) runs real UI mutations.
+    """browser(jar, target, guest, theme, rule_name) checks the live UI.
 
-    jar supplies the fixture session. A null target runs setup and row checks;
-    otherwise target and guest identify the edit and scoped-history fixtures.
-    theme selects navigation and rule_name isolates this run's saved records.
+    jar holds the session cookies. With --history-only, guest selects existing
+    samples. target and rule_name are unused in that mode. Otherwise, target=None
+    runs setup and row checks. A target ID selects its editor and the guest's
+    history. theme selects navigation. rule_name names this run's saved rules.
     """
     binary = shutil.which('chromium') or shutil.which('chromium-browser')
     assert binary, 'Chromium is required'
@@ -272,6 +277,215 @@ def browser(jar, target, guest, theme, rule_name):
                 navigate('notifications.cgi')
             wait('!!document.querySelector("#notification-history")',
                  'History did not load')
+
+            if any(arg.startswith('--history-only=') for arg in sys.argv):
+                # Exercise actual search submissions and page links in both themes.
+                path = 'notifications.cgi?' + urllib.parse.urlencode({
+                    'id': guest, 'page': 1})
+                if theme == 'authentic-theme':
+                    # Load the full theme, including its table and form handlers.
+                    path += '&xnavigation=1'
+                navigate(path)
+                wait('!!document.querySelector(".ui_pager_next")', 'History pager missing')
+                if theme == 'authentic-theme':
+                    # A bare content response cannot verify the theme's layout.
+                    assert evaluate('!!document.querySelector(".panel-heading")')
+
+                def check_history_export():
+                    """check_history_export() downloads CSV through the header only."""
+                    if theme == 'authentic-theme':
+                        # Authentic keeps the table's export action hidden and
+                        # exposes it through the existing header control.
+                        wait('!!document.querySelector(".btn-filter-gl .export_mirror")',
+                             'Header export missing')
+                        assert not evaluate('$("#notification-history .buttons-csv").is(":visible")')
+                        click('.btn-filter-gl')
+                        wait('$(".btn-filter-gl .export_mirror").is(":visible")',
+                             'Header export did not open')
+                        screenshot('history-header-export')
+                        # Download only into this run's temporary browser profile.
+                        downloads = Path(profile) / 'exports'
+                        downloads.mkdir(exist_ok=True)
+                        call('Browser.setDownloadBehavior', {
+                            'behavior': 'allow', 'downloadPath': str(downloads)})
+                        previous = set(downloads.glob('*.csv'))
+                        click('.btn-filter-gl .export_mirror')
+                        deadline = time.monotonic() + 15
+                        while time.monotonic() < deadline:
+                            exported = set(downloads.glob('*.csv')) - previous
+                            if exported:
+                                # A completed download must contain table data.
+                                with next(iter(exported)).open(encoding='utf-8-sig') as data:
+                                    records = list(csv.reader(data))
+                                assert records[0][:2] == ['Time', 'Name'], records[0]
+                                assert len(records) > 1, 'CSV contains no events'
+                                break
+                            time.sleep(.1)
+                        else:
+                            # Report the failed action without retaining files.
+                            raise AssertionError('Header CSV download did not finish')
+
+                check_history_export()
+                # The row callback excludes nested theme wrappers and headings.
+                rows = '''[...document.querySelectorAll('#notification-history tr')]
+                    .filter(row => !row.querySelector('tr') && row.querySelector('td') &&
+                        !row.classList.contains('ui_columns_heads'))'''
+                # Check page size and guest-only columns before paging.
+                first = evaluate(rows + '.map(row => row.innerText)')
+                assert len(first) == 25, ('First page row count', len(first))
+                assert evaluate('document.querySelector("#notification-history").innerText.includes("Threshold")')
+                assert not evaluate('document.querySelector("#notification-history").innerText.includes("Delivery")')
+                def check_no_matches():
+                    """check_no_matches() checks message alignment and its border."""
+                    layout = evaluate('''(() => {
+                        // callback() measures the message and its border.
+                        const message = document.querySelector('#notification-history .notification-no-matches');
+                        // Let Python report the missing message.
+                        if (!message) return null;
+                        // Measure the text against the center of its box.
+                        const style = getComputedStyle(message);
+                        const range = document.createRange();
+                        range.selectNodeContents(message);
+                        const textBox = range.getBoundingClientRect();
+                        const box = message.getBoundingClientRect();
+                        // Include the resolved border and its theme variable.
+                        return {
+                            text: message.textContent.trim(),
+                            alignment: style.textAlign,
+                            offset: Math.abs((textBox.left + textBox.right - box.left - box.right) / 2),
+                            border: style.borderTopWidth,
+                            color: style.borderTopColor,
+                            themedBorder: message.style.border.includes('var(--ui-border)')
+                        };
+                    })()''')
+                    # Check centering and theme colors, with no table or pager.
+                    assert layout and layout['text'] == 'No notifications match your search.', layout
+                    assert layout['alignment'] == 'center' and layout['offset'] < 2, layout
+                    assert layout['border'] == '1px' and layout['themedBorder'], layout
+                    assert layout['color'] not in ('transparent', 'rgba(0, 0, 0, 0)'), layout
+                    assert not evaluate('!!document.querySelector("#notification-history table, #notification-history .ui_empty, #notification-history .ui_pager")')
+
+                screenshot('history-guest')
+                # Page changes return distinct events and keep search empty.
+                click('.ui_pager_next')
+                wait('document.querySelector(".ui_pager_current")?.textContent.trim() === "2"',
+                     'Next page did not load')
+                second = evaluate(rows + '.map(row => row.innerText)')
+                assert len(second) == 25 and not set(first).intersection(second), 'Pages overlap'
+                assert evaluate('document.querySelector("#notification-history [name=search]").value') == ''
+                screenshot('history-page-two')
+
+                def history_search(value):
+                    """history_search(value) submits a phrase by pressing Enter."""
+                    evaluate('''(() => {
+                        // callback() focuses the field and sets its value.
+                        const field = document.querySelector('#notification-history [name=search]');
+                        field.focus();
+                        field.value = ''' + json.dumps(value) + ''';
+                    })()''')
+                    # Press Enter to exercise normal form submission.
+                    call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Enter',
+                        'code': 'Enter', 'windowsVirtualKeyCode': 13, 'text': '\r'})
+                    call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': 'Enter',
+                        'code': 'Enter', 'windowsVirtualKeyCode': 13})
+                    # Wait for the submitted phrase before checking results.
+                    wait('''document.readyState === 'complete' &&
+                        new URL(location.href).searchParams.get('search') === ''' + json.dumps(value),
+                         'History search did not finish')
+
+                # Search must reach events older than the latest 100.
+                history_search('CPU pressure 1')
+                wait(rows + '.length > 0', 'Search found no rows')
+                assert any('CPU pressure 1\t' in row or
+                           'CPU pressure 1\n' in row for row in evaluate(rows + '.map(row => row.innerText)'))
+                assert not evaluate('!!document.querySelector(".ui_pager_current")'), 'Search did not reset the page'
+                # Uppercase accented input must match the stored Unicode name.
+                history_search('CAFÉ')
+                wait(rows + '.length > 0', 'Unicode search failed')
+                assert all('Café' in row for row in evaluate(rows + '.map(row => row.innerText)'))
+                # The clear control fits inside the input without covering text.
+                clear_layout = evaluate('''(() => {
+                    // callback() measures the clear control and its labels.
+                    const field = document.querySelector('#notification-history [name=search]');
+                    const clear = field.closest('.ui_search').querySelector('.ui_search_clear');
+                    // Report a missing control to the Python assertion.
+                    if (!clear) return {missing: true, markup: field.closest('.ui_search').outerHTML};
+                    const inputBox = field.getBoundingClientRect();
+                    const clearBox = clear.getBoundingClientRect();
+                    return {title: clear.title, aria: clear.getAttribute('aria-label'),
+                        input: inputBox.toJSON(), clear: clearBox.toJSON(),
+                        padding: parseFloat(getComputedStyle(field).paddingRight),
+                        inside: clearBox.width >= 20 && clearBox.height >= 20 &&
+                            clearBox.right <= inputBox.right && clearBox.top >= inputBox.top &&
+                            clearBox.bottom <= inputBox.bottom &&
+                            clearBox.left >= inputBox.right - parseFloat(getComputedStyle(field).paddingRight)};
+                })()''')
+                assert clear_layout.get('title') == 'Clear search' and \
+                    clear_layout.get('aria') == 'Clear search' and clear_layout.get('inside'), clear_layout
+                screenshot('history-search')
+                # Match the displayed status, not just its stored code.
+                history_search('Recovered')
+                wait(rows + '.length > 0', 'Translated state search failed')
+                assert all('Recovered' in row for row in evaluate(rows + '.map(row => row.innerText)'))
+                # Search text must not run as HTML or lose the selected guest.
+                history_search('<script>window.historyInjected=1</script>')
+                wait('document.querySelector("#notification-history")?.innerText.includes("No notifications match")',
+                     'No-match feedback missing')
+                # No-match feedback uses a plain box, without table headings.
+                check_no_matches()
+                screenshot('history-guest-no-matches')
+                assert not evaluate('!!window.historyInjected'), 'Search rendered markup'
+                clear = evaluate('''document.querySelector('#notification-history .ui_search_clear')
+                    ?.getAttribute('href')''')
+                assert clear and urllib.parse.parse_qs(urllib.parse.urlparse(clear).query)['id'] == [guest]
+                # Clearing by keyboard returns to page 1 for the same guest.
+                evaluate('document.querySelector("#notification-history .ui_search_clear").focus()')
+                call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Enter',
+                    'code': 'Enter', 'windowsVirtualKeyCode': 13, 'text': '\r'})
+                call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': 'Enter',
+                    'code': 'Enter', 'windowsVirtualKeyCode': 13})
+                wait('''document.readyState === 'complete' &&
+                    !new URL(location.href).searchParams.has('search') &&
+                    document.querySelector('#notification-history [name=search]')?.value === '' &&
+                    document.querySelector('.ui_pager_current')?.textContent.trim() === '1' ''',
+                     'Clearing the guest search did not reset history')
+                assert evaluate('new URL(location.href).searchParams.get("id")') == guest
+                assert not evaluate('!!document.querySelector("#notification-history .ui_search_clear")')
+
+                # The same paginator must work for combined host history.
+                navigate('notifications.cgi?search=GiB' +
+                         ('&xnavigation=1' if theme == 'authentic-theme' else ''))
+                wait('!!document.querySelector(".ui_pager_next")', 'Combined history pager missing')
+                assert evaluate('document.querySelector("#notification-history").innerText.includes("Delivery")')
+                check_history_export()
+                screenshot('history-all')
+                # Combined history shows the same centered message with no matches.
+                history_search('no-such-notification-history-event')
+                wait('!!document.querySelector("#notification-history .notification-no-matches")',
+                     'Combined no-match message missing')
+                check_no_matches()
+                screenshot('history-all-no-matches')
+                # Combined history clears the filter without selecting a guest.
+                click('#notification-history .ui_search_clear')
+                wait('''document.readyState === 'complete' &&
+                    !new URL(location.href).searchParams.has('search') &&
+                    document.querySelector('#notification-history [name=search]')?.value === '' ''',
+                     'Clearing the combined search did not reset history')
+                assert not evaluate('new URL(location.href).searchParams.has("id")')
+                # Keep the table scrollable inside the card on a narrow viewport.
+                call('Emulation.setDeviceMetricsOverride', {
+                    'width': 540, 'height': 1000, 'deviceScaleFactor': 1, 'mobile': False})
+                navigate(path)
+                wait('!!document.querySelector(".ui_pager_next")', 'Narrow history missing')
+                screenshot('history-narrow')
+                assert evaluate('''(() => {
+                    // callback() checks the table scroll container.
+                    const table = document.querySelector('#notification-history table');
+                    const scroll = table && table.closest('.ui_table_scroll');
+                    return scroll && getComputedStyle(scroll).overflowX === 'auto';
+                })()'''), 'Narrow table has no scrolling container'
+                print('PASS history search, page links, readings and narrow layout:', theme, flush=True)
+                return
 
             if target is None:
                 # Exercise setup, editing and row actions using
@@ -1153,6 +1367,34 @@ with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Sink) as sink:
                 account('acl', theme, user, json.dumps({'admin': 1}))
                 time.sleep(1)
                 opener, jar = login(user, password)
+                # A guest UUID selects history checks without sending alerts.
+                history_guest = next((arg.split('=', 1)[1] for arg in sys.argv
+                                      if arg.startswith('--history-only=')), None)
+                if history_guest:
+                    # Read saved samples without a write token or new events.
+                    query = {'action': 'notifications', 'id': history_guest,
+                             'page': 1, 'limit': 25}
+                    first = api(opener, query)['result']
+                    assert first['total'] >= 125 and len(first['events']) == 25
+                    # Adjacent API pages must not repeat event IDs.
+                    second = api(opener, {**query, 'page': 2})['result']
+                    assert not {event['id'] for event in first['events']}.intersection(
+                        event['id'] for event in second['events'])
+                    # Use the same retained events for browser and API checks.
+                    browser(jar, None, history_guest, theme, user)
+                    # Read-only delegates retain guest history, not host data.
+                    account('acl', theme, user, json.dumps({'admin': 0, 'vms': history_guest}))
+                    account('readonly', theme, user, '1\n')
+                    scoped = api(opener, query)['result']
+                    assert scoped['total'] == first['total']
+                    assert all(event['owner'] == history_guest and 'deliveries' not in event
+                               for event in scoped['events'])
+                    # Reject host reads and conflicting navigation.
+                    assert 'error' in api(opener, {'action': 'notifications', 'page': 1})
+                    assert 'error' in api(opener, {**query, 'id': 'host'})
+                    assert 'error' in api(opener, {**query, 'cursor': 0})
+                    print('PASS scoped history API and read-only access:', theme, flush=True)
+                    continue
                 token = api(opener, {'action': 'options'})['result']['token']
                 # Run the setup, form and row checks with Unicode record names.
                 browser(jar, None, None, theme, user + '-setup-Größe-М-Ã©-😀')

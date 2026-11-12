@@ -159,4 +159,38 @@ for my $scope (undef, '', 'host', '*', [ ], '../all') {
 	eval { call_notification_api('mute_notifications', { id => $scope, token => 'valid' }) };
 	ok($@, 'invalid scope never defaults to muting everything');
 	}
+# Page filters pass through the same guest authorization as cursor reads.
+my $store = get_notifications();
+$store->transaction(sub {
+	# callback(db) seeds both owners to test scope isolation.
+	my ($db) = @_;
+	for my $owner ($vm, 'host') {
+		Cloudmin::Notifications::event($db,
+			{ id => 'history', name => "Caf\x{e9} history",
+			  metric => 'cpu', threshold => 90,
+			  severity => 'warning', targets => [ ] },
+			{ owner => $owner, subject => 'cpu', label => 'Fixture',
+			  value => 95 },
+			'firing', time());
+		}
+	});
+# Guest searches decode form bytes without exposing delivery details.
+$host = 0;
+my $paged = call_notification_api('notifications',
+	{ id => $vm, page => 1,
+	  search => Encode::encode('UTF-8', "Caf\x{e9}") });
+is($paged->{total}, 1, 'UTF-8 form search counts only the assigned guest');
+ok(!exists($paged->{events}[0]{deliveries}),
+   'page results omit guest receipts');
+# Search cannot bypass host authorization or combine two navigation modes.
+eval {
+	call_notification_api('notifications',
+			      { page => 1, search => 'history' })
+	};
+like($@, qr/Denied/, 'search without a guest cannot bypass host access');
+eval {
+	call_notification_api('notifications',
+			      { id => $vm, page => 1, cursor => 0 })
+	};
+like($@, qr/either a page or a cursor/, 'API rejects conflicting navigation');
 done_testing();

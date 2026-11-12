@@ -42,12 +42,15 @@ my $store = get_notifications();
 my $empty = show_notifications('history');
 like($empty, qr/ui_empty/, 'empty inventory uses shared empty states');
 unlike($empty, qr/ui_columns_heads/, 'empty inventory has no table headings');
-# An empty history offers no setup actions. An empty rule list links to
-# the rule editor.
+# Empty history has no setup actions, search or pagination controls.
 my $history_empty = show_notification_history(
-	{ events => [ ], states => [ ] }, { }, 'fixture-token', 0);
+	{ events => [ ], states => [ ], page => 1, pages => 1,
+	  limit => 25, total => 0, search => '' }, { }, 'fixture-token', 0);
 unlike($history_empty, qr/notification_(?:form|save).cgi/,
 	'empty history does not duplicate setup actions');
+unlike($history_empty, qr/name="search"|ui_pager|Showing 0/,
+	'empty unfiltered history has no search or pagination controls');
+# An empty rule list still offers rule creation.
 my $rules_empty = show_notification_list('rule',
 	{ rules => [ ], targets => [ ] }, 'fixture-token', { });
 like($rules_empty, qr/notification_form.cgi\?kind=rule/,
@@ -373,6 +376,67 @@ unlike($history, qr/<script>error|<b>Pressure/,
 $history = show_notification_history($data, { }, '', 1);
 unlike($history, qr/Delivery|retry_notification|script&gt;error/,
 	'guest history omits delivery details and retries');
+# Historical readings use their saved units and comparison, including zero.
+is_deeply([ notification_event_readings({
+	metric => 'cpu', value => 0,
+	threshold => 90, unit => '%', comparison => 'ge' }) ],
+	  [ '0%', 'At or above 90%' ],
+	  'zero reading and percentage threshold shown');
+is_deeply([ notification_event_readings({
+	metric => 'filesystem_free', value => .125, threshold => 1,
+	unit => 'GiB', comparison => 'le' }) ],
+	  [ '0.125 GiB', 'At or below 1 GiB' ],
+	  'free space keeps units and comparison');
+# Status events use words; tests and absent readings do not imply a value.
+is_deeply([ notification_event_readings({
+	metric => 'guest_down', value => 0 }) ],
+	  [ 'The guest is running again.', '&mdash;' ],
+	  'status recovery uses words');
+is_deeply([ notification_event_readings({ metric => 'test' }) ],
+	  [ '&mdash;', '&mdash;' ],
+	  'tests do not invent readings or thresholds');
+is_deeply([ notification_event_readings({ metric => 'cpu' }) ],
+	  [ '&mdash;', '&mdash;' ], 'missing historical readings stay missing');
+# Search text is escaped, and page links retain both the phrase and guest UUID.
+my $paged = { %$data, page => 2, pages => 6, limit => 25, total => 150,
+	      search => '<script>&"' };
+my $paged_guest = '11111111-2222-3333-4444-555555555555';
+my $page_html = show_notification_history($paged, { }, '', 1, $paged_guest);
+like($page_html, qr/ui_pager_current[^>]*>2</,
+	'the shared pager marks the current page');
+my $paged_url = 'id='.urlize($paged_guest).
+	'&amp;search=%3Cscript%3E%26%22&amp;page=3';
+like($page_html, qr/\Q$paged_url\E/i,
+	'page links preserve escaped search and guest scope');
+like($page_html, qr/name="id"[^>]*value="$paged_guest"/,
+	'search form keeps the guest scope');
+unlike($page_html, qr/<script>|Delivery|retry_notification/,
+	'guest paging does not expose markup or host controls');
+like($page_html, qr/&lt;script&gt;&amp;&quot;/,
+	'search field escapes HTML-sensitive text');
+# A no-match result keeps search and centers its message without headings.
+my $no_matches = show_notification_history(
+	{ events => [ ], states => [ ], page => 1, pages => 1,
+	  limit => 25, total => 0, search => '0' }, { }, '', 1);
+like($no_matches,
+	qr/<div\b[^>]*text-align: center[^>]*>No notifications match your search\.<\/div>/,
+	'guest search with no matches has a centered message in a div');
+like($no_matches, qr/border: 1px solid var\(--ui-border\)/,
+	'no-match box uses the shared border color');
+unlike($no_matches, qr/ui_empty|<table\b|Delivery|data-sortable/,
+	'guest no-match result has no widget, table or sorting');
+like($no_matches, qr/Clear search/, 'an empty search result can be cleared');
+unlike($no_matches, qr/ui_pager|Showing 0/,
+	'an empty search result has no pagination controls or count');
+# Combined history uses the same plain message box as guest history.
+my $host_no_matches = show_notification_history(
+	{ events => [ ], states => [ ], page => 1, pages => 1,
+	  limit => 25, total => 0, search => 'missing' }, { }, '', 0);
+like($host_no_matches,
+	qr/<div\b[^>]*text-align: center[^>]*>No notifications match your search\.<\/div>/,
+	'combined search with no matches centers its message in a div');
+unlike($host_no_matches, qr/<table\b|Delivery|data-sortable/,
+	'combined no-match result has no table or sorting');
 # Paused checks show the cause, with a generic fallback when none is saved.
 for my $case (
 	[ planned_stop => 'Alerts paused for planned stop' ],
