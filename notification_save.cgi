@@ -4,7 +4,7 @@ use warnings;
 use Encode ();
 our (%in, %text);
 require './server-manager-lib.pl';
-# Only signed POST requests can change rules or queue a test message.
+# Only signed POST requests can change settings or mutes, or queue a test.
 error('Use POST for notification changes')
 	unless ($ENV{REQUEST_METHOD} || '') eq 'POST';
 error('Request is too large') if ($ENV{CONTENT_LENGTH} || 0) > 32768;
@@ -27,8 +27,9 @@ if (!$decoded) {
 	delete @in{qw(secret webhook_url address)};
 	error('Invalid UTF-8 in notification form');
 	}
+# Pass the signed token, a record ID in object and a mute scope in id.
 my $action = $in{action} || '';
-my %input = ( token => $in{token}, object => $in{object} );
+my %input = ( token => $in{token}, object => $in{object}, id => $in{id} );
 # Both editors use the same mapping for provider-specific inputs.
 my %address_fields = ( email => 'email_address', telegram => 'telegram_chat',
 	gotify => 'gotify_url' );
@@ -92,6 +93,17 @@ my $ok = eval { call_notification_api($action, \%input); 1 };
 # Error pages must not receive bearer tokens or private webhook URLs.
 delete @in{qw(secret webhook_url address)};
 error(html_escape(error_message($@))) unless $ok;
-# Retries belong to History; record changes return to their own inventory.
-redirect('notifications.cgi?tab=history') if $action eq 'retry_notification';
-redirect('notifications.cgi?tab='.($action =~ /rule/ ? 'rules' : 'targets'));
+# Return to the page that matches the change.
+if ($action eq 'mute_notifications' || $action eq 'unmute_notifications') {
+	# A guest mute returns to that guest's page, all to All Notifications.
+	redirect('notifications.cgi'.(lc($in{id}) eq 'all'
+		? '' : '?id='.urlize(lc($in{id}))));
+	}
+elsif ($action eq 'retry_notification') {
+	# Retry results belong with their event in History.
+	redirect('notifications.cgi?tab=history');
+	}
+else {
+	# Other changes return to their rule or destination list.
+	redirect('notifications.cgi?tab='.($action =~ /rule/ ? 'rules' : 'targets'));
+	}

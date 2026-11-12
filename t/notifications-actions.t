@@ -353,4 +353,20 @@ subtest 'Save standalone and inline push destinations' => sub {
 		}
 	};
 
+# Both mute scopes use the same signed POST handler and return to their page.
+$host = $manage = 1;
+$readonly = 0;
+my $vm = '11111111-1111-4111-8111-111111111111';
+for my $scope ($vm, 'all') {
+	for my $action (qw(mute_notifications unmute_notifications)) {
+		my %form = ( action => $action, token => 'fixture-token', id => $scope );
+		my $output = eval { render(\%form, 'GET', 'notification_save.cgi') };
+		like($@, qr/Use POST/, "$action rejects GET");
+		$output = eval { render(\%form, 'POST', 'notification_save.cgi') };
+		is($@, '', "$action accepts signed POST");
+		my $return = 'notifications.cgi'.($scope eq 'all' ? '' : '?id='.urlize($scope));
+		like($output, qr/REDIRECT: \Q$return\E\n/,
+			"$action returns to the selected scope");
+		}
+	}
 done_testing();

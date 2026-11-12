@@ -156,7 +156,7 @@ if ($action eq 'statistics' || $action eq 'statistics_export') {
 	return call_statistics_api($action, $input);
 	}
 # Notification dispatch checks read scope and mutation grants before storage.
-if ($action =~ /\A(?:notifications|notification_config|set_notification_target_enabled|set_notification_rule_enabled|retry_notification|save_notification_target|save_notification_rule|delete_notification_target|delete_notification_rule|test_notification_target)\z/) {
+if ($action =~ /\A(?:notifications|notification_config|mute_notifications|unmute_notifications|set_notification_target_enabled|set_notification_rule_enabled|retry_notification|save_notification_target|save_notification_rule|delete_notification_target|delete_notification_rule|test_notification_target)\z/) {
 	require "$module_root_directory/cloudmin-notifications-lib.pl";
 	return call_notification_api($action, $input);
 	}

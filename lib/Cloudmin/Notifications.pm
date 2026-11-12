@@ -78,6 +78,8 @@ return 0 + $v;
 
 # connect(self, write) opens private SQLite storage; true write allows changes.
 # A read returns undef when the database or its initial schema is absent.
+# A write creates the schema or upgrades it to version 3. Reads accept
+# versions 1 to 3 without upgrading.
 sub connect
 {
 my ($self, $write) = @_;
@@ -113,7 +115,7 @@ $db->do('PRAGMA busy_timeout = 5000');
 $db->do('PRAGMA foreign_keys = ON');
 $db->do('PRAGMA query_only = ON') unless $write;
 my ($version) = $db->selectrow_array('PRAGMA user_version');
-die "Unsupported notification database version\n" if $version > 1;
+die "Unsupported notification database version\n" if $version > 3;
 if (!$write && !$version) {
 	# A first writer may still be publishing the schema.
 	$db->disconnect();
@@ -124,8 +126,8 @@ if ($write) {
 	$db->do('PRAGMA secure_delete = ON');
 	$db->do('PRAGMA synchronous = FULL');
 	}
-if ($write && !$version) {
-	# Publish a complete schema and instance identity in one transaction.
+if ($write && $version < 3) {
+	# Create or upgrade the schema and instance identity in one transaction.
 	$db->do('BEGIN IMMEDIATE');
 	$db->do('CREATE TABLE IF NOT EXISTS targets
 		(id TEXT PRIMARY KEY, record TEXT NOT NULL)');
@@ -156,7 +158,28 @@ if ($write && !$version) {
 	# The instance ID distinguishes webhook events from different hosts.
 	$db->do('INSERT OR IGNORE INTO metadata VALUES (?, ?)', undef,
 		'instance', encode(id()));
-	$db->do('PRAGMA user_version = 1');
+	# Store mute intervals. Zero until_time means the mute has not ended.
+	# Upgrades keep existing events and receipts.
+	$db->do('CREATE TABLE IF NOT EXISTS mutes
+		(owner TEXT NOT NULL, start_time INTEGER NOT NULL,
+		 until_time INTEGER NOT NULL)');
+	$db->do('CREATE INDEX IF NOT EXISTS mutes_owner
+		ON mutes(owner, until_time)');
+	if ($version == 2) {
+		# Version 2 came from an unreleased build with timed mutes.
+		# Keep its active mutes as manual ones with no end time.
+		$db->do('UPDATE mutes SET until_time = 0 WHERE until_time > ?',
+			undef, time());
+		# Drop its schedule table and each rule's schedule list.
+		$db->do('DROP TABLE IF EXISTS windows');
+		for my $row (@{$db->selectall_arrayref('SELECT id, record FROM rules')}) {
+			my $rule = decode($row->[1]);
+			delete $rule->{windows};
+			$db->do('UPDATE rules SET record = ? WHERE id = ?',
+				undef, encode($rule), $row->[0]);
+			}
+		}
+	$db->do('PRAGMA user_version = 3');
 	$db->commit();
 	}
 return $db;
@@ -551,14 +574,18 @@ for my $row (@{$db->selectall_arrayref("SELECT DISTINCT e.id, e.record
 	}
 }
 
-# event(database, rule, observation, phase, now, [source]) records an event.
-# source prevents duplicate job-failure events; omit it for sampled conditions.
-# now is Unix seconds. Return the new event ID, or undef for a duplicate. rule
-# supplies saved settings; observation supplies owner, subject, label and value.
-# phase identifies firing, resolved, reminder, failed or test.
+# event(database, rule, observation, phase, now, [source], [quiet])
+# records an event and a receipt for each enabled destination of the rule.
+# rule supplies saved settings; observation supplies owner, subject, label and
+# value. phase identifies firing, resolved, reminder, failed or test. now is
+# Unix seconds. source prevents duplicate job-failure events; omit it for
+# sampled conditions. The event is recorded as muted when a mute is active at
+# now, or when quiet supplies a mute reason, all or guest, after the mute has
+# ended. Test events are never muted.
+# Return the new event ID, or undef for a duplicate.
 sub event
 {
-my ($db, $rule, $obs, $phase, $now, $source) = @_;
+my ($db, $rule, $obs, $phase, $now, $source, $quiet) = @_;
 my ($instance) = $db->selectrow_array(
 	'SELECT value FROM metadata WHERE key = ?', undef, 'instance');
 # The worker clock has fractions. Receivers always get whole seconds.
@@ -577,6 +604,10 @@ my $record = { version => 1, host => hostname(),
 	value => $obs->{value}, phase => $phase,
 	severity => $phase eq 'resolved' ? 'notice' : $rule->{severity},
 	created => $created };
+# Muted events stay in history, and their receipts are never queued.
+my $silenced = $phase eq 'test' ? undef
+	: $quiet || silence($db, $obs->{owner}, $now);
+$record->{silenced} = $silenced if $silenced;
 # Repeated job scans must not create another event or delivery receipt.
 $db->do('INSERT OR IGNORE INTO events(source, owner, created, record)
 	VALUES (?, ?, ?, ?)', undef, $source, $obs->{owner}, $created,
@@ -588,9 +619,111 @@ my %targets = map { $_->{id} => $_ } @{records($db, 'targets')};
 for my $target (@{$rule->{targets}}) {
 	next unless $targets{$target} && $targets{$target}->{enabled};
 	$db->do('INSERT INTO deliveries(event, target, state, attempts, due)
-		VALUES (?, ?, ?, 0, ?)', undef, $id, $target, 'queued', $now);
+		VALUES (?, ?, ?, 0, ?)', undef, $id, $target,
+		$silenced ? 'muted' : 'queued', $now);
 	}
 return $id;
+}
+
+# silence_context(database, now) snapshots the scopes muted at Unix time now.
+# Return a hash keyed by each muted scope, all or a guest UUID. Stores before
+# version 2 have no mutes. Zero until_time means the mute has not ended.
+sub silence_context
+{
+my ($db, $now) = @_;
+return { } unless $db && $db->selectrow_array('PRAGMA user_version') >= 2;
+return { map { $_->[0] => 1 }
+	@{$db->selectall_arrayref('SELECT DISTINCT owner FROM mutes
+	WHERE start_time <= ? AND (until_time = 0 OR until_time > ?)',
+	undef, $now, $now)} };
+}
+
+# silence(database, owner, now, [context]) returns all, guest or undef.
+# owner is host or a guest UUID; only the global mute covers the host.
+# Optional context reuses a silence_context() snapshot from the same
+# transaction. A global mute takes precedence over a guest's own mute.
+sub silence
+{
+my ($db, $owner, $now, $context) = @_;
+$context ||= silence_context($db, $now);
+return $context->{all} ? 'all' : $context->{$owner} ? 'guest' : undef;
+}
+
+# mute_event(database, id, event, reason) mutes an event's pending deliveries.
+# id is the event ID, event its decoded record, and reason all or guest.
+# Sent and failed copies stay unchanged. An active incident is flagged to
+# alert again after the mute ends. A transport already running may finish.
+sub mute_event
+{
+my ($db, $id, $event, $reason) = @_;
+# Mark queued and leased copies muted, and save the reason in the event.
+$db->do("UPDATE deliveries SET state = 'muted', error = ''
+	WHERE event = ? AND state IN ('queued', 'sending')", undef, $id);
+$event->{silenced} = $reason;
+$db->do('UPDATE events SET record = ? WHERE id = ?', undef, encode($event), $id);
+my ($json) = $db->selectrow_array('SELECT record FROM states
+	WHERE rule = ? AND subject = ?', undef, $event->{rule}, $event->{subject});
+if ($json) {
+	# Flag a still-active incident and keep the rest of its state.
+	my $state = decode($json);
+	$state->{notify_after_mute} = $reason if $state->{active};
+	$db->do('UPDATE states SET record = ? WHERE rule = ? AND subject = ?',
+		undef, encode($state), $event->{rule}, $event->{subject});
+	}
+}
+
+# mute(self, owner, enabled, now) starts or ends a manual mute.
+# owner is a guest UUID, or all for the host and every guest. enabled is 0 or
+# 1, and now is Unix seconds. A mute has no expiry. Ending one keeps its past
+# interval for delayed job-failure scans. Return the scope and new state.
+sub mute
+{
+my ($self, $owner, $enabled, $now) = @_;
+# Accept only an explicit scope, so bad input never mutes everything.
+$owner = lc(text($owner, 'mute scope', 36));
+die "Use a guest UUID or all for the mute scope\n" unless $owner eq 'all' ||
+	$owner =~ /\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/;
+$enabled = flag($enabled, 0);
+return $self->transaction(sub {
+	# callback(db) saves the mute and updates pending alerts in its scope.
+	my ($db) = @_;
+	my $active = silence_context($db, $now);
+	if (!$enabled) {
+		# Close this scope's open interval. Other scopes are unchanged.
+		$db->do('UPDATE mutes SET until_time = ? WHERE owner = ?
+			AND (until_time = 0 OR until_time > ?)', undef, $now, $owner, $now);
+		}
+	elsif (!$active->{$owner}) {
+		# Open an interval with no end. Repeating a mute keeps the
+		# existing interval.
+		$db->do('INSERT INTO mutes VALUES (?, ?, 0)', undef, $owner, $now);
+		}
+	if ($enabled) {
+		# Mute pending alerts in this scope at once, including retries
+		# due much later. Destination tests still send.
+		my $reason = $owner eq 'all' ? 'all' : 'guest';
+		for my $row (@{$db->selectall_arrayref("SELECT DISTINCT e.id, e.record
+			FROM events e JOIN deliveries d ON d.event = e.id
+			WHERE d.state IN ('queued', 'sending')")}) {
+			my $event = decode($row->[1]);
+			next if $event->{phase} eq 'test';
+			next unless $owner eq 'all' || $event->{owner} eq $owner;
+			mute_event($db, $row->[0], $event, $reason);
+			}
+		# Mark current incidents muted. Flag active ones to alert again
+		# at the first fresh check after unmuting.
+		for my $row (@{$db->selectall_arrayref(
+			'SELECT rule, subject, record FROM states')}) {
+			my $state = decode($row->[2]);
+			next unless $owner eq 'all' || $state->{owner} eq $owner;
+			$state->{muted} = $reason;
+			$state->{notify_after_mute} = $reason if $state->{active};
+			$db->do('UPDATE states SET record = ? WHERE rule = ? AND subject = ?',
+				undef, encode($state), @$row[0, 1]);
+			}
+		}
+	return { id => $owner, muted => $enabled };
+	});
 }
 
 # suppress(self, owner, until) pauses alerts for a guest's planned downtime.
@@ -617,7 +750,8 @@ $self->transaction(sub {
 # and skip_cached, default false, to retain collector-based state while
 # waiting for a new fresh sample. Optional rule_snapshot maps rule IDs to their
 # canonical JSON captured before collecting readings. Rules added or edited
-# since then wait for the next run.
+# since then wait for the next run. Muted owners are still checked, but their
+# events are recorded as muted.
 sub evaluate
 {
 my ($self, $observations, $now, $suppressed, $timing) = @_;
@@ -627,6 +761,8 @@ my $expected = $timing->{rule_snapshot};
 return $self->transaction(sub {
 	# callback(db) saves state changes and their events in one transaction.
 	my ($db) = @_;
+	# Read the active mutes once for every reading in this run.
+	my $silences = silence_context($db, $now);
 	for my $rule (@{records($db, 'rules')}) {
 		# Skip disabled rules. Job failure rules are handled
 		# by failure(), not by readings.
@@ -649,6 +785,12 @@ return $self->transaction(sub {
 			my ($json) = $db->selectrow_array('SELECT record FROM states
 				WHERE rule = ? AND subject = ?', undef, $rule->{id}, $subject);
 			my $s = $json ? decode($json) : { active => 0 };
+			# Checks continue while muted. Save the mute for the
+			# status badge, and flag an active incident to alert
+			# again after unmuting.
+			my $muted = silence($db, $obs->{owner}, $now, $silences);
+			$s->{muted} = $muted;
+			$s->{notify_after_mute} = $muted if $muted && $s->{active};
 			my ($until) = $db->selectrow_array(
 				'SELECT until_time FROM suppressions WHERE owner = ?',
 				undef, $obs->{owner});
@@ -723,6 +865,15 @@ return $self->transaction(sub {
 						$s->{active} = 1;
 						$s->{sent} = $now;
 						}
+					elsif ($s->{active} && !$muted &&
+					       $s->{notify_after_mute}) {
+						# After a mute ends, alert once
+						# for a still-active incident,
+						# even without reminders.
+						event($db, $rule, $obs, 'firing', $now, undef);
+						$s->{sent} = $now;
+						delete $s->{notify_after_mute};
+						}
 					elsif ($s->{active} && $rule->{reminder} &&
 						$now - ($s->{sent} || 0) >= 60 * $rule->{reminder}) {
 						# Repeat an active alert once
@@ -730,15 +881,22 @@ return $self->transaction(sub {
 						event($db, $rule, $obs, 'reminder', $now, undef);
 						$s->{sent} = $now;
 						}
+					# An alert raised while muted is
+					# announced after unmuting.
+					$s->{notify_after_mute} = $muted if $muted && $s->{active};
 					$s->{status} = $s->{active} ? 'active' : 'pending';
 					}
 				else {
 					# Clear active and pending conditions.
 					# Report recovery only after an alert
-					# and when recovery is enabled.
-					event($db, $rule, $obs, 'resolved', $now, undef)
+					# and when recovery is enabled. The
+					# recovery of an incident not announced
+					# since its mute is recorded as muted.
+					event($db, $rule, $obs, 'resolved', $now, undef,
+						$s->{notify_after_mute})
 						if $s->{active} && $rule->{recovery};
 					$s->{active} = 0;
+					delete $s->{notify_after_mute};
 					delete $s->{since};
 					$s->{status} = 'ok';
 					}
@@ -783,6 +941,7 @@ return $self->transaction(sub {
 # source identifies the failed job, owner is host or a guest UUID, and timestamp
 # is Unix seconds. Repeated scans reuse each rule/source pair.
 # label is the public failure description, truncated to 300 characters.
+# A mute active at timestamp records the event as muted.
 sub failure
 {
 my ($self, $source, $owner, $label, $now) = @_;
@@ -849,7 +1008,9 @@ return $result;
 # history(self, [owner], [after], [limit]) reads events and current incidents.
 # owner is a guest UUID; omit it only for authorized host viewers. Without
 # after, return the latest events; zero starts at the oldest.
-# limit defaults to 100 and allows 1 to 500.
+# limit defaults to 100 and allows 1 to 500. muted is 1 when the owner's own
+# mute is active, or the global mute when owner is omitted. all_muted is 1
+# when the global mute is active.
 sub history
 {
 my ($self, $owner, $after, $limit) = @_;
@@ -862,7 +1023,8 @@ die "Use whole cursor and limit values\n" if int($after) != $after ||
 	int($limit) != $limit;
 # A store that was never written has no history.
 my $db = $self->connect(0);
-return { events => [ ], cursor => $after, states => [ ] } unless $db;
+return { events => [ ], cursor => $after, states => [ ],
+	muted => 0, all_muted => 0 } unless $db;
 my @args = ( $after );
 my $scope = '';
 if (defined($owner)) {
@@ -885,16 +1047,22 @@ for my $row (@$rows) {
 		{ Slice => { } }, $row->[0]) unless defined($owner);
 	push @events, $event;
 	}
+# Read current mutes, so badges change without waiting for the next reading.
+my $silences = silence_context($db, time());
 # Current incidents use the same guest restriction as historical events.
 my @states;
 for my $row (@{$db->selectall_arrayref(
 	'SELECT rule, subject, record FROM states')}) {
 	my $state = decode($row->[2]);
 	next if defined($owner) && $state->{owner} ne $owner;
+	$state->{muted} = silence($db, $state->{owner}, time(), $silences);
 	push @states, { %$state, rule => $row->[0], subject => $row->[1] };
 	}
+# A guest reports its own mute; combined history reports the global mute.
+my $muted = $silences->{defined($owner) ? $owner : 'all'} ? 1 : 0;
 $db->disconnect();
 return { events => \@events, states => \@states,
+	muted => $muted, all_muted => $silences->{all} ? 1 : 0,
 	cursor => @events ? $events[-1]->{id} : $after };
 }
 
@@ -902,6 +1070,7 @@ return { events => \@events, states => \@states,
 # Stop starting attempts after 25 seconds; a final send may finish later.
 # send(target, event) throws on failure. now is Unix time. Lease each receipt
 # under a write lock, then release the lock before calling the transport.
+# Due copies in a muted scope are marked muted instead and are not counted.
 sub deliver
 {
 my ($self, $send, $now) = @_;
@@ -929,10 +1098,21 @@ for (1 .. 20) {
 				$row->{event}, $row->{target});
 			return { skip => 1 };
 			}
-		# Reserve this event/destination pair for five
-		# minutes before sending.
+		# Check the mute again at send time. It may have started
+		# after queueing, or a retry may have requeued this copy.
 		my ($json) = $db->selectrow_array('SELECT record FROM events WHERE id = ?',
 			undef, $row->{event});
+		my $event = decode($json);
+		my $muted = $event->{phase} eq 'test' ? undef
+			: silence($db, $event->{owner}, $now);
+		if ($muted) {
+			# Mute every pending copy, so no backlog is sent
+			# after unmuting.
+			mute_event($db, $row->{event}, $event, $muted);
+			return { skip => 1 };
+			}
+		# Reserve this event/destination pair for five
+		# minutes before sending.
 		$db->do("UPDATE deliveries SET state = 'sending', attempts = attempts + 1,
 			due = ? WHERE event = ? AND target = ?", undef,
 			$now + 300, $row->{event}, $row->{target});
@@ -1022,8 +1202,8 @@ return $self->transaction(sub {
 	});
 }
 
-# prune(self, now) removes completed history older than 30 days.
-# now is Unix seconds. Pending receipts remain until delivered or expired.
+# prune(self, now) removes completed history and mutes that ended over 30 days
+# ago. now is Unix seconds. Pending receipts remain until delivered or expired.
 sub prune
 {
 my ($self, $now) = @_;
@@ -1032,6 +1212,10 @@ $self->transaction(sub {
 	# Expire messages more than a day overdue, including abandoned leases.
 	$_[0]->do("UPDATE deliveries SET state = 'failed', error = 'Delivery expired'
 		WHERE state IN ('queued', 'sending') AND due < ?", undef, $now - 86400);
+	# Delete mutes that ended over 30 days ago. Newer intervals stay for
+	# delayed job-failure scans. Active mutes never expire.
+	$_[0]->do('DELETE FROM mutes WHERE until_time > 0 AND until_time < ?', undef,
+		$now - 30 * 86400);
 	# Retain pending deliveries even when their event is older than 30 days.
 	$_[0]->do("DELETE FROM events WHERE created < ? AND NOT EXISTS
 		(SELECT 1 FROM deliveries WHERE event = events.id

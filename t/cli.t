@@ -247,6 +247,10 @@ my %cases = (
 		{ object => 42 } ],
 	'get-notifications' => [ 'notifications', [ '--cursor', '0' ], { cursor => 0 } ],
 	'get-notification-config' => [ 'notification_config', [ ], { } ],
+	'mute-notifications' => [ 'mute_notifications',
+		[ '--id', 'all' ], { id => 'all' } ],
+	'unmute-notifications' => [ 'unmute_notifications',
+		[ '--id', 'guest-id' ], { id => 'guest-id' } ],
 	'save-notification-target' => [ 'save_notification_target',
 		[ '--file', "$tmp/notification.json" ], { target => { name => 'Fixture' } } ],
 	'save-notification-rule' => [ 'save_notification_rule',
@@ -552,7 +556,7 @@ foreach my $command (@{Cloudmin::CLI::commands()}) {
 
 # The API action set comes from its public contract, not the CLI definitions.
 my @actions =
-	qw(retry_notification notifications notification_config save_notification_target save_notification_rule set_notification_target_enabled set_notification_rule_enabled delete_notification_target delete_notification_rule test_notification_target download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines statistics statistics_export review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
+	qw(mute_notifications unmute_notifications retry_notification notifications notification_config save_notification_target save_notification_rule set_notification_target_enabled set_notification_rule_enabled delete_notification_target delete_notification_rule test_notification_target download_ssh_key ssh_keys save_ssh_key delete_ssh_key guest_ssh_keys add_guest_ssh_key remove_guest_ssh_key license check_license change_license deregister_license storage register_pool pool_start pool_stop pool_autostart volume_review delete_volume pool_review unregister_pool options machines statistics statistics_export review create status list cancel cancel_cleanup recover discard start shutdown reboot suspend resume reset reset_password power_cycle force_off autostart snapshots snapshot_create snapshot_restore snapshot_delete bridges bridge_remove_review bridge_remove bridge_status bridge_confirm bridge_rollback settings update add_disk attach_disk detach_disk delete_disk grow_disk add_interface update_interface remove_interface change_media delete clone_options clone image_options capture_image backups backup backup_inspect restore);
 my %mapped;
 foreach my $c (@{Cloudmin::CLI::commands()}) {
 	$mapped{$_} =

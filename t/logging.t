@@ -72,6 +72,12 @@ foreach my $action (qw(save_ssh_key delete_ssh_key download_ssh_key)) {
 	     qr/SSH key <tt\b[^>]*>Admins&lt;one&gt;<\/tt>\s*$/,
 	     "$action names the library entry");
 	}
+# Notification mutes name their scope, a guest UUID or all.
+foreach my $action (qw(mute_notifications unmute_notifications)) {
+	like(parse_webmin_log('root', '', $action, 'notification', 'all', { }),
+	     qr/^(?:Muted|Unmuted) alerts for <tt\b[^>]*>all<\/tt>\s*$/,
+	     "$action has a readable description");
+	}
 
 # Storage logs retain names and distinguish enabling boot from disabling it.
 for my $action (qw(create start stop)) {

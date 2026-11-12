@@ -6,8 +6,8 @@ records. Test messages go only to loopback receivers. Existing guests and
 notification rules are left alone. Requires Chromium, python3-websocket and two
 guests. Pass an existing screenshot directory to save review images. Add
 --setup-only to run only the form and row-action checks, or --forms-only
-to check only the editors. Full runs expect the notification interval to
-remain at its default of 60 seconds for the scheduled-delivery deadline.
+to check the editors and mute controls. Full runs expect the notification
+interval to remain at its default of 60 seconds for the scheduled-delivery deadline.
 """
 import base64
 import http.cookiejar
@@ -606,6 +606,113 @@ def browser(jar, target, guest, theme, rule_name):
                 wait('!!document.querySelector("input[value=save_notification_target]")', 'Destination edit failed')
                 assert evaluate('document.querySelector("[name=webhook_url]").value').endswith('sig=fixture-private')
                 submit('targets', standalone['name'])
+                # Each page header holds one mute toggle for its own scope.
+                # Start with the host and the guest unmuted.
+                mute_guest = guest_ids[0]
+                assert not api(opener, {'action': 'notifications'})['result']['muted'], 'Host already muted'
+                assert not api(opener, {'action': 'notifications', 'id': mute_guest})['result']['muted'], 'Guest already muted'
+                try:
+                    for scope in ('all', mute_guest):
+                        # The page offers Mute with no duration or schedule.
+                        navigate('notifications.cgi' + ('' if scope == 'all' else '?id=' + scope))
+                        wait('!!document.querySelector("#notification-mute input[value=mute_notifications]")', 'Header mute button missing')
+                        assert not evaluate('!!document.querySelector("[name=minutes], [name=windows]")')
+                        if theme == 'authentic-theme':
+                            # Authentic shows the link in the panel heading.
+                            assert evaluate('!!document.querySelector("[data-notification-action=mute]").closest(".panel-heading")'), 'Mute action is not in the page header'
+                            # Unmuted alerts show the filled Authentic2 bell.
+                            assert evaluate('''(() => {
+                                const icon = document.querySelector(".panel-heading [data-notification-action=mute] .fa2-notifications");
+                                return icon && icon.getBoundingClientRect().width > 0 &&
+                                    getComputedStyle(icon, "::before").fontFamily.includes("Authentic2") &&
+                                    !["none", "normal", "", '""'].includes(getComputedStyle(icon, "::before").content);
+                            })()'''), 'Visible mute icon missing'
+                            assert not evaluate('!!document.querySelector(".panel-heading #notification-mute")'), 'Form leaked into header'
+                        # Save the unmuted view, then mute from the header link.
+                        screenshot('all-unmuted' if scope == 'all' else 'guest-unmuted')
+                        evaluate('document.querySelector("[data-notification-action=mute], [data-notification-action=unmute]").click()')
+                        wait('!!document.querySelector("#notification-mute input[value=unmute_notifications]")', 'Unmute button missing')
+                        if theme == 'authentic-theme':
+                            # Muted alerts show the outline red bell.
+                            assert evaluate('''(() => {
+                                const icon = document.querySelector(".panel-heading [data-notification-action=unmute] .fa2-notifications-none.text-danger");
+                                const color = icon && getComputedStyle(icon).color.match(/[0-9.]+/g).map(Number);
+                                return icon && icon.getBoundingClientRect().width > 0 &&
+                                    color[0] > color[1] && color[0] > color[2] &&
+                                    getComputedStyle(icon, "::before").fontFamily.includes("Authentic2") &&
+                                    !["none", "normal", "", '""'].includes(getComputedStyle(icon, "::before").content);
+                            })()'''), 'Visible unmute icon missing'
+                            # The bell uses transforms. The upload pulse
+                            # keeps its glow.
+                            assert evaluate('''(() => {
+                                const icon = document.querySelector("[data-notification-action=unmute] i");
+                                const frames = icon.getAnimations().flatMap(a => a.effect.getKeyframes());
+                                const upload = document.createElement("span");
+                                upload.className = "pulse";
+                                document.body.append(upload);
+                                try {
+                                    const glow = upload.getAnimations().flatMap(a => a.effect.getKeyframes());
+                                    return frames.some(frame => frame.transform) &&
+                                        !frames.some(frame => frame.boxShadow) &&
+                                        glow.some(frame => frame.boxShadow) &&
+                                        !glow.some(frame => frame.transform);
+                                } finally {
+                                    upload.remove();
+                                }
+                            })()'''), 'Bell animation conflicts with upload highlighting'
+                        # The API reports the new mute for this scope.
+                        query = {'action': 'notifications'}
+                        if scope != 'all':
+                            # Guest scopes read that guest's history.
+                            query['id'] = scope
+                        assert api(opener, query)['result']['muted'] == 1
+                        screenshot('all-muted' if scope == 'all' else 'guest-muted')
+                        if scope == 'all':
+                            # Guest pages direct managers to the global control.
+                            navigate('notifications.cgi?id=' + mute_guest)
+                            wait('!!document.querySelector("[data-notification-action=global]")', 'Global status missing on guest')
+                            assert not evaluate('!!document.querySelector("#notification-mute")')
+                            if theme == 'authentic-theme':
+                                # Guest pages keep the muted color and tooltip.
+                                assert evaluate('''(() => {
+                                    const link = document.querySelector("[data-notification-action=global]");
+                                    const icon = link.querySelector(".fa2-notifications-none.text-danger");
+                                    const color = icon && getComputedStyle(icon).color.match(/[0-9.]+/g).map(Number);
+                                    return icon && color[0] > color[1] && color[0] > color[2] &&
+                                        (link.getAttribute("data-original-title") || link.title).includes("Manage the global mute");
+                                })()'''), 'Global mute icon or tooltip is wrong'
+                            navigate('notifications.cgi')
+                        # Unmute from the header and check the API.
+                        evaluate('document.querySelector("[data-notification-action=mute], [data-notification-action=unmute]").click()')
+                        wait('!!document.querySelector("#notification-mute input[value=mute_notifications]")', 'Manual unmute failed')
+                        assert not api(opener, query)['result']['muted']
+                    # Real HTTP mute requests need POST and a token, and fail
+                    # in read-only mode or for a guest-only account.
+                    assert 'error' in api(opener, {'action': 'mute_notifications',
+                        'id': mute_guest, 'token': token})
+                    assert 'error' in api(opener, {'action': 'mute_notifications',
+                        'id': mute_guest}, True)
+                    account('readonly', theme, user, '1\n')
+                    assert 'error' in api(opener, {'action': 'mute_notifications',
+                        'id': 'all', 'token': token}, True)
+                    account('readonly', theme, user, '0\n')
+                    account('acl', theme, user, json.dumps({'admin': 0, 'vms': mute_guest}))
+                    assert 'error' in api(opener, {'action': 'mute_notifications',
+                        'id': mute_guest, 'token': token}, True)
+                    # The guest-only account gets no token or host settings.
+                    navigate('notifications.cgi?id=' + mute_guest)
+                    assert not evaluate('!!document.querySelector("input[name=token]")')
+                    assert 'error' in api(opener, {'action': 'notification_config'})
+                finally:
+                    # Restore the test account and only the mutes created here.
+                    account('readonly', theme, user, '0\n')
+                    account('acl', theme, user, json.dumps({'admin': 1}))
+                    for scope in ('all', mute_guest):
+                        assert 'result' in api(opener, {'action': 'unmute_notifications',
+                            'id': scope, 'token': token}, True)
+                navigate('notifications.cgi?tab=targets')
+                print('PASS header mute/unmute for all alerts and one guest, plus ACL:', theme, flush=True)
+
                 if '--forms-only' in sys.argv:
                     # Fake Telegram credentials are saved only for disabled
                     # rules and destinations, and never used
@@ -995,7 +1102,7 @@ def browser(jar, target, guest, theme, rule_name):
                  'Signed rule form did not save')
             assert evaluate('document.querySelector("div[id$=_notifications_rules]").offsetHeight') > 0
             screenshot('rules')
-            # Guest history retains the selected VM and has no host controls.
+            # Guest history keeps the selected VM in its return link.
             navigate('notifications.cgi?id=' + guest)
             wait('!!document.querySelector("#notification-history")', 'Guest history did not load')
             assert evaluate('document.body.innerText.includes("Guest Notifications")')
@@ -1005,9 +1112,9 @@ def browser(jar, target, guest, theme, rule_name):
                     url.searchParams.get('id') === ''' + json.dumps(guest) + ''';
             })'''), 'Guest return link lost its VM'
 
-            # The guest view has no tabs and no signed token.
+            # Host managers get a signed guest mute control but no host tabs.
             assert not evaluate('!!document.querySelector("input[name=notification_tabs]")')
-            assert not evaluate('!!document.querySelector("input[name=token]")')
+            assert evaluate('!!document.querySelector("input[value=mute_notifications], input[value=unmute_notifications]")')
             screenshot('guest')
 
         finally:

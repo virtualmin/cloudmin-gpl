@@ -1614,6 +1614,8 @@ log_notification_delete_notification_target=Deleted notification destination $1
 log_notification_delete_notification_rule=Deleted notification rule $1
 log_notification_retry_notification=Retried failed deliveries of notification event $1
 log_notification_test_notification_target=Queued test notification event $1
+log_notification_mute_notifications=Muted alerts for $1
+log_notification_unmute_notifications=Unmuted alerts for $1
 
 notifications_destination=Destination
 notifications_used_by=Used by
@@ -1694,3 +1696,15 @@ notifications_gotify=Gotify
 notifications_new_gotify=New Gotify destination
 notifications_gotify_url=Gotify server URL
 notifications_gotify_token=Gotify application token
+
+notifications_muted=Muted
+notifications_mute=Mute alerts
+notifications_unmute=Unmute
+notifications_mute_all=Mute all
+notifications_unmute_all=Unmute all
+notifications_muted_all=All alerts muted
+notifications_muted_all_hint=All alerts are muted. Manage the global mute.
+notifications_mute_hint=Mute this guest's alerts until you unmute them. Checks and history continue.
+notifications_unmute_hint=Resume this guest's alerts. Old muted alerts will not be sent.
+notifications_mute_all_hint=Mute host and guest alerts until you unmute them. Checks and history continue.
+notifications_unmute_all_hint=Resume host and guest alerts. Guests muted separately stay muted.

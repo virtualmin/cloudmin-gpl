@@ -54,7 +54,8 @@ is_deeply($_[3], { }, 'audit contains no submitted fields');
 }
 # Guests cannot inspect host configuration or invoke management actions.
 for my $action (qw(notification_config save_notification_target
-	test_notification_target delete_notification_rule)) {
+	test_notification_target delete_notification_rule mute_notifications
+	unmute_notifications)) {
 	eval { call_notification_api($action, { }) };
 	like($@, qr/Denied/, "$action requires host access");
 	}
@@ -123,4 +124,39 @@ my ($rule) = grep { $_->{id} eq $new->{id} } @{$cfg->{rules}};
 my ($dest) = grep { $_->{name} eq 'Combined email' } @{$cfg->{targets}};
 is_deeply($rule->{targets}, [ $dest->{id} ],
 	'authorized combined request saves and connects both records');
+# Mute actions need host access, management, a writable session and a token.
+for my $action (qw(mute_notifications unmute_notifications)) {
+	my $input = { id => $vm, token => 'valid' };
+	$host = 0; $manage = 1; $readonly = 0;
+	eval { call_notification_api($action, $input) };
+	like($@, qr/Denied/, "$action denies guest managers");
+	$host = 1; $manage = 0;
+	eval { call_notification_api($action, $input) };
+	like($@, qr/Denied/, "$action requires management");
+	$manage = 1; $readonly = 1;
+	eval { call_notification_api($action, $input) };
+	like($@, qr/read-only/, "$action rejects read-only sessions");
+	$readonly = 0;
+	eval { call_notification_api($action, { %$input, token => 'bad' }) };
+	like($@, qr/Invalid token/, "$action requires a signed token");
+	}
+# A host manager mutes each scope, and an assigned guest viewer sees it.
+for my $scope ($vm, 'all') {
+	my $mute = call_notification_api('mute_notifications',
+		{ id => $scope, token => 'valid' });
+	is($mute->{muted}, 1, 'host manager can mute the selected scope');
+	$host = 0;
+	my $data = call_notification_api('notifications', { id => $vm });
+	ok($scope eq 'all' ? $data->{all_muted} : $data->{muted},
+		'assigned guest viewer sees applicable mute status');
+	$host = 1;
+	call_notification_api('unmute_notifications', { id => $scope, token => 'valid' });
+	$data = call_notification_api('notifications', { id => $vm });
+	ok(!$data->{muted} && !$data->{all_muted}, 'unmute clears active status');
+	}
+# A missing or malformed scope fails instead of muting everything.
+for my $scope (undef, '', 'host', '*', [ ], '../all') {
+	eval { call_notification_api('mute_notifications', { id => $scope, token => 'valid' }) };
+	ok($@, 'invalid scope never defaults to muting everything');
+	}
 done_testing();

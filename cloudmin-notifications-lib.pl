@@ -76,6 +76,11 @@ elsif ($action eq 'save_notification_rule') {
 	# An optional new destination commits with its rule or not at all.
 	$result = $store->save_rule($in->{rule}, time(), $in->{target});
 	}
+elsif ($action eq 'mute_notifications' || $action eq 'unmute_notifications') {
+	# Start or end a manual mute for a guest UUID or all.
+	$result = $store->mute($in->{id}, $action eq 'mute_notifications' ? 1 : 0,
+		time());
+	}
 elsif ($action =~ /\Adelete_notification_(rule|target)\z/) {
 	# Keep referenced destinations until their rules are updated.
 	$result = $store->remove($1, $in->{object});

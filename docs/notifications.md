@@ -62,6 +62,18 @@ Disabling a rule or destination cancels its pending deliveries. Saving or re-ena
 
 A powered-off host or stopped Webmin service cannot send alerts. Detecting either requires another monitoring system.
 
+## Muting alerts
+
+Muting pauses alert delivery for one guest or for the host and all guests. Muting all alerts also covers guests added later. Mutes stay active until you unmute them, including after restarts.
+
+Unmuting all alerts leaves separately muted guests muted. Unmuting one guest does not override a mute for all alerts.
+
+Checks and history continue. Pending deliveries are marked muted and will not be sent later. Destination tests still send. A delivery already in progress may finish.
+
+After unmuting, a problem still present at the next fresh check sends one new alert, even when reminders are disabled. A problem that has recovered stays quiet. A missing reading leaves the check paused.
+
+You need host and management access to mute or unmute alerts. Changes are blocked in read-only mode. Users assigned to a guest can see its mute status and events.
+
 ## Command line
 
 Save this destination in `target.json` with file permissions `0600`, so only its owner can read or write it:
@@ -110,6 +122,15 @@ cloudmin set-notification-target-enabled --id TARGET_ID --enabled yes
 
 To update a rule or destination, include its existing `id` and the full settings you want to save. Keep any optional values you still need. Omitting `secret` keeps its saved token only if the type and address stay the same. An empty `secret` removes a bearer token, but is rejected for Telegram, Pushover and Gotify.
 
+Use these commands to mute or unmute one guest or all alerts:
+
+```sh
+cloudmin mute-notifications --id GUEST_UUID
+cloudmin unmute-notifications --id GUEST_UUID
+cloudmin mute-notifications --id all
+cloudmin unmute-notifications --id all
+```
+
 Use `--file -` to read JSON from standard input. Remove a destination from all its rules before deleting it.
 
 ## API
@@ -120,7 +141,7 @@ Without a cursor, the API returns the latest events. Set `cursor=0` to start wit
 
 `notification_config` returns saved rules, destinations without tokens or private chat URLs, and the last background job status. Each destination's `last_delivery` shows the current result of its last recorded attempt. If that attempt record is unavailable, it uses the newest retained delivery record. The optional `at` field gives the attempt time. Records without a finished attempt have no time. `last_delivery` is null when no delivery record remains.
 
-Changes require POST, host and management access, and a signed `token` obtained from `options`:
+Changes require POST, host and management access, and a signed `token` obtained from `options`. Changes are blocked in read-only mode.
 
 | Action | Fields |
 | --- | --- |
@@ -132,6 +153,12 @@ Changes require POST, host and management access, and a signed `token` obtained 
 | `delete_notification_rule` | `object` rule ID |
 | `test_notification_target` | `object` target ID |
 | `retry_notification` | `object` event ID |
+| `mute_notifications` | Guest UUID or `all` in `id` |
+| `unmute_notifications` | Guest UUID or `all` in `id` |
+
+`notifications` returns `muted` and `all_muted` as 0 or 1. For guest history, `muted` reports only that guest's own mute. For combined history, it reports the global mute. `all_muted` always reports the global mute. A guest is muted if either value is 1.
+
+Events marked muted have a `silenced` field set to `guest` or `all`. Deliveries with state `muted` cannot be retried or sent later.
 
 Passing a `target` object with `save_notification_rule` creates a destination for that rule instead of using `rule.targets`. Both are saved together. If either is invalid, neither is saved. The new target must not have an `id`. Use `save_notification_target` to update an existing destination.
 

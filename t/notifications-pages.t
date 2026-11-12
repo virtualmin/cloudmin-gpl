@@ -451,4 +451,69 @@ subtest 'Unicode in notification pages' => sub {
 	is($store->target($target)->{name}, $name, 'rendering does not alter storage');
 	};
 
+# The header carries one manual control, with no duration or schedule form.
+my $guest_id = '11111111-1111-4111-8111-111111111111';
+# mute_control(owner, data) combines the link and body form for field checks.
+sub mute_control { return join('', show_notification_mute(@_)); }
+# The host control mutes the explicit all scope.
+my $control = mute_control(undef, $store->history());
+like($control, qr/>Mute all</, 'host header offers Mute all');
+like($control, qr/name="id"[^>]*value="all"/, 'host control has an explicit all scope');
+unlike($control, qr/name="(?:minutes|windows)"/, 'mute control has no scheduling fields');
+# A muted guest offers a signed Unmute action.
+$store->mute($guest_id, 1, time());
+$control = mute_control($guest_id, $store->history($guest_id));
+like($control, qr/>Unmute</, 'muted guest header offers Unmute');
+like($control, qr/value="unmute_notifications"/, 'unmute is a signed action');
+# The global mute offers Unmute all on the host and only a status link on
+# guest pages.
+$store->mute('all', 1, time());
+like(mute_control(undef, $store->history()), qr/>Unmute all</,
+	'global mute can be undone in the host header');
+$control = mute_control($guest_id, $store->history($guest_id));
+like($control, qr/>All alerts muted</, 'global mute is visible on the guest');
+like($control, qr/href="notifications.cgi"/, 'global mute links to its own control');
+unlike($control, qr/value="unmute_notifications"/, 'guest cannot override global mute');
+$store->mute('all', 0, time());
+{
+	# Delegated viewers see the guest's own mute without a mutation token.
+	local *main::can_access = sub { return $_[0] ne 'host'; };
+	my $html = mute_control($guest_id, $store->history($guest_id));
+	like($html, qr/\AMuted\z/, 'delegated viewer sees the guest mute');
+	unlike($html, qr/<form|name="token"/, 'delegate has no mute form');
+	}
+{
+	# Host viewers and read-only sessions cannot change either scope.
+	local *main::can_access = sub { return $_[0] ne 'manage'; };
+	unlike(mute_control(undef, $store->history()), qr/<form/,
+		'host viewer has no global mute form');
+	local *main::is_readonly_mode = sub { return 1; };
+	unlike(mute_control($guest_id, $store->history($guest_id)), qr/<form/,
+		'read-only session has no unmute form');
+	}
+{
+	# Run the real CGI to check that the link stays in the right-side header
+	# slot, without the module index link.
+	local *main::ReadParse = sub { };
+	local *main::get_system_hostname = sub { return 'fixture'; };
+	local *main::ui_print_header = sub {
+		like($_[7], qr/data-notification-action="mute"/, 'CGI puts action link in header');
+		unlike($_[7], qr/<form|<button|ui_action/, 'header uses a plain theme link');
+		is($_[5], 1, 'header omits Module Index like Remote Access');
+	};
+	local *main::ui_print_footer = sub { };
+	local *main::error = sub { die $_[0] };
+	# Reuse the loaded libraries, and run the host page with no form input.
+	local $INC{'./server-manager-lib.pl'} = 1;
+	local $INC{'./cloudmin-notification-pages.pl'} = 1;
+	local %main::in = ( );
+	# Capture what the CGI prints. The header stub prints nothing.
+	my $output = '';
+	open(my $capture, '>', \$output) or die $!;
+	local *STDOUT = $capture;
+	do "$module_root_directory/notifications.cgi";
+	die $@ if $@;
+	like($output, qr/id="notification-mute"/, 'signed form stays in page body');
+	unlike($output, qr/data-notification-action/, 'header link is not duplicated in body');
+	}
 done_testing();

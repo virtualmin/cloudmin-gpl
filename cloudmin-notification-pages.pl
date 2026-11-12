@@ -35,9 +35,11 @@ my %targets = map { $_->{id} => notification_bytes($_->{name}) } @{$cfg->{target
 my %rules = map { $_->{id} => notification_bytes($_->{name}) } @{$cfg->{rules} || [ ]};
 my @attention = map {
 	# A paused record without a saved reason uses the generic label.
+	# Muted owners add a Muted suffix to the status.
 	my $status = $text{'notifications_'.$_->{status}};
 	$status = $text{'notifications_paused_'.($_->{pause_reason} || '')} ||
 		$status if $_->{status} eq 'paused';
+	$status .= ' · '.$text{notifications_muted} if $_->{muted};
 	{ title => notification_bytes($_->{label}),
 	  desc => $rules{$_->{rule}} || notification_bytes($_->{name}),
 	  badge => [ $status,
@@ -62,6 +64,9 @@ for my $event (reverse @{$data->{events}}) {
 		ui_badge($text{'notifications_'.$phase},
 			$phase eq 'resolved' ? 'success' : 'neutral',
 			{ small => 1 }) );
+	# Mark muted events.
+	$row[4] .= ' '.ui_badge($text{notifications_muted}, 'neutral',
+		{ small => 1 }) if $event->{silenced};
 	if (!$guest) {
 		# Keep each receipt and any retry beside its event.
 		my @receipts = map {
@@ -328,6 +333,49 @@ for my $row (@{$cfg->{rules}}) {
 		class => 'notification-row' });
 	}
 return notification_rows('rule', \@rows, \@columns, $token);
+}
+
+# show_notification_mute(owner, data) returns a header link and its form.
+# owner is a guest UUID, host or undef. data is the authorized history for that
+# scope. Managers get a link that submits a signed POST form. Others get plain
+# status text while muted, and an empty form. The caller prints the form in
+# the page body, so themes can style the header link like other header links.
+sub show_notification_mute
+{
+my ($owner, $data) = @_;
+# Changing a mute needs host and management access outside read-only mode.
+my $guest = defined($owner) && $owner ne 'host';
+my $muted = $data->{muted};
+my $manage = !is_readonly_mode() && can_access('host') && can_access('manage');
+if ($guest && $data->{all_muted}) {
+	# Guest pages cannot undo the global mute. Link managers to its control.
+	my $label = html_escape($text{notifications_muted_all});
+	return ($manage ? ui_tag('a', $label, { href => 'notifications.cgi',
+		title => $text{notifications_muted_all_hint},
+		'data-notification-action' => 'global' }) : $label, '');
+	}
+if (!$manage) {
+	# Viewers see mute status but receive no mutation token or form.
+	return ($muted ? html_escape($text{notifications_muted}) : '', '');
+	}
+# Label the link for this scope and state. It submits the form below, so it
+# can look like other header links.
+my $label = $guest ? ($muted ? 'unmute' : 'mute')
+	: ($muted ? 'unmute_all' : 'mute_all');
+my $link = ui_tag('a', html_escape($text{'notifications_'.$label}), {
+	href => '#', title => $text{'notifications_'.$label.'_hint'},
+	'data-notification-action' => $muted ? 'unmute' : 'mute',
+	onclick => 'document.getElementById("notification-mute").requestSubmit(); return false;' });
+# State changes need a signed POST. The noscript button submits the form
+# when JavaScript is off.
+my $form = ui_form_start('notification_save.cgi', 'post', undef,
+	'id="notification-mute"').
+	ui_hidden('token', get_image_jobs()->form_token($remote_user)).
+	ui_hidden('id', $guest ? $owner : 'all').
+	ui_hidden('action', $muted ? 'unmute_notifications' : 'mute_notifications').
+	ui_tag('noscript', ui_submit($text{'notifications_'.$label})).
+	ui_form_end(undef, undef, 1);
+return ($link, $form);
 }
 
 # show_notifications(tab, [owner], [target]) renders history and settings.

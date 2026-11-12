@@ -105,6 +105,28 @@ Queues a test for the enabled destination selected by C<--id>. Delivery runs at 
 
     cloudmin test-notification-target --id TARGET_ID
 
+=head2 mute-notifications
+
+Mutes alerts for the guest selected by C<--id>. Use C<--id all> to mute the host and every guest, including guests added later. Mutes stay active until you undo them with C<unmute-notifications>, including after restarts.
+
+Checks and history continue. Pending deliveries are marked muted and will not be sent later. Destination tests still send. A delivery already in progress may finish.
+
+You need host and management access. Changes are blocked in read-only mode.
+
+    cloudmin mute-notifications --id MACHINE_UUID
+    cloudmin mute-notifications --id all
+
+=head2 unmute-notifications
+
+Ends the mute selected by C<--id>. Use a guest UUID for that guest or C<all> for the host and all guests. Guests muted separately stay muted when you unmute all. Unmuting a guest does not override a global mute.
+
+At the next fresh check, a problem that is still present sends one new alert, even when reminders are disabled. A problem that has recovered stays quiet. Muted deliveries are never sent later.
+
+You need host and management access. Changes are blocked in read-only mode.
+
+    cloudmin unmute-notifications --id MACHINE_UUID
+    cloudmin unmute-notifications --id all
+
 =head2 get-statistics
 
 Shows the last hour of host history. C<--id> selects a VM by UUID. C<--from> and C<--to> set the range using Unix timestamps in seconds, up to 366 days apart. C<--points> sets the maximum number of points, from 60 to 1200. C<--entity> selects a device ID from a previous query.

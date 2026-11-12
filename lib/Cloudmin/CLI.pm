@@ -232,6 +232,17 @@ $add->('test-notification-target', 'test_notification_target',
 	group => 'Notifications', options => {
 		id => option('s', field => 'object', required => 1, help => 'Destination ID'),
 	});
+# Manual mutes persist until explicitly undone; all covers host and guests.
+for my $verb (qw(mute unmute)) {
+	$add->($verb.'-notifications', $verb.'_notifications',
+		$verb eq 'mute'
+			? 'Mutes alerts until manually unmuted.'
+			: 'Resumes alerts after a manual mute.',
+				group => 'Notifications', options => {
+				id => option('s', required => 1,
+				help => 'Virtual machine UUID, or all for host and guests'),
+				});
+	}
 # Power actions differ in confirmation and waiting: full restart is a job,
 # simple state changes are polled, and reboot/reset return on acceptance.
 foreach my $item (
