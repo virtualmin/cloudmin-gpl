@@ -169,12 +169,13 @@ foreach my $step ( $plan, @{$plan->{'changes'} || [ ]} ) {
 	$reason ||= 'Shut down the virtual machine before growing an LVM disk'
 		if ($step->{'operation'} eq 'grow_disk' &&
 		    $step->{'volume'}->{'block'});
-	# QEMU owns live image resizing; no independent
-	# volume resize follows it.
+	# QEMU grows live disks. Keep the driver type so stopped-VM recovery
+	# can check the format before resizing the volume directly.
 	push(@ops, { kind => 'resize', identity => $step->{'target'},
 		     before => $step->{'volume'}->{'capacity'}, after =>
 									$step->{'bytes'},
-		     volume => $step->{'volume'} })
+		     volume => $step->{'volume'},
+		     driver => $step->{'driver'} })
 		if ($step->{'operation'} eq 'grow_disk');
 	}
 $plan->{'live_ops'} = \@ops;
@@ -632,13 +633,14 @@ for (my $index = $journal->{'next'} ; $index < @ops ; $index++) {
 	my $active = $op->{'kind'} ne 'next_start' && $domain->is_active();
 	if (!$active && $op->{'kind'} eq 'resize' &&
 	    $config ne $op->{'after'}) {
-		# A stopped guest uses the normal volume path when
-		# completing recovery.
+		# Finish recovery through the offline path, which checks the
+		# volume against the saved driver type before resizing it.
 		require_stopped($domain);
 		$self->apply_storage($adapter,
 				     { operation => 'grow_disk',
 				       uuid => $plan->{'uuid'},
 				       volume => $op->{'volume'},
+				       driver => $op->{'driver'},
 				       bytes => $op->{'after'} }, $id);
 		}
 	my $live = $active ? read_hotplug($domain, $op, 0) : $op->{'after'};

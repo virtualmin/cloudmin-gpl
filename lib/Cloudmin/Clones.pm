@@ -795,11 +795,11 @@ return $jobs->run_worker($id, sub {
 						     ? 'raw'
 						     : 'qcow2';
 				my $slot = $index++;
-				# Record the output name before allocation so
-				# rollback can find it.
+				# Check the VM's disk format before copying.
+				# Record the output name for rollback first.
 				my $copy = $adapter->clone_disk($r->{'pool'},
 								$name,
-								{ pool => $v->{'pool'}, volume => $v->{'name'}, volume_key => $v->{'key'} }, $capacity, $format, sub {
+								{ pool => $v->{'pool'}, volume => $v->{'name'}, volume_key => $v->{'key'}, format => $disk->{'driver'} }, $capacity, $format, sub {
 						$jobs->update($id,
 							      sub { $_[0]->{'resources'}->{'volumes'}->[$slot] = { name => $name }; });
 						});

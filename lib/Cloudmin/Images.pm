@@ -1060,6 +1060,12 @@ my $ok = eval {
 	$stream = undef;
 	$self->checkpoint($job);
 	Cloudmin::Libvirt::refresh_pool($pool);
+	# Reject disk images whose detected format differs from the import check.
+	# ISO media are stored as raw bytes and are not cloned as disks.
+	Cloudmin::Libvirt::check_volume_format($volume, $job->{'format'},
+		"Import it again with the correct format, or convert it to ".
+		"QCOW2 or raw first")
+		if ($job->{'format'} ne 'iso');
 	$job->{'volume_key'} = $volume->get_key();
 	$job->{'volume_path'} = $volume->get_path();
 	$self->cleanup_staging($id);

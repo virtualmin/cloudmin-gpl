@@ -338,12 +338,13 @@ $self->step($id, 'backup_disks', sub {
 		my $i = scalar(@disks);
 		my $name = "cloudmin-backup-$id-$i";
 		my $format = $v->{'format'} eq 'qcow2' ? 'qcow2' : 'raw';
-		# journal() records intent before libvirt can
-		# leave a volume behind.
+		# Check against the VM's disk format before copying. The journal
+		# records the output name before allocation for cleanup.
 		my $copy = $adapter->clone_disk($v->{'pool'}, $name,
 						{ pool => $v->{'pool'},
 						  volume => $v->{'name'},
-						  volume_key => $v->{'key'} },
+						  volume_key => $v->{'key'},
+						  format => $d->{'driver'} },
 						$v->{'capacity'},
 						$format, sub {
 				$jobs->update($id,

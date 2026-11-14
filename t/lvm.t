@@ -392,6 +392,115 @@ like($@, qr/raw disks/, 'format error is explicit');
 	$top->{backing} = 'top';
 	ok(!eval { $adapter->conversion_sources($top); 1 },
 	   'cyclic backing metadata is rejected');
+
+	# Libvirt detects a file's format from its bytes and copies the disk as
+	# root in that format, so it must match the format the import checked.
+	ok(eval { Cloudmin::Libvirt::check_volume_format($base, 'raw'); 1 },
+	   'volume detected as its checked format is accepted');
+	ok(!eval { Cloudmin::Libvirt::check_volume_format($top, 'raw'); 1 },
+	   'raw image detected as QCOW2 is rejected');
+	like($@, qr/used as raw, but its contents are detected as qcow2/,
+	     'format mismatch names both formats');
+	like($@, qr/, so it cannot be copied safely\n\z/,
+	     'format mismatch explains the refusal by default');
+	# Caller advice changes only the message, not the format check.
+	ok(!eval { Cloudmin::Libvirt::check_volume_format(
+			   $top, 'raw', 'Import it again'); 1 },
+	   'advice does not change the refusal');
+	like($@, qr/detected as qcow2\. Import it again\n\z/,
+	     'advice replaces the default end of the error');
+	# A missing trusted format must not bypass the check.
+	ok(!eval { Cloudmin::Libvirt::check_volume_format($top, undef); 1 },
+	   'image without a checked format is rejected');
+	# Copies treat ISO detection as raw; growth must compare it exactly.
+	my $media =
+		bless({ path => "$work/top", format => 'iso' },
+		      'ConversionVolume');
+	ok(eval { Cloudmin::Libvirt::check_volume_format($media, 'raw'); 1 },
+	   'raw disk detected as ISO media is accepted');
+	# Libvirt copies ISO media as raw bytes, but resizes it in whatever
+	# format QEMU finds in it, so growth compares the formats exactly.
+	ok(!eval { Cloudmin::Libvirt::check_volume_format(
+			   $media, 'raw', undef, 1); 1 },
+	   'exact check rejects a raw disk detected as ISO media');
+	like($@, qr/used as raw, but its contents are detected as iso/,
+	     'exact mismatch names the detected format');
+	ok(eval { Cloudmin::Libvirt::check_volume_format(
+			  $base, 'raw', undef, 1); 1 },
+	   'exact check accepts a raw disk detected as raw');
+
+	# A QCOW2 file is attached only if its header links to no other file.
+	# header([fields...]) Writes a version 3 header. Optional field/value
+	# pairs override magic, version, links, encryption, features or length.
+	my $header = sub {
+		my (%f) = @_;
+		my $version = $f{'version'} // 3;
+		my $bytes = pack('a4 N N N N N N N N', $f{'magic'} // "QFI\xfb",
+				 $version, 0, $f{'backing'} // 0, 0, 16, 0,
+				 16 * 1024**2, $f{'encryption'} // 0).
+			    ("\0" x 36);
+		# Only version 2 fixtures omit the extended header.
+		$bytes .= pack('N N', 0, $f{'features'} // 0).("\0" x 16).
+			  pack('N N', 4, 104) if ($version != 2);
+		# A requested length models an incomplete header.
+		$bytes = substr($bytes, 0, $f{'length'}) if ($f{'length'});
+		# The checker reads bytes from a file, not fixture metadata.
+		open(my $fh, '>', "$work/header") or die $!;
+		binmode($fh);
+		print $fh $bytes;
+		close($fh);
+		return "$work/header";
+		};
+	# Cover standalone headers, external links and unsupported metadata.
+	for my $case (
+		[ 1, 'a version 3 file with no links' ],
+		[ 1, 'a version 2 file with no links', version => 2 ],
+		[ 1, 'features that describe only its own contents',
+		  features => 0x1b ],
+		[ 0, 'a backing file', backing => 4096 ],
+		[ 0, 'an external data file', features => 4 ],
+		[ 0, 'an unknown incompatible feature', features => 32 ],
+		[ 0, 'encryption', encryption => 2 ],
+		[ 0, 'an unknown version', version => 4 ],
+		[ 0, 'a truncated header', length => 80 ],
+		[ 0, 'another format', magic => 'KDMV' ]) {
+		my ($standalone, $name, @fields) = @$case;
+		is(Cloudmin::Libvirt::standalone_qcow2($header->(@fields)),
+		   $standalone, "QCOW2 header check handles $name");
+		}
+	is(Cloudmin::Libvirt::standalone_qcow2("$work/missing"), 0,
+	   'QCOW2 header check rejects an unreadable file');
+	{
+		package FormatAdapter;
+		our @ISA = ('Cloudmin::Libvirt');
+
+		# volume(self, pool, name, [key]) returns the fixture source
+		# and reports that no destination exists yet.
+		sub volume
+		{
+		return ( $_[0]->{'pool'},
+			 $_[2] eq 'source' ? $_[0]->{'source'} : undef );
+		}
+	}
+	my $cloner = bless({ pool => $pool, source => $top }, 'FormatAdapter');
+	my $allocations = 0;
+	# clone([fields...]) Adds optional source field/value pairs and runs
+	# clone_disk until its journal callback stops allocation.
+	my $clone = sub {
+		return eval { $cloner->clone_disk('pool', 'copy',
+			{ pool => 'pool', volume => 'source', @_ }, 1024,
+			'qcow2', sub { $allocations++; die "stop\n" }); 1 };
+		};
+	# A mismatch stops before the allocation journal; a match reaches it.
+	$clone->(format => 'raw');
+	like($@, qr/detected as qcow2/,
+	     'imported raw image detected as QCOW2 is not cloned');
+	is($allocations, 0, 'refused clone allocates nothing');
+	$clone->(format => 'qcow2');
+	is($allocations, 1, 'matching format reaches the allocation journal');
+	# Callers that check the format themselves can still omit the field.
+	$clone->();
+	is($allocations, 2, 'omitted format reaches the allocation journal');
 	}
 
 # Auxiliary files use the preferred file pool, else the conventional default

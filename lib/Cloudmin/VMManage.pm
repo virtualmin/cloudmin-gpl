@@ -764,6 +764,20 @@ else {
 return ( $pool, $volume );
 }
 
+# check_attachable(self, adapter, record) Checks ownership and use of the
+# selected volume record, then rejects QCOW2 headers with links or encryption.
+# This stops a guest-written header from exposing host files on attachment.
+sub check_attachable
+{
+my ($self, $adapter, $record) = @_;
+$self->check_volume($adapter, $record);
+# QCOW2 headers must stand alone; raw disks are attached as plain bytes.
+die "This QCOW2 disk links to another file, is encrypted, or has a header ".
+    "that cannot be verified. It cannot be attached\n"
+	if ($record->{'format'} eq 'qcow2' &&
+	    !Cloudmin::Libvirt::standalone_qcow2($record->{'path'}));
+}
+
 # clone_source(self, adapter, image_id, [expected]) Resolves a completed import
 # and detects replacement before copying its bytes. expected is the source
 # record saved at submission; omit it for the first read.
@@ -781,6 +795,9 @@ my $format = Cloudmin::Libvirt::parse_xml_document(
 die "Only raw and QCOW2 images can be cloned\n"
 	if ($format !~ /\A(?:raw|qcow2)\z/ || ($image->{'format'} ||
 					       '') eq 'iso');
+# Libvirt copies the volume in the format it detects, so that must still be
+# the format the import checked.
+Cloudmin::Libvirt::check_volume_format($volume, $image->{'format'});
 my $source = { id => $id, pool => $image->{'pool'},
 	       volume => $image->{'volume'},
 	       volume_key => $volume->get_key(), identity =>
@@ -1075,6 +1092,11 @@ elsif ($action eq 'grow_disk') {
 		if ($v->{'format'} !~ /\A(?:raw|qcow2)\z/);
 	my ($pool, $volume) =
 		$self->check_volume($adapter, $v, $plan->{'uuid'});
+	# Capacity and offline growth use the detected format. Check it
+	# against the VM's driver before trusting either.
+	my $driver = $disk->findvalue('driver/@type') || 'raw';
+	Cloudmin::Libvirt::check_volume_format(
+		$volume, $driver, 'It cannot be grown safely', 1);
 	my $bytes = Cloudmin::VMs::size_bytes($in, 'disk_gib', 1024**3, 'disk');
 	$bytes = int(($bytes + 511) / 512) * 512;
 	$bytes = $pool->aligned_capacity($bytes)
@@ -1085,7 +1107,9 @@ elsif ($action eq 'grow_disk') {
 		if (!($pool->isa('Cloudmin::LVM::Pool') && $pool->{'thin'}) &&
 		    $bytes - $v->{'capacity'} >
 		    $pool->get_info()->{'available'});
+	# Keep the trusted format for queued growth and recovery.
 	$plan->{'volume'} = $v;
+	$plan->{'driver'} = $driver;
 	$plan->{'bytes'} = $bytes;
 	$plan->{'target'} = text($in, 'target');
 	return $plan;
@@ -1118,7 +1142,7 @@ elsif ($action eq 'attach_disk' || $action eq 'add_disk') {
 			$_->{'name'} eq text($in, 'volume') &&
 			$_->{'format'} =~ /\A(?:raw|qcow2)\z/ } @$volumes;
 		die "Select an available storage volume\n" if (!$v);
-		$self->check_volume($adapter, $v);
+		$self->check_attachable($adapter, $v);
 		$plan->{'attach_volume'} = $v;
 		}
 	else {
@@ -1371,7 +1395,8 @@ if ($step->{'mac'}) {
 			if (grep { lc($_) eq $step->{'mac'} } @{$vm->{'macs'}});
 		}
 	}
-$self->check_volume($adapter, $step->{'attach_volume'})
+# A queued attachment must still pass the ownership and header checks.
+$self->check_attachable($adapter, $step->{'attach_volume'})
 	if ($step->{'attach_volume'});
 die "The selected network is no longer available\n" if ($step->{'network'} &&
 							!grep { $_->{'key'} eq $step->{'network'} } @{networks($adapter)});
@@ -1512,6 +1537,10 @@ elsif ($step->{'operation'} eq 'grow_disk') {
 		my $domain = $adapter->find_domain($step->{'uuid'});
 		require_stopped($domain) if ($domain);
 		require_editable($domain, $step) if ($domain);
+		# The guest may have rewritten its disk since the request
+		# was checked, and the resize follows the detected format.
+		Cloudmin::Libvirt::check_volume_format(
+			$v, $step->{'driver'}, 'It cannot be grown safely', 1);
 		Cloudmin::Libvirt::log_call('Sys::Virt::StorageVol::resize',
 					    {
 						    pool => $step->{'volume'}->{'pool'},

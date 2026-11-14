@@ -379,9 +379,59 @@ while (1) {
 	}
 }
 
+# check_volume_format(volume, format, [advice], [exact]) Dies if libvirt's
+# detected format differs from the format checked at import or used by the VM.
+# A mismatch could make a copy or resize follow a guest-written header's
+# links to host files. advice replaces the default error ending. By default,
+# ISO detection counts as raw for copies. Resizing requires exact=1 because
+# QEMU can detect another format inside those same bytes.
+sub check_volume_format
+{
+my ($volume, $format, $advice, $exact) = @_;
+my $found = parse_xml_document($volume->get_xml_description(0))->findvalue(
+	'/volume/target/format/@type') || 'raw';
+# Libvirt copies a file it detects as ISO media as raw bytes.
+$found = 'raw' if ($found eq 'iso' && !$exact);
+# A missing trusted format must also fail the comparison.
+die "This disk is used as ".($format || 'an unknown format').
+    ", but its contents are detected as $found".
+    ($advice ? ". $advice" : ", so it cannot be copied safely")."\n"
+	if ($found ne ($format || ''));
+}
+
+# standalone_qcow2(path) Checks up to 104 header bytes for external links and
+# encryption. Returns false for unreadable or short headers, unknown versions
+# and unknown incompatible feature bits. This is not a full integrity check.
+sub standalone_qcow2
+{
+my ($path) = @_;
+# A file that cannot be read cannot be shown to stand alone.
+open(my $fh, '<', $path) || return 0;
+binmode($fh);
+my $read = read($fh, my $header, 104);
+close($fh);
+# A version 2 header has 72 bytes; version 3 extends it to at least 104.
+return 0 if (!defined($read) || $read < 72);
+# The backing file offset is a 64-bit field, read here as two halves.
+my ($magic, $version, @backing) = unpack('a4 N N N', $header);
+my $encryption = unpack('N', substr($header, 32, 4));
+# Version 3 adds incompatible feature bits; version 2 has none.
+my @features = $version == 3 && $read == 104
+	? unpack('N N', substr($header, 72, 8)) : ( 0, 0 );
+# Allow dirty, corrupt, compression and extended-L2 flags. Reject external
+# data files, unknown incompatible bits, backing files and encryption.
+return $magic eq "QFI\xfb" &&
+       ($version == 2 || $version == 3 && $read == 104) &&
+       !$backing[0] && !$backing[1] && !$encryption &&
+       !$features[0] && !($features[1] & ~0x1b) ? 1 : 0;
+}
+
 # clone_disk(self, pool_uuid, name, source, bytes, format, journal) Makes an
 # independent libvirt volume and grows it without changing the image. source
-# contains pool, volume and volume_key; journal() records cleanup intent.
+# requires pool, volume and volume_key. Its optional format field is the
+# trusted source format, from the import check or VM driver. If omitted, the
+# caller must have checked it. The format argument sets the output file
+# format; LVM output is always raw. journal() records intent before allocation.
 sub clone_disk
 {
 my ($self, $pool_id, $name, $source, $bytes, $format, $journal) = @_;
@@ -393,6 +443,10 @@ die "Destination volume already exists\n" if ($existing);
 my (undef, $original) = $self->volume(@{$source}{qw(pool volume volume_key)});
 # The selected import may have disappeared after request validation.
 die "Source image volume is missing\n" if (!$original);
+# When supplied, compare the trusted source format before copying or
+# allocating storage. Callers that omit it must have checked it already.
+check_volume_format($original, $source->{'format'})
+	if (exists($source->{'format'}));
 # Record intent before libvirt allocates anything, for recovery after a crash.
 $journal->();
 # LVM disks contain raw sectors. Convert in the existing unprivileged worker,

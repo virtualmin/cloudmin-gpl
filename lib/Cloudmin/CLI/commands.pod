@@ -434,7 +434,9 @@ Supported running guests can receive the disk live. A guest may still need to di
 
 Attaches an existing unused volume to the machine selected by C<--name> or C<--id>. C<--pool> identifies its storage pool, and C<--volume> is the volume's name inside that pool, not a host filesystem path. Use this when reusing a disk kept by C<detach-disk> or machine deletion.
 
-The volume must be a supported raw or QCOW2 disk and pass ownership and dependency checks. Cloudmin protects imported images and disks referenced by other machines or storage. To create a separate copy of an imported image, use C<create-disk --image> instead.
+The volume must be a supported raw or QCOW2 disk and pass ownership and dependency checks. Cloudmin refuses QCOW2 disks that use a backing file, an external data file or encryption. It also refuses QCOW2 headers it cannot read or recognize.
+
+Cloudmin protects imported images and disks referenced by other machines or storage. To create a separate copy of an imported image, use C<create-disk --image> instead.
 
 Supported running guests can receive the attachment live; Cloudmin does not mount or reconfigure filesystems inside the guest. Snapshots or checkpoints may block this change. The command waits for the hardware job unless C<--no-wait> is supplied. C<list-disks> shows the new target after completion.
 
@@ -466,6 +468,8 @@ The operation runs as a job. By default, the command waits for completion; C<--n
 Grows an attached disk on the machine selected by C<--name> or C<--id>. C<--target> identifies the disk, and C<--disk> is its new total capacity, not the amount to add. Bare sizes are GiB; for example, C<--disk 50G> makes the disk 50 GiB.
 
 Shrinking is not supported. Snapshots, checkpoints, shared storage or unsupported disk types can block growth. File disks can grow through libvirt while the guest runs. LVM and LVM-thin disks require the guest to be shut down first.
+
+The detected disk format must match the format in the VM configuration. This prevents a disk header written by a guest from redirecting growth to a host file.
 
 This changes virtual disk capacity only. Expand partitions, logical volumes and filesystems inside the guest separately. Completed growth cannot be rolled back, including when a later part of a job fails. The command waits for the job by default; C<--no-wait> returns its ID.
 

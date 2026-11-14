@@ -14,6 +14,9 @@ plan skip_all => 'SQLite and XML::LibXML are required'
 # Disk contents live only in memory; real inode checks run in the live suite.
 no warnings qw(redefine once);
 local *Cloudmin::VMManage::file_identity = sub { return $_[0]; };
+# standalone_qcow2(path) Uses a path map because fixture files do not exist.
+my %linked;
+local *Cloudmin::Libvirt::standalone_qcow2 = sub { return !$linked{$_[0]}; };
 my @operation_details;
 local *Cloudmin::Libvirt::additional_log = sub {
 	push(@operation_details, $_[2]);
@@ -771,6 +774,7 @@ ok($a->{'pool'}->{'volumes'}->{'root.qcow2'}, 'existing disk retains its name');
 	my $original = $a->{'pool'}->{'volumes'}->{'extra.qcow2'};
 	$images->{'images'} =
 		[ { id => 'a' x 32, state => 'ready', name => 'Original image',
+		    format => 'qcow2',
 		    pool => 'pool', volume => 'extra.qcow2', volume_key =>
 								     $original->get_key() } ];
 	my $settings = $m->settings($uuid);
@@ -829,6 +833,147 @@ ok($a->{'pool'}->{'volumes'}->{'root.qcow2'}, 'existing disk retains its name');
 	$images->{'images'}->[0]->{'state'} = 'failed';
 	is(scalar(@{$m->settings($uuid)->{'images'}}), 0,
 	   'failed import is not offered for cloning');
+	}
+
+# An image is cloned only while libvirt detects the format its import checked.
+{
+	my ($m, $a, $jobs, $d, $images) = fixture();
+	my $original = $a->{'pool'}->{'volumes'}->{'extra.qcow2'};
+	$original->{'format'} = 'raw';
+	$images->{'images'} =
+		[ { id => 'a' x 32, state => 'ready', name => 'Raw image',
+		    format => 'raw', pool => 'pool', volume => 'extra.qcow2',
+		    volume_key => $original->get_key() } ];
+	my $queued =
+		request($m, 'add_disk', { pool => 'pool', image => 'a' x 32 });
+	# Model an image whose bytes now look like QCOW2 to libvirt.
+	$original->{'format'} = 'qcow2';
+	my $count = scalar(keys %{$a->{'pool'}->{'volumes'}});
+	ok(!eval { request($m, 'add_disk',
+			   { pool => 'pool', image => 'a' x 32 }); 1 },
+	   'raw image detected as QCOW2 cannot be cloned');
+	like($@, qr/used as raw, but its contents are detected as qcow2/,
+	     'format refusal names both formats');
+	ok(!$m->run($queued), 'queued clone is refused once detection changes');
+	like($jobs->get($queued)->{'error'}, qr/detected as qcow2/,
+	     'queued clone reports the format refusal');
+	is(scalar(keys %{$a->{'pool'}->{'volumes'}}), $count,
+	   'refused clone copies nothing');
+	}
+
+# An existing QCOW2 disk is attached only if its header links to no other file.
+{
+	my ($m, $a, $jobs, $d) = fixture();
+	my $attach = { pool => 'pool', volume => 'extra.qcow2' };
+	my $queued = request($m, 'attach_disk', $attach);
+	# Model a guest-written header that would expose a host file if attached
+	# as QCOW2. Both new and queued attachments must refuse it.
+	local $linked{'/fixture/extra.qcow2'} = 1;
+	ok(!eval { request($m, 'attach_disk', $attach); 1 },
+	   'QCOW2 disk that links to another file cannot be attached');
+	like($@, qr/links to another file/, 'attachment refusal is specific');
+	ok(!$m->run($queued),
+	   'queued attachment is refused once the header links to a file');
+	unlike($d->{'xml'}, qr{/fixture/extra\.qcow2},
+	       'refused disk stays detached');
+	# A disk detected as raw is attached as raw bytes, whatever they are.
+	$a->{'pool'}->{'volumes'}->{'extra.qcow2'}->{'format'} = 'raw';
+	ok($m->run(request($m, 'attach_disk', $attach)),
+	   'raw disk is attached without a header check');
+	like($d->{'xml'},
+	     qr{<driver[^>]*type="raw"[^>]*/><source file="/fixture/extra\.q},
+	     'raw disk is attached as raw');
+	}
+
+# Growth requires the detected format to match the VM's disk format.
+{
+	my ($m, $a, $jobs, $d) = fixture();
+	my $root = $a->{'pool'}->{'volumes'}->{'root.qcow2'};
+	$d->{'xml'} =~ s{<driver type="qcow2"/>}{<driver type="raw"/>};
+	$root->{'format'} = 'raw';
+	ok($m->run(request($m, 'grow_disk',
+			   { target => 'vda', disk_gib => 2 })),
+	   'raw disk used as raw is grown');
+	my $grow = { target => 'vda', disk_gib => 3 };
+	my $queued = request($m, 'grow_disk', $grow);
+	# Model a guest-written QCOW2 header that could redirect disk growth
+	# to an external data file on the host.
+	$root->{'format'} = 'qcow2';
+	ok(!eval { request($m, 'grow_disk', $grow, 'b' x 32); 1 },
+	   'raw disk detected as QCOW2 cannot be grown');
+	like($@, qr/used as raw, .* detected as qcow2\. It cannot be grown/,
+	     'growth refusal names both formats');
+	ok(!$m->run($queued),
+	   'queued growth is refused once detection changes');
+	like($jobs->get($queued)->{'error'}, qr/detected as qcow2/,
+	     'queued growth reports the format refusal');
+	is($root->{'resized'}, 1, 'refused growth resizes nothing');
+	}
+
+# Growth also refuses a raw disk detected as ISO media, which copies accept.
+{
+	my ($m, $a, $jobs, $d) = fixture();
+	my $root = $a->{'pool'}->{'volumes'}->{'root.qcow2'};
+	$d->{'xml'} =~ s{<driver type="qcow2"/>}{<driver type="raw"/>};
+	$root->{'format'} = 'raw';
+	my $queued =
+		request($m, 'grow_disk', { target => 'vda', disk_gib => 2 });
+	$root->{'format'} = 'iso';
+	ok(!$m->run($queued),
+	   'queued growth is refused for detected ISO media');
+	like($jobs->get($queued)->{'error'}, qr/detected as iso/,
+	     'ISO refusal names the detected format');
+	ok(!$root->{'resized'}, 'disk detected as ISO media is not resized');
+	}
+
+# An interrupted live resize can finish after shutdown, with the same check.
+{
+	my ($m, $a, $jobs, $d) = running_fixture();
+	my $root = $a->{'pool'}->{'volumes'}->{'root.qcow2'};
+	my $id = request($m, 'grow_disk', { target => 'vda', disk_gib => 2 });
+	{
+		# block_resize(self, target, bytes, flags) Fails before growth.
+		local *ManageDomain::block_resize = sub { die "Reply lost\n" };
+		ok(!$m->run($id), 'interrupted live growth fails');
+		}
+	# A later shutdown makes recovery use the offline resize path.
+	$d->{'active'} = 0;
+	$jobs->update($id, sub { $_[0]->{'state'} = 'recovering'; });
+	ok($m->run($id), 'recovery grows the stopped guest\'s volume') or
+		diag($jobs->get($id)->{'error'});
+	is($root->{'capacity'}, 2 * 1024**3, 'recovered growth reaches its size');
+	# The same recovery refuses a disk whose detected format has changed.
+	($m, $a, $jobs, $d) = running_fixture();
+	$root = $a->{'pool'}->{'volumes'}->{'root.qcow2'};
+	$d->{'xml'} =~ s{<driver type="qcow2"/>}{<driver type="raw"/>};
+	$d->{'live_xml'} = $d->{'xml'};
+	$root->{'format'} = 'raw';
+	$id = request($m, 'grow_disk', { target => 'vda', disk_gib => 2 });
+	{
+		# block_resize(self, target, bytes, flags) Fails before growth.
+		local *ManageDomain::block_resize = sub { die "Reply lost\n" };
+		ok(!$m->run($id), 'interrupted live growth of a raw disk fails');
+		}
+	# Changed bytes must not replace the trusted format saved in the job.
+	$d->{'active'} = 0;
+	$root->{'format'} = 'qcow2';
+	$jobs->update($id, sub { $_[0]->{'state'} = 'recovering'; });
+	ok(!$m->run($id), 'recovery refuses a raw disk now detected as QCOW2');
+	like($jobs->get($id)->{'error'}, qr/used as raw, .* detected as qcow2/,
+	     'recovery refusal names both formats');
+	ok(!$root->{'resized'}, 'refused recovery resizes nothing');
+	}
+
+# Disk records preserve the VM's driver type, including raw for CD media.
+{
+	my ($m, $a, $jobs, $d) = fixture();
+	$d->{'xml'} =~ s{</devices>}{<disk type="file" device="disk"><driver type="raw"/><source file="/fixture/extra.qcow2"/><target dev="vdb"/></disk><disk type="file" device="cdrom"><source file="/fixture/root.qcow2"/><target dev="sda"/><readonly/></disk></devices>};
+	require "$Bin/../lib/Cloudmin/Snapshots.pm";
+	my $disks = Cloudmin::Snapshots->new(%$m)->disks($a, $d,
+		Cloudmin::Libvirt::parse_xml_document($d->{'xml'}));
+	is_deeply([ map { [ $_->{'target'}, $_->{'driver'} ] } @$disks ],
+		  [ [ 'vda', 'qcow2' ], [ 'vdb', 'raw' ], [ 'sda', 'raw' ] ],
+		  'each disk records its driver type, defaulting to raw');
 	}
 
 # snapshot_fixture() supplies two disk chains and a branch discarded by restore.

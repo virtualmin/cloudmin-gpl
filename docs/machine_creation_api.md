@@ -601,10 +601,10 @@ a new attempt after failure and cleanup, or a new token for a separate operation
 | --- | --- | --- |
 | `update` | `cpus`, `memory_mib`, optional `cpu_limit`, `memory_limit_mib`, `enable_live`, `description`, `boot`, `bootmenu`, `changes` | Applies resource and hardware edits in one job. Known next-start resource and boot changes are saved while running; hardware expansion still requires a stopped guest |
 | `add_disk` | `pool`, plus `disk_gib` or `image` | Creates and attaches an empty disk or an independent clone of the imported image. File pools use QCOW2; LVM pools use raw. With `image`, omitted `disk_gib` keeps its original capacity; shrinking is rejected |
-| `attach_disk` | `pool`, `volume` | Attaches an existing, unused raw/QCOW2 volume |
+| `attach_disk` | `pool`, `volume` | Attaches an existing, unused raw/QCOW2 volume. Refuses QCOW2 disks with backing files, external data files, encryption, or unreadable or unsupported headers |
 | `detach_disk` | `target`, such as `vdc` | Detaches the disk and keeps its data |
 | `delete_disk` | `target` | Detaches and permanently deletes one managed disk while keeping the virtual machine; the editor confirms with a Delete button, and this action cannot be included in `update.changes` |
-| `grow_disk` | `target`, `disk_gib` | Grows to the specified total capacity; never shrinks |
+| `grow_disk` | `target`, `disk_gib` | Grows to the specified total capacity. Never shrinks. Refuses disks whose detected format differs from the format in the VM configuration |
 | `add_interface` | `network`, optional `mac` | Adds a virtio NIC; generates a MAC if omitted |
 | `update_interface` | `mac`, optional `network`, `link` (`up`/`down`), `inbound_kib`, `outbound_kib` | Changes the source network/bridge, link state or average bandwidth limits in KiB/s; zero removes a limit. Live source switching depends on the libvirt network backend |
 | `remove_interface` | `mac` | Removes the selected NIC |
@@ -698,7 +698,9 @@ Encrypted or custom TPM storage, physical TPMs and externally managed TPMs are n
 
 The source UUID and destination name remain reserved until completion or successful cleanup. Use the existing `status`, `cancel` and `recover` actions. Interrupted jobs restore the source and remove incomplete copies. Cleanup failures keep the reservations.
 
-File and standard LVM pools must have room for full disk capacities and temporary snapshots. Thin pools allocate space as data is copied. LVM processing also needs temporary space on the host; free-space checks use each disk's full capacity even when the copy is sparse. Writable disks must be private raw or QCOW2 files, or managed LVM volumes. The result has no backing files.
+File and standard LVM pools must have room for full disk capacities and temporary snapshots. Thin pools allocate space as data is copied. LVM processing also needs temporary space on the host; free-space checks use each disk's full capacity even when the copy is sparse.
+
+Writable disks must be private raw or QCOW2 files, or managed LVM volumes. Before copying, Cloudmin compares the detected disk format with the format in the VM configuration. ISO media count as raw during this check. Other format mismatches are refused because copying a disk in the wrong format could read host files. The result has no backing files.
 
 Both clone modes replace Virtualmin Pro credentials in the license file and repository authentication files with `CLONE_REQUIRES_LICENSE`. They also clear cached license status before the clone can boot. `confirm_license: 1` acknowledges this. Pro packages and repository channels stay in place. Add a separate Pro license or downgrade manually to GPL to restore repository updates.
 
@@ -715,6 +717,7 @@ Live tests are in `t/live`:
 - `check-clone-tpm-failures.pl` checks TPM cleanup after failure, cancellation and an interrupted worker.
 - `check-clone-access.py` checks HTTP permissions and form validation.
 - `check-clone-storage.pl` checks independent raw/QCOW2 disk copies.
+- `check-disk-format.py` checks that raw disks with QCOW2 headers pointing to host files cannot be backed up, cloned, captured, grown or attached.
 - `check-clone-pools.py` checks filesystem and NFS pools on a disposable test virtual machine.
 
 Run these only on authorized test hosts. `check-clones.py --virtualmin` installs GPL in its disposable guest; `--virtualmin-hostname` also checks a management hostname domain and a hosted website. Fixtures remove their own guests, storage and jobs after successful cleanup. Failed source recovery retains the fixtures for inspection.

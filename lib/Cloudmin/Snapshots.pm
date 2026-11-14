@@ -240,7 +240,8 @@ die "Snapshot storage is missing or outside active managed pools\n"
 
 # disks(self, adapter, domain, document, [allow_blocks]) Includes every writable
 # disk and verifies exclusive, managed storage. allow_blocks defaults off;
-# native snapshots and copies enable managed raw LVs.
+# native snapshots and copies enable managed raw LVs. Each entry records the
+# disk format from the VM's driver.
 sub disks
 {
 my ($self, $adapter, $domain, $doc, $allow_blocks) = @_;
@@ -250,10 +251,13 @@ foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
 	my $target = $disk->findvalue('target/@dev');
 	die "Invalid disk device in virtual machine configuration\n"
 		if ($target !~ /\A[a-zA-Z0-9_-]+\z/);
+	# Libvirt opens a disk without a driver type as raw.
+	my $driver = $disk->findvalue('driver/@type') || 'raw';
 	if ($disk->exists('readonly') || !$disk->exists('source')) {
-		# Read-only media remain attached but do not
-		# need a writable overlay.
-		push(@disks, { target => $target, readonly => 1 });
+		# Read-only media and empty drives need no writable overlay.
+		# Keep their driver type for any later media copy.
+		push(@disks, { target => $target, readonly => 1,
+			       driver => $driver });
 		next;
 		}
 	die "Snapshots require private raw or QCOW2 files, or managed raw LVM disks\n" if (
@@ -270,7 +274,8 @@ foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
 		: undef;
 	die "Wait for the disk operation on $target to finish\n"
 		if ($job && $job->{'type'});
-	push(@disks, { target => $target, volume => $volume });
+	push(@disks, { target => $target, volume => $volume,
+		       driver => $driver });
 	}
 die "The virtual machine has no writable disks to snapshot\n"
 	if (!grep { !$_->{'readonly'} } @disks);
