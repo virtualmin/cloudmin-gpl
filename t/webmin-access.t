@@ -6,6 +6,8 @@ use lib "$Bin/lib";
 use CloudminTest;
 use WebminCore;
 use Test::More;
+use MIME::Base64 ();
+use Digest::SHA qw(sha256_hex);
 require "$Bin/../lib/Cloudmin/VMs.pm";
 require "$Bin/../cloudmin-webmin-lib.pl";
 
@@ -33,6 +35,28 @@ my @host_addresses;
 my (%servers, @calls, %locked);
 my ($module_grant, $view_grant, $manage_grant, $server_grant, $readonly) =
 	( 1, 1, 1, 1, 0 );
+
+# pem(bytes, [with_key]) builds a PEM file whose certificate holds these bytes.
+# with_key defaults to false. When true, prepend a dummy private key block.
+sub pem
+{
+my ($bytes, $with_key) = @_;
+return ($with_key
+		? "-----BEGIN PRIVATE KEY-----\n".
+		  MIME::Base64::encode_base64('fixture-private-key').
+		  "-----END PRIVATE KEY-----\n"
+		: '').
+       "-----BEGIN CERTIFICATE-----\n".MIME::Base64::encode_base64($bytes).
+       "-----END CERTIFICATE-----\n";
+}
+
+# Model the files returned by the guest agent, including a combined key file.
+our %guest_files =
+	( '/etc/webmin/miniserv.conf' =>
+		  "port=10000\nssl=1\nkeyfile=/etc/webmin/miniserv.pem\n",
+	  '/etc/webmin/miniserv.pem' => pem('first certificate', 1) );
+my $first_pin = sha256_hex('first certificate');
+my ($agent_down, @reads);
 
 {
 	no warnings qw(redefine once);
@@ -87,6 +111,22 @@ my ($module_grant, $view_grant, $manage_grant, $server_grant, $readonly) =
 		die "Guest agent must be skipped\n" if (!$_[3]);
 		return \@host_addresses;
 		};
+	# read_guest_file(self, uuid, path, [limit]) returns a fixture file,
+	# undef while the agent is down, or dies for a missing file.
+	# The optional limit is ignored by this stub.
+	*WebminAdapter::read_guest_file = sub {
+		push(@reads, $_[2]);
+		# Model an unavailable agent without a file-specific error.
+		return undef if ($agent_down);
+		# A missing file must not prevent trying other certificates.
+		die "Guest identity lookup failed\n"
+			if (!exists($guest_files{$_[2]}));
+		return $guest_files{$_[2]};
+		};
+	# server_ssl_fingerprints(record) splits fixture pins. Its presence lets
+	# Cloudmin detect proxy support. These tests do not model TLS.
+	*servers::server_ssl_fingerprints =
+		sub { split(/,/, $_[0]->{'sslfingerprint'} || '') };
 
 	}
 
@@ -138,7 +178,30 @@ is_deeply(\@calls, [ ], 'direct link creates no native entry');
 
 # Missing credentials use the native prompt, without storing a guest password.
 my $password = delete($job->{'request'}->{'webmin_password'});
-my $prompt = register_vm_webmin($job);
+my ($prompt, $occupied);
+{
+	# A seven-digit PID must still produce an ID supported by older themes.
+	local $$ = 2522527;
+	no warnings 'redefine';
+	# get_server(id) simulates a manual entry occupying the first candidate.
+	local *servers::get_server = sub {
+		if (!defined($occupied)) {
+			# Force a collision without depending on the current timestamp.
+			$occupied = $_[0];
+			$servers{$occupied} = { id => $occupied,
+					       host => 'manual.example.test' };
+			}
+		return $servers{$_[0]};
+		};
+	$prompt = register_vm_webmin($job);
+	}
+like($prompt->{'id'}, qr/\A\d{8,16}\z/,
+     'large process IDs stay within the older theme limit');
+is(substr($occupied, -7), '2522527', 'the full process ID is retained');
+is($prompt->{'id'}, $occupied + 1, 'an occupied ID is skipped');
+is($servers{$occupied}->{'host'}, 'manual.example.test',
+   'ID reservation preserves the existing server');
+delete($servers{$occupied});
 is($prompt->{'autouser'}, 1,
    'passwordless guests use Servers Index login prompt');
 ok(!exists($prompt->{'user'}) && !exists($prompt->{'pass'}),
@@ -151,9 +214,28 @@ ok(!eval { register_vm_webmin($job); 1 },
    'malformed supplied passwords are rejected');
 is(scalar(keys %servers), 0, 'invalid credentials publish no server');
 $job->{'request'}->{'webmin_password'} = $password;
+# A guest whose certificate cannot be read gets no entry and no saved login.
+my $pem_file = '/etc/webmin/miniserv.pem';
+# Each broken() callback removes one prerequisite for learning a certificate.
+for my $broken ( sub { $agent_down = 1 },
+		 sub { delete($guest_files{'/etc/webmin/miniserv.conf'}) },
+		 sub { $guest_files{$pem_file} = 'no certificate' } ) {
+	# Isolate each failure and check that no server record is saved.
+	local %guest_files = %guest_files;
+	$broken->();
+	ok(!eval { register_vm_webmin($job); 1 },
+	   'registration needs a certificate read through the guest agent');
+	like($@, qr/guest agent/, 'the failure names the guest agent');
+	is(scalar(keys %servers), 0, 'an unverified guest publishes no server');
+	$agent_down = 0;
+	}
 # Reuse the creation login exactly once and retain later administrator edits.
 @calls = ();
 my $server = register_vm_webmin($job, '192.0.2.5');
+is($server->{'sslfingerprint'}, $first_pin,
+   'registration saves the fingerprint of the guest certificate');
+unlike(convert_to_json($servers{$server->{'id'}}), qr/private-key|PRIVATE KEY/i,
+       'key material from the certificate file is not saved');
 is($server->{'user'}, 'cloudmin',
    'registration uses the initial guest username');
 is($server->{'pass'}, $password,
@@ -203,8 +285,105 @@ ok(!eval { register_vm_webmin($job); 1 },
 ok(!eval { vm_webmin_url($vm); 1 },
    'proxy access honors the native server ACL');
 $server_grant = 1;
+@reads = ();
 is(vm_webmin_url($vm), '/prefix/servers/link.cgi/'.$server->{'id'}.'/',
    'URL uses the native proxy and Webmin prefix');
+is_deeply(\@reads, [ ], 'checking the setup does not contact the guest agent');
+
+# Opening refreshes pins from the agent. An unchanged pin needs no write.
+my $proxy_url = '/prefix/servers/link.cgi/'.$server->{'id'}.'/';
+# saved() reads the current fixture server's stored fingerprints.
+my $saved = sub { vm_webmin_server($uuid)->{'sslfingerprint'} };
+my $pin_writes = scalar(@calls);
+is(vm_webmin_url($vm, undef, undef, 1), $proxy_url,
+   'an unchanged certificate opens the proxy');
+is(scalar(@calls), $pin_writes, 'an unchanged certificate is not saved again');
+{
+	# An older proxy would connect without checking the saved fingerprint.
+	no warnings 'once';
+	local *servers::server_ssl_fingerprints;
+	ok(!eval { vm_webmin_url($vm, undef, undef, 1); 1 },
+	   'a proxy that cannot check certificates is not opened');
+	like($@, qr/Update Webmin/, 'the refusal asks for a Webmin update');
+	ok(vm_webmin_url($vm), 'the setup check itself needs no proxy support');
+	}
+{
+	# A saved fingerprint cannot secure a connection with SSL disabled.
+	local $servers{$server->{'id'}}->{'ssl'} = 0;
+	ok(!eval { vm_webmin_url($vm, undef, undef, 1); 1 },
+	   'a connection without SSL is not opened');
+	}
+# A changed guest certificate can update the pin only with edit permissions.
+$guest_files{'/etc/webmin/miniserv.pem'} = pem('second certificate', 1);
+my $second_pin = sha256_hex('second certificate');
+{
+	# Native server permissions apply even when Cloudmin allows management.
+	local $servers::access{'edit'} = 0;
+	ok(!eval { vm_webmin_url($vm, undef, undef, 1); 1 },
+	   'saving a changed certificate needs native edit permission');
+	}
+# Cloudmin management permission is also required to save a renewed pin.
+$manage_grant = 0;
+ok(!eval { vm_webmin_url($vm, undef, undef, 1); 1 },
+   'saving a changed certificate needs management access');
+$manage_grant = 1;
+is($saved->(), $first_pin, 'refused updates leave the saved fingerprint');
+# With both grants restored, refresh the pin exactly once.
+is(vm_webmin_url($vm, undef, undef, 1), $proxy_url,
+   'a changed certificate opens once verified');
+is($saved->(), $second_pin, 'the changed certificate replaces the saved one');
+is(scalar(@calls), $pin_writes + 1, 'the change is saved exactly once');
+# Webmin can present its default certificate, or one saved for the name or
+# address the proxy connects to. Other domains' certificates do not apply.
+{
+	local %guest_files = ( %guest_files,
+		'/etc/webmin/miniserv.conf' =>
+			"keyfile=/etc/webmin/miniserv.pem\n".
+			"certfile=/etc/webmin/host.cert\n".
+			"ipkey_a.test,fixture.test=/etc/webmin/sni.key\n".
+			"ipcert_a.test,fixture.test=/etc/webmin/sni.cert\n".
+			"ipkey_192.0.2.9=/etc/webmin/combined.pem\n".
+			"ipkey_*.test=/etc/webmin/missing.pem\n".
+			"ipkey_192.0.2.9,alias.test=relative.pem\n".
+			"ipkey_other.test,192.0.2.10=/etc/webmin/other.pem\n",
+		'/etc/webmin/host.cert' => pem('host certificate'),
+		'/etc/webmin/sni.cert' => pem('name certificate'),
+		'/etc/webmin/combined.pem' => pem('address certificate', 1),
+		'/etc/webmin/other.pem' => pem('other certificate', 1) );
+	# Check which certificates are accepted and which guest paths are read.
+	@reads = ();
+	is_deeply([ sort(vm_webmin_fingerprints($uuid, 'fixture.test',
+						 '192.0.2.9')) ],
+		  [ sort(map { sha256_hex($_) } 'host certificate',
+			 'name certificate', 'address certificate') ],
+		  'certificates for this name and address are returned');
+	ok(grep({ /missing/ } @reads),
+	   'a wildcard entry for the name is tried');
+	ok(!grep({ /\.key\z|relative|other/ } @reads),
+	   'keys, relative paths and other domains are never read');
+	}
+# An unavailable agent leaves the saved pin in force without another write.
+$agent_down = 1;
+$pin_writes = scalar(@calls);
+is(vm_webmin_url($vm, undef, undef, 1), $proxy_url,
+   'a saved fingerprint still opens the proxy without the agent');
+is(scalar(@calls), $pin_writes, 'nothing is saved without the agent');
+{
+	# Without either an agent response or a saved pin, opening must fail.
+	local $servers{$server->{'id'}}->{'sslfingerprint'};
+	ok(!eval { vm_webmin_url($vm, undef, undef, 1); 1 },
+	   'a guest never verified is not opened without the agent');
+	like($@, qr/open Webmin directly/,
+	     'the refusal offers the direct link');
+	}
+$agent_down = 0;
+{
+	# An older entry gains a pin when the agent can supply its certificate.
+	local $servers{$server->{'id'}}->{'sslfingerprint'};
+	is(vm_webmin_url($vm, undef, undef, 1), $proxy_url,
+	   'an earlier entry opens after its first verification');
+	is($saved->(), $second_pin, 'the earlier entry gains a fingerprint');
+	}
 # An address change requires approval before credentials go to the new target.
 $vm->{'addresses'} = [ { address => '192.0.2.6' } ];
 my %change;

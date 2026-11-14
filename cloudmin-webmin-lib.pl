@@ -2,6 +2,8 @@
 use strict;
 use warnings;
 no warnings 'once';
+use Digest::SHA qw(sha256_hex);
+use MIME::Base64 ();
 our ($module_root_directory, $module_config_directory, $remote_user, %text);
 
 # can_vm_webmin(uuid) checks access to the Webmin tab for the host's root login.
@@ -89,10 +91,87 @@ unlock_data_file($file);
 die $error if (!$ok);
 }
 
+# vm_webmin_fingerprints(uuid, host, address) returns SHA-256 fingerprints of
+# Webmin's default certificate and those configured for this hostname or IP.
+# Read files through the guest agent for this UUID, independent of the network
+# address. Hash only certificate data; never save private keys from those files.
+# Dies if none of the selected files yields a certificate.
+sub vm_webmin_fingerprints
+{
+my ($uuid, $host, $address) = @_;
+my $adapter = get_libvirt(1);
+# read(path) reads at most 256 KiB through this guest's agent. Return an empty
+# string on failure so other configured certificate files can still be tried.
+my $read = sub {
+	return eval { $adapter->read_guest_file($uuid, $_[0], 262144) } // '';
+	};
+# Use the guest's own Webmin configuration to locate its certificates.
+my %miniserv = $read->('/etc/webmin/miniserv.conf') =~
+	       /^([^=\s]+)=([^\r\n]*)/mg;
+# Webmin presents its default certificate, or one saved for the requested name,
+# its wildcard or the local address. A separate certificate file takes
+# precedence over one stored with its key.
+(my $wildcard = $host // '') =~ s/\A[^.]+/*/;
+my @files = ( $miniserv{'certfile'} || $miniserv{'keyfile'} );
+foreach my $key (sort grep { /\Aipkey_/ } keys %miniserv) {
+	my ($names) = $key =~ /\Aipkey_(.*)\z/;
+	# Include certificates for the requested name, wildcard or IP only.
+	push(@files, $miniserv{"ipcert_$names"} || $miniserv{$key})
+		if (grep { $_ eq ($host // '') || $_ eq $wildcard ||
+			   $_ eq ($address // '') } split(/,/, $names));
+	}
+# Bound the reads a guest's configuration can request.
+splice(@files, 8) if (@files > 8);
+# Read each absolute path once, ignoring missing or unreadable certificates.
+my (%seen, @fingerprints);
+foreach my $file (grep { defined($_) && m{\A/} && !$seen{$_}++ } @files) {
+	# Webmin presents the first certificate in the file.
+	push(@fingerprints, sha256_hex(MIME::Base64::decode_base64($1)))
+		if ($read->($file) =~
+		    m{-----BEGIN CERTIFICATE-----([A-Za-z0-9+/=\s]+)-----END});
+	}
+# Refuse to create an unpinned entry when none of the reads succeeds.
+die "Cannot verify the Webmin certificate of this virtual machine through its guest agent. Check that qemu-guest-agent is running inside it, or open Webmin directly instead\n"
+	if (!@fingerprints);
+return @fingerprints;
+}
+
+# vm_webmin_pin(vm, server) refreshes the server record's certificate pins
+# through the VM's guest agent. Keep saved pins if the agent cannot supply new
+# ones. Dies if verification is unsupported, SSL is disabled, no pin is known,
+# or saving a changed pin is denied. The proxy checks the peer when connecting.
+sub vm_webmin_pin
+{
+my ($vm, $server) = @_;
+# An older Servers Index proxy ignores saved fingerprints.
+die "Embedded Webmin needs a Webmin version on this host that can verify the virtual machine's certificate. Update Webmin, or open Webmin directly instead\n"
+	if (!defined(&servers::server_ssl_fingerprints));
+# The proxy checks certificates only on SSL connections.
+die "Embedded Webmin needs an SSL connection to the virtual machine. Enable SSL for this server in Webmin Servers Index, or open Webmin directly instead\n"
+	if (!$server->{'ssl'});
+# Refresh trusted pins so certificate renewals can take effect before opening.
+my $pin = eval { join(',', vm_webmin_fingerprints($vm->{'uuid'},
+						  @$server{qw(host ip)})) };
+# A failed refresh requires a saved pin. The proxy still rejects any
+# certificate that does not match that pin.
+die $@ if (!$pin && ($server->{'sslfingerprint'} // '') !~ /\S/);
+# Avoid writes when reusing a saved pin or when the certificates are unchanged.
+return if (!$pin || $pin eq ($server->{'sslfingerprint'} // ''));
+# Saving new fingerprints needs the same permissions as an address change.
+require_access('manage');
+die "Permission to edit Webmin servers is required\n"
+	if (!$servers::access{'edit'});
+# Save only the fingerprints through the normal server update wrapper.
+$server->{'sslfingerprint'} = $pin;
+# The callback takes no arguments and writes the updated server record.
+vm_webmin_server_change($server, sub { servers::save_server($server); });
+}
+
 # register_vm_webmin(job, [address], [finishing]) adds the guest to Servers
 # Index. Use the initial password if available, or the native login prompt. If
 # address is omitted, use the first configured or discovered guest IP. finishing
-# defaults to false; workers set it when completing accepted creation.
+# defaults to false; workers set it when completing accepted creation. New
+# entries require certificate fingerprints read through the guest agent.
 sub register_vm_webmin
 {
 my ($job, $address, $finishing) = @_;
@@ -129,13 +208,18 @@ return vm_webmin_lock($uuid, sub {
 		$user !~ /\A[a-z_][a-z0-9_-]{0,31}\z/ ||
 		ref($password) || length($password) > 1024 ||
 		$password =~ /[\x00\r\n]/));
+	# Read the guest's certificates before saving anything, so a guest
+	# that cannot be verified gets no entry and no saved login.
+	my $pin = join(',', vm_webmin_fingerprints($uuid, $r->{'hostname'},
+						   $address || $addresses[0]));
 	# Servers Index owns both automatic login and its
 	# browser-session prompt.
 	$server =
 		{ host => $r->{'hostname'}, ip => $address || $addresses[0],
 		  port =>
 			  10000,
-		  ssl => 1, fast => 0, type => 'linux',
+		  ssl => 1, sslfingerprint => $pin,
+		  fast => 0, type => 'linux',
 		  desc => $r->{'name'},
 		  group => 'Cloudmin',
 		  ($saved_login
@@ -143,7 +227,8 @@ return vm_webmin_lock($uuid, sub {
 			  : ( autouser => 1 )),
 		  cloudmin_uuid => $uuid, cloudmin_job => $id };
 	# Reserve an unused native ID without replacing a manually added server.
-	$server->{'id'} = time().$$;
+	# Older guest themes allow at most 16 digits. Keep the full PID.
+	$server->{'id'} = substr(time().$$, -16);
 	$server->{'id'}++ while (servers::get_server($server->{'id'}));
 	vm_webmin_server_change($server,
 				sub { servers::save_server($server); });
@@ -267,13 +352,16 @@ return $html.ui_cluster([
 ]).ui_form_end();
 }
 
-# vm_webmin_url(vm, [change], [approval]) checks access before opening the
-# proxy. On an IP change, fill the optional change hash and return no URL until
-# approved. approval contains the old and new IPs from a
-# token-checked POST by the caller.
+# vm_webmin_url(vm, [change], [approval], [open]) checks access before opening
+# the proxy. On an IP change, fill the optional change hash and return no URL
+# until approved. approval contains the old and new IPs from a
+# token-checked POST by the caller. Pass a true open to refresh the certificate
+# pins before loading the URL; saved pins can be reused if the agent fails.
+# open defaults to false, which skips the refresh. The proxy checks the peer
+# certificate when connecting, using the pins saved in the server record.
 sub vm_webmin_url
 {
-my ($vm, $change, $approval) = @_;
+my ($vm, $change, $approval, $open) = @_;
 # A reused output hash must not retain a warning from an earlier lookup.
 %$change = () if ($change);
 # Recheck Cloudmin permissions even for callers outside the tab renderer.
@@ -317,6 +405,8 @@ return vm_webmin_lock($vm->{'uuid'}, sub {
 		vm_webmin_server_change($server,
 					sub { servers::save_server($server); });
 		}
+	# Refresh trusted certificate pins only when the proxy is about to open.
+	vm_webmin_pin($vm, $server) if ($open);
 	return get_webprefix().'/servers/link.cgi/'.$server->{'id'}.'/';
 	});
 }

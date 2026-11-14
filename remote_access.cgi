@@ -175,8 +175,12 @@ if ($tab eq 'webmin') {
 				$approval = { old => $in{'webmin_old_ip'},
 					      new => $in{'webmin_new_ip'} };
 				}
+			# Refresh the guest's certificate pins only when the
+			# embedded view is about to load.
+			my $opening = $webmin_requested || $webmin_auto;
 			my $target =
-				vm_webmin_url($vm, \%webmin_change, $approval);
+				vm_webmin_url($vm, \%webmin_change, $approval,
+					      $opening);
 			if (!$target && !%webmin_change) {
 				# Offer registration with the same button when
 				# the caller may add it.
