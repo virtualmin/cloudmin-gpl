@@ -70,6 +70,7 @@ Replace the example IDs with the 32-character job IDs returned by Cloudmin. Raw 
 `t/backups.t` and `t/backup-archive.py` check metadata, XML rewriting, destination validation and malformed archives. `t/backup-schedules.t` checks recurrence and retention controls; `t/backup-ssh.t` checks host-key approval. On authorized Linux test hosts:
 
 - `t/live/check-backups.py IMAGE --network NETWORK` boots an isolated source, backs it up in supported consistency modes, restores it, boots the replacement and checks identity, network, credentials, firmware and secondary-disk data. UEFI is the default, including on x86. Use `--bios` only with a BIOS-capable image such as Ubuntu; RHEL 10 family images require UEFI.
+- `t/live/check-restore-format.py` restores raw disks with a QCOW2 header or ISO signature, plus an ordinary QCOW2 disk. It checks that the restored formats match the backup. It then starts QEMU paused and verifies that raw reads do not follow the crafted header's link to a host file.
 - `t/live/check-backup-jobs.pl` checks scheduling, overlapping-run refusal, retention, cancellation, interrupted-job cleanup, failed transfers, inspection and refusal to restore over an existing virtual machine.
 - `t/live/check-backup-nfs.py` runs those checks through a private loopback NFS mount and removes its export afterward. It requires the NFS client and server tools.
 - `t/live/check-backup-access.py --browser` checks HTTP permissions, forms, CSRF and destination switching in both navigation layouts.

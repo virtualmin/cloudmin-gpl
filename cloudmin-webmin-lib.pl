@@ -21,8 +21,8 @@ foreign_require('servers', 'servers-lib.pl');
 return $servers::access{'links'} ? 1 : 0;
 }
 
-# require_webmin_registration([finishing]) checks server-list permissions.
-# finishing is reserved for a worker completing an already accepted creation.
+# require_webmin_registration([finishing]) checks permissions and proxy support.
+# finishing defaults to false; workers set it for accepted creation jobs.
 sub require_webmin_registration
 {
 # Registration stores host-side logins and requires Cloudmin management access.
@@ -33,9 +33,13 @@ require_access($_[0] ? 'recover' : 'manage');
 die "Webmin Servers Index access is required to register a virtual machine\n"
 	if (!foreign_available('servers'));
 foreign_require('servers', 'servers-lib.pl');
+# Saved guest logins need Servers Index add, edit and link permissions.
 die "Permission to add, edit and connect to Webmin servers is required\n"
 	if (!$servers::access{'edit'} || !$servers::access{'add'} ||
 	    !$servers::access{'links'});
+# Older proxies ignore saved fingerprints and could expose the guest login.
+die "This host's Webmin cannot verify guest certificates. Update Webmin, or open Webmin directly instead\n"
+	if (!defined(&servers::server_ssl_fingerprints));
 }
 
 # vm_webmin_server(uuid, [creation_job]) finds only Cloudmin's own registration.

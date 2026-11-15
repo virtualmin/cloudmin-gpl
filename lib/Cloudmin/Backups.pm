@@ -563,6 +563,8 @@ die "The backup contains unsupported host devices or extensions\n"
 }
 
 # restore_xml(xml, manifest, job_id, volumes, [nvram]) rebinds host resources.
+# volumes maps archive disk names to destination records. Pass nvram when
+# the archive includes firmware variables.
 # Guest IDs, MACs, firmware and cloud-init bytes retain their original identity.
 sub restore_xml
 {
@@ -591,8 +593,10 @@ foreach my $disk ($doc->findnodes('/domain/devices/disk')) {
 		: 'file', $volume->{'path'});
 	my ($driver) = $disk->findnodes('driver');
 	$driver ||= $disk->addNewChild(undef, 'driver');
-	$driver->setAttribute('name', 'qemu'); $driver->setAttribute('type',
-								     $volume->{'format'} || $d->{'format'});
+	# File disks keep the checked archive format; LVM stores raw sectors.
+	$driver->setAttribute('name', 'qemu');
+	$driver->setAttribute('type',
+			      $volume->{'block'} ? 'raw' : $d->{'format'});
 	$driver->setAttribute('cache', 'none') if ($volume->{'block'});
 	}
 die "A backed-up disk is missing from the domain definition\n"

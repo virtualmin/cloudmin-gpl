@@ -148,7 +148,7 @@ SKIP: {
 # A restored seed must remain distinguishable from unrelated read-only disks,
 # including when a file-backed backup is restored into a logical volume.
 SKIP: {
-	skip 'XML::LibXML is unavailable', 3
+	skip 'XML::LibXML is unavailable', 6
 		if (!eval { require XML::LibXML; 1 });
 	my $old = 'a' x 32;
 	my $source = qq{<domain><name>fixture</name><uuid>$uuid</uuid>
@@ -166,12 +166,16 @@ SKIP: {
 			Cloudmin::Backups::restore_volume_names($source,
 								$manifest,
 								$id, $type);
+		# Model raw file contents detected as ISO or QCOW2 after upload.
 		my %volumes =
 			map { $_ => { path => $type eq 'dir'
 				? '/new/'.$names->{$_}
 				: Cloudmin::LVM::device_path('guest-vg',
 							     $names->{$_}),
-				      block => $type ne 'dir' } } keys %$names;
+				      block => $type ne 'dir',
+				      format => $type ne 'dir' ? 'raw'
+					: $_ eq 'disk1' ? 'iso' : 'qcow2' } }
+			    keys %$names;
 		my $restored =
 			Cloudmin::Backups::restore_xml($source, $manifest, $id,
 						       \%volumes);
@@ -180,6 +184,14 @@ SKIP: {
 				$restored) ],
 			[ qw(system seed disk) ],
 			"restore into $type preserves seed and system roles without treating read-only data as a seed");
+		# ISO seed bytes and a raw disk with a QCOW2 header stay raw.
+		# LVM stores every restored disk as raw sectors.
+		my $doc = Cloudmin::Libvirt::parse_xml_document($restored);
+		is_deeply(
+			[ map { $_->findvalue('driver/@type') }
+				$doc->findnodes('/domain/devices/disk') ],
+			[ $type eq 'dir' ? 'qcow2' : 'raw', 'raw', 'raw' ],
+			"restore into $type uses archive formats for files and raw for LVM");
 		}
 	}
 

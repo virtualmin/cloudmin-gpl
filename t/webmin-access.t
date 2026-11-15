@@ -176,6 +176,28 @@ is_deeply(\@calls, [ ], 'direct link creates no native entry');
 	   'malformed address cannot become a URL');
 	}
 
+# Refuse registration when the host proxy cannot verify guest certificates.
+{
+	local *servers::server_ssl_fingerprints;
+	my $writes = scalar(@calls);
+	ok(!eval { require_webmin_registration(); 1 },
+	   'registration preflight requires certificate verification support');
+	# Check both manual registration and workers finishing guest creation.
+	for my $finishing ( 0, 1 ) {
+		ok(!eval { register_vm_webmin($job, undef, $finishing); 1 },
+		   "registration refuses an older proxy when finishing=$finishing");
+		like($@, qr/Update Webmin/, 'registration asks for a Webmin update');
+		}
+	# Refusal must save nothing and leave direct guest access available.
+	is(scalar(keys %servers), 0, 'unsupported proxy gets no server entry');
+	is(scalar(@calls), $writes, 'unsupported proxy saves no credentials');
+	is(vm_webmin_direct_url($vm), 'https://192.0.2.5:10000/',
+	   'older hosts still allow direct guest access');
+	# Keep later cases independent if the guard is removed for regression tests.
+	%servers = ();
+	splice(@calls, $writes);
+	}
+
 # Missing credentials use the native prompt, without storing a guest password.
 my $password = delete($job->{'request'}->{'webmin_password'});
 my ($prompt, $occupied);
